@@ -1,0 +1,23 @@
+local RunService = game:GetService("RunService")
+
+local Effects = require(script.Parent.Effects)
+local Hazards = require(script.Parent.Hazards)
+local Lurkers = require(script.Parent.Lurkers)
+local MapBuilder = require(script.Parent.MapBuilder)
+local Noise = require(script.Parent.Noise)
+local Pebbles = require(script.Parent.Pebbles)
+local Progress = require(script.Parent.Progress)
+
+local layout = MapBuilder.build()
+
+Noise.init(layout)
+Hazards.init(layout)
+Lurkers.init(layout)
+Pebbles.init()
+Progress.init(layout)
+Effects.startAmbience()
+
+RunService.Heartbeat:Connect(function(dt)
+	Noise.step(dt)
+	Lurkers.step(dt)
+end)

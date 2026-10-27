@@ -1,0 +1,4 @@
+# Tools for working on the game. Install Aftman, then run `aftman install`.
+[tools]
+rojo = "rojo-rbx/rojo@7.4.4"
+selene = "Kampfkarren/selene@0.27.1"
