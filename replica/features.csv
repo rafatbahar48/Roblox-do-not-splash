@@ -1,0 +1,49 @@
+feature,area,priority,original,clone,notes
+Blind creature that hunts by sound,creature,must,yes,yes,ours: several creatures that each listen in their own room
+Falling or wading in the water draws the creature,creature,must,yes,yes,splash + wading noise in Noise.luau
+Caught in the water = out,creature,must,yes,yes,ours also grabs loud players standing on nearby tiles
+Rooms of tiles over water to jump across,stages,must,yes,yes,7 stages generated from a seed
+Throw pebbles to lure the creature,items,must,yes,partial,ours: 3 per life refilled at checkpoints; no pickups yet
+Pebble piles to pick up during a run,items,must,yes,no,
+Sinking tiles,stages,must,yes,yes,
+Safe rest tiles marked so players can tell them apart,stages,must,yes,partial,our tiles are tinted by type; no clear safe marker
+Lobby hub,lobby,must,yes,partial,ours is a room with a spawn and a door; no portals or shops
+Form a party and start a run together,lobby,must,yes,no,needs reserved servers + TeleportService
+Difficulty changes how many creatures there are,runs,must,yes,partial,ours scales noise and creature speed per player
+Final room objective with a timer and rising water,stages,must,yes,no,make our own version rather than two valves
+Coins earned per room and for escaping,economy,must,yes,no,
+Escape screen with rewards,runs,must,yes,partial,escape screen yes; no rewards
+Progress saved between sessions,data,must,yes,yes,DataStore with BindToClose
+Permanent upgrades bought with coins (levels 0-3),economy,should,yes,no,design our own upgrade list
+Throw-range upgrade,economy,should,yes,no,
+Extra splashes per throw upgrade,economy,should,yes,no,
+Item shop and loadout slots,economy,should,yes,no,
+A second distraction item,items,should,yes,no,our own design (not a bottle copy)
+Rescue a teammate who fell in,co-op,should,yes,no,
+Rescue rope item,co-op,should,yes,no,
+Spectate teammates after being caught,co-op,should,yes,no,guess: not confirmed in sources
+Platforms moving on a track,stages,should,yes,partial,our rafts drift side to side
+Drifting platforms,stages,should,yes,yes,rafts
+Rotating bridge,stages,should,yes,no,
+Memory bridge (remember the safe tiles),stages,should,yes,no,
+Closing walls,stages,should,yes,no,
+Pillar hall,stages,should,yes,yes,Columns stage
+Hard mode unlocks after clearing Normal,runs,should,yes,no,original: 2 Normal clears
+Throw works on phones and controllers,controls,should,yes,yes,ContextActionService button + R2
+Robux passes (max an upgrade / extra slots),monetization,should,yes,no,set our own prices
+Coin packs for Robux,monetization,should,yes,no,developer products
+Wind-up toy distraction item,items,could,yes,no,guess at behaviour; design our own
+Light-source item,items,could,yes,no,guess at behaviour; design our own
+Self-revive purchase,monetization,could,yes,no,
+Codes to redeem,economy,could,unknown,no,fan sites mention codes; unconfirmed
+Play as the creature mode,modes,could,yes,no,separate place in the original
+Visible noise meter,hud,could,no,yes,ours
+Creaky tiles that make noise,stages,could,no,yes,ours
+Hidden collectible in each stage,stages,could,no,yes,ours (shells)
+Checkpoint after each stage,runs,could,unknown,yes,ours; may change once runs are party-based
+Their name / thumbnail / icon / store text,brand,skip,yes,skip,belongs to the original
+Their models / textures / sounds / music / creature design,assets,skip,yes,skip,belongs to the original
+Their stage and item names and in-game text,content,skip,yes,skip,write our own
+Their player base and visits,network,skip,yes,skip,not part of the product
+Their Robux price points,monetization,skip,yes,skip,set our own pricing in /replica-launch
+Their seasonal event tie-ins,events,skip,yes,skip,run our own events
