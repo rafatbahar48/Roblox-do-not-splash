@@ -20,6 +20,7 @@ local Progress = {}
 
 local layout
 local profiles = {} -- [Player] = profile
+local pendingSaves = 0 -- saves still in flight, so BindToClose can wait for them
 
 local store
 do
@@ -80,12 +81,14 @@ local function save(player, profile)
 	for index in profile.shells do
 		table.insert(shells, index)
 	end
+	pendingSaves += 1
 	local ok, err = pcall(store.SetAsync, store, keyFor(player), {
 		checkpoint = profile.checkpoint,
 		shells = shells,
 		wins = profile.wins,
 		difficulty = profile.difficulty,
 	}, { player.UserId })
+	pendingSaves -= 1
 	if not ok then
 		warn("[Progress] Could not save", player.Name, err)
 	end
@@ -265,15 +268,12 @@ function Progress.init(newLayout)
 	end)
 
 	game:BindToClose(function()
-		local pending = 0
 		for player, profile in profiles do
-			pending += 1
-			task.spawn(function()
-				save(player, profile)
-				pending -= 1
-			end)
+			task.spawn(save, player, profile)
 		end
-		while pending > 0 do
+		-- Also waits for saves PlayerRemoving already started. Their profiles are
+		-- gone from the table, and the server would otherwise close mid-save.
+		while pendingSaves > 0 do
 			task.wait()
 		end
 	end)
