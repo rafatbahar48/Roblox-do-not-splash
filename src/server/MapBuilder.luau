@@ -1,12 +1,17 @@
 -- Builds the whole map from Config and Stages when the server starts:
--- a lobby, one flooded room per stage, and an exit room, in a line along +Z.
--- Returns a layout table the other server modules use to find rooms.
+-- a lobby (LobbyBuilder.luau), one flooded room per stage, and an exit room,
+-- in a line along +Z. Returns a layout table the other server modules use to
+-- find rooms.
 
 local Lighting = game:GetService("Lighting")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Stages = require(ReplicatedStorage.Shared.Stages)
+local LobbyBuilder = require(script.Parent.LobbyBuilder)
+local Parts = require(script.Parent.Parts)
+
+local block, box = Parts.block, Parts.box
 
 local ROOM = Config.Room
 local HALF_WIDTH = ROOM.Width / 2
@@ -26,18 +31,6 @@ local COLORS = {
 	water = Color3.fromRGB(26, 70, 80),
 	light = Color3.fromRGB(236, 238, 214),
 	deadLight = Color3.fromRGB(84, 88, 86),
-	-- The lobby is warm and bright on purpose: the safe place between runs.
-	lobbyWall = Color3.fromRGB(232, 226, 212),
-	lobbyFloor = Color3.fromRGB(222, 210, 186),
-	lobbyLight = Color3.fromRGB(255, 236, 200),
-	lane = Color3.fromRGB(40, 70, 110),
-	accent = Color3.fromRGB(46, 150, 150),
-	wood = Color3.fromRGB(150, 110, 70),
-	glass = Color3.fromRGB(190, 225, 235),
-	tank = Color3.fromRGB(80, 124, 128),
-	tankWater = Color3.fromRGB(40, 110, 120),
-	tankLight = Color3.fromRGB(90, 220, 230),
-	board = Color3.fromRGB(22, 32, 42),
 	checkpoint = Color3.fromRGB(120, 230, 170),
 	shell = Color3.fromRGB(255, 186, 200),
 	exit = Color3.fromRGB(255, 238, 196),
@@ -45,30 +38,6 @@ local COLORS = {
 }
 
 local MapBuilder = {}
-
-local function block(parent, name, size, cframe, color, material, props)
-	local part = Instance.new("Part")
-	part.Name = name
-	part.Anchored = true
-	part.Size = size
-	part.CFrame = cframe
-	part.Color = color
-	part.Material = material or Enum.Material.SmoothPlastic
-	part.TopSurface = Enum.SurfaceType.Smooth
-	part.BottomSurface = Enum.SurfaceType.Smooth
-	if props then
-		for key, value in props do
-			part[key] = value
-		end
-	end
-	part.Parent = parent
-	return part
-end
-
--- A block filling the box between two corners.
-local function box(parent, name, min, max, color, material, props)
-	return block(parent, name, max - min, CFrame.new((min + max) / 2), color, material, props)
-end
 
 local function addSign(part, face, title, subtitle)
 	local gui = Instance.new("SurfaceGui")
@@ -442,162 +411,6 @@ local function removeTemplateSpawns()
 	end
 end
 
--- The lobby, z from -LobbyLength to 0: a warm pool reception, the safe place
--- between runs. The left wall has a window into an aquarium where one of the
--- creatures lives (server/LobbyTank.luau), the right wall holds the record
--- boards (server/Leaderboards.luau), and a kiosk by the door opens the shop.
-local function buildLobby(map)
-	local folder = Instance.new("Folder")
-	folder.Name = "Lobby"
-	folder.Parent = map
-
-	local z0, z1 = -ROOM.LobbyLength, 0
-	local top = SURFACE_Y + ROOM.Height
-	local tiles = Enum.Material.CeramicTiles
-	local decor = { CanCollide = false, CanQuery = false, CastShadow = false }
-
-	box(folder, "Floor", Vector3.new(-HALF_WIDTH, BASE_Y, z0), Vector3.new(HALF_WIDTH, TILE_TOP, z1), COLORS.lobbyFloor, tiles)
-	box(folder, "RightWall", Vector3.new(HALF_WIDTH, BASE_Y, z0), Vector3.new(HALF_WIDTH + WALL, top, z1), COLORS.lobbyWall, tiles)
-	box(folder, "Ceiling", Vector3.new(-HALF_WIDTH - WALL, top, z0), Vector3.new(HALF_WIDTH + WALL, top + 1, z1), COLORS.lobbyWall, tiles)
-	box(folder, "EndWall", Vector3.new(-HALF_WIDTH, TILE_TOP, z0 - 1), Vector3.new(HALF_WIDTH, top, z0), COLORS.lobbyWall, tiles)
-
-	-- The left wall, with the aquarium window cut into it.
-	local tank = {
-		min = Vector3.new(-HALF_WIDTH - WALL - 14, TILE_TOP - 1, z0 + 12),
-		max = Vector3.new(-HALF_WIDTH - WALL, TILE_TOP + 12, z1 - 12),
-		glassX = -HALF_WIDTH, -- the room side of the window
-	}
-	tank.windowZ0, tank.windowZ1 = tank.min.Z + 2, tank.max.Z - 2
-	local windowY0, windowY1 = TILE_TOP + 1, TILE_TOP + 10
-	local wx0, wx1 = -HALF_WIDTH - WALL, -HALF_WIDTH
-	box(folder, "LeftWall", Vector3.new(wx0, BASE_Y, z0), Vector3.new(wx1, windowY0, z1), COLORS.lobbyWall, tiles)
-	box(folder, "LeftWall", Vector3.new(wx0, windowY1, z0), Vector3.new(wx1, top, z1), COLORS.lobbyWall, tiles)
-	box(folder, "LeftWall", Vector3.new(wx0, windowY0, z0), Vector3.new(wx1, windowY1, tank.windowZ0), COLORS.lobbyWall, tiles)
-	box(folder, "LeftWall", Vector3.new(wx0, windowY0, tank.windowZ1), Vector3.new(wx1, windowY1, z1), COLORS.lobbyWall, tiles)
-	box(folder, "Glass", Vector3.new(wx0, windowY0, tank.windowZ0), Vector3.new(wx0 + 0.4, windowY1, tank.windowZ1), COLORS.glass, Enum.Material.Glass, {
-		Transparency = 0.7,
-		Reflectance = 0.15,
-		CastShadow = false,
-	})
-
-	-- The tank behind it.
-	local t0, t1 = tank.min, tank.max
-	box(folder, "TankBack", Vector3.new(t0.X - 1, t0.Y - 1, t0.Z - 1), Vector3.new(t0.X, t1.Y + 1, t1.Z + 1), COLORS.tank, tiles)
-	box(folder, "TankFloor", Vector3.new(t0.X, t0.Y - 1, t0.Z - 1), Vector3.new(t1.X, t0.Y, t1.Z + 1), COLORS.tank, tiles)
-	box(folder, "TankTop", Vector3.new(t0.X, t1.Y, t0.Z - 1), Vector3.new(t1.X, t1.Y + 1, t1.Z + 1), COLORS.tank, tiles)
-	box(folder, "TankEnd", Vector3.new(t0.X, t0.Y, t0.Z - 1), Vector3.new(t1.X, t1.Y, t0.Z), COLORS.tank, tiles)
-	box(folder, "TankEnd", Vector3.new(t0.X, t0.Y, t1.Z), Vector3.new(t1.X, t1.Y, t1.Z + 1), COLORS.tank, tiles)
-	box(folder, "TankWater", t0, Vector3.new(t1.X, t1.Y - 0.6, t1.Z), COLORS.tankWater, Enum.Material.SmoothPlastic, {
-		Transparency = 0.55,
-		CanCollide = false,
-		CanQuery = false,
-		CanTouch = false,
-		CastShadow = false,
-	})
-	for _, along in { 0.25, 0.75 } do
-		local holder = block(
-			folder,
-			"TankLight",
-			Vector3.one,
-			CFrame.new((t0.X + t1.X) / 2, t0.Y + 0.6, t0.Z + (t1.Z - t0.Z) * along),
-			COLORS.tankLight,
-			Enum.Material.SmoothPlastic,
-			{ Transparency = 1, CanCollide = false, CanQuery = false, CanTouch = false }
-		)
-		local light = Instance.new("PointLight")
-		light.Color = COLORS.tankLight
-		light.Range = 18
-		light.Brightness = 1.6
-		light.Parent = holder
-	end
-	block(folder, "Bench", Vector3.new(2, 1.4, 10), CFrame.new(-HALF_WIDTH + 7, TILE_TOP + 0.7, (tank.windowZ0 + tank.windowZ1) / 2), COLORS.wood, Enum.Material.WoodPlanks)
-
-	-- Warm ceiling lights.
-	for i = 1, 4 do
-		local panel = block(
-			folder,
-			"LightPanel",
-			Vector3.new(8, 0.3, 3),
-			CFrame.new(0, top - 0.15, z0 + (i - 0.5) * (z1 - z0) / 4),
-			COLORS.lobbyLight,
-			Enum.Material.Neon,
-			decor
-		)
-		local light = Instance.new("PointLight")
-		light.Range = 32
-		light.Brightness = 1.6
-		light.Color = COLORS.lobbyLight
-		light.Shadows = true
-		light.Parent = panel
-	end
-
-	-- Lane lines on the floor, like the bottom of a pool, and tiled skirting.
-	for _, x in { -7, 7 } do
-		box(folder, "LaneLine", Vector3.new(x - 0.4, TILE_TOP, z0 + 6), Vector3.new(x + 0.4, TILE_TOP + 0.04, z1 - 4), COLORS.lane, nil, decor)
-		box(folder, "LaneLine", Vector3.new(x - 1.6, TILE_TOP, z0 + 6), Vector3.new(x + 1.6, TILE_TOP + 0.04, z0 + 6.8), COLORS.lane, nil, decor)
-		box(folder, "LaneLine", Vector3.new(x - 1.6, TILE_TOP, z1 - 4.8), Vector3.new(x + 1.6, TILE_TOP + 0.04, z1 - 4), COLORS.lane, nil, decor)
-	end
-	box(folder, "Skirting", Vector3.new(HALF_WIDTH - 0.1, TILE_TOP, z0), Vector3.new(HALF_WIDTH, TILE_TOP + 0.8, z1), COLORS.accent, tiles, decor)
-	box(folder, "Skirting", Vector3.new(-HALF_WIDTH, TILE_TOP, z0), Vector3.new(-HALF_WIDTH + 0.1, TILE_TOP + 0.8, z1), COLORS.accent, tiles, decor)
-
-	-- Record boards along the right wall, read left to right.
-	local boards = {}
-	for i, id in { "Escapes", "Easy", "Normal", "Hard" } do
-		local z = z0 + 14 + (i - 1) * 12
-		block(folder, "BoardFrame", Vector3.new(0.3, 8.6, 10.6), CFrame.new(HALF_WIDTH - 0.15, TILE_TOP + 5.6, z), COLORS.accent)
-		boards[id] = block(folder, "Board" .. id, Vector3.new(0.4, 8, 10), CFrame.new(HALF_WIDTH - 0.35, TILE_TOP + 5.6, z), COLORS.board)
-	end
-
-	-- The shop kiosk by the door, facing into the room.
-	local kioskX, kioskZ = -HALF_WIDTH + 6, z1 - 7
-	local counter = block(folder, "ShopCounter", Vector3.new(3, 3.4, 9), CFrame.new(kioskX, TILE_TOP + 1.7, kioskZ), COLORS.wood, Enum.Material.WoodPlanks)
-	block(folder, "ShopCounterTop", Vector3.new(3.4, 0.3, 9.4), CFrame.new(kioskX, TILE_TOP + 3.55, kioskZ), COLORS.lobbyWall, Enum.Material.Marble)
-	for i = 0, 8 do
-		local color = if i % 2 == 0 then COLORS.accent else COLORS.lobbyWall
-		block(folder, "Awning", Vector3.new(4.2, 0.25, 1), CFrame.new(kioskX - 0.6, TILE_TOP + 7.2, kioskZ - 4 + i), color, Enum.Material.Fabric, decor)
-	end
-	for _, side in { -1, 1 } do
-		block(folder, "AwningPost", Vector3.new(0.3, 7.2, 0.3), CFrame.new(kioskX + 1.3, TILE_TOP + 3.6, kioskZ + side * 4.3), COLORS.wood, Enum.Material.WoodPlanks)
-	end
-	block(folder, "ShopSignFrame", Vector3.new(0.3, 2.4, 7.4), CFrame.new(-HALF_WIDTH + 0.15, TILE_TOP + 5.6, kioskZ), COLORS.accent, nil, decor)
-	local sign = block(folder, "ShopSign", Vector3.new(0.4, 2, 7), CFrame.new(-HALF_WIDTH + 0.3, TILE_TOP + 5.6, kioskZ), Color3.fromRGB(250, 246, 236), nil, decor)
-	addSign(sign, Enum.NormalId.Right, "SHOP", "Skins · accessories · boosts")
-	local prompt = Instance.new("ProximityPrompt")
-	prompt.Name = "OpenShop" -- client/ShopUi.luau opens the shop when it's used
-	prompt.ActionText = "Open shop"
-	prompt.ObjectText = "Shop"
-	prompt.KeyboardKeyCode = Enum.KeyCode.G -- E throws a pebble
-	prompt.GamepadKeyCode = Enum.KeyCode.ButtonX
-	prompt.MaxActivationDistance = 10
-	prompt.RequiresLineOfSight = false
-	prompt.Parent = counter
-
-	local spawn = Instance.new("SpawnLocation")
-	spawn.Name = "LobbySpawn"
-	spawn.Anchored = true
-	spawn.Neutral = true
-	spawn.Duration = 0
-	spawn.Size = Vector3.new(8, 0.2, 8)
-	spawn.CFrame = CFrame.new(0, TILE_TOP + 0.05, z0 + 10) * CFrame.Angles(0, math.pi, 0)
-	spawn.Color = COLORS.checkpoint
-	spawn.Material = Enum.Material.Neon
-	spawn.TopSurface = Enum.SurfaceType.Smooth
-	spawn.Parent = folder
-
-	-- Walking through stage 1's door starts the run timer (server/Progress.luau).
-	local runStart = block(
-		folder,
-		"RunStart",
-		Vector3.new(ROOM.DoorWidth, ROOM.DoorHeight, 2),
-		CFrame.new(0, TILE_TOP + ROOM.DoorHeight / 2, 1.5),
-		COLORS.checkpoint,
-		nil,
-		{ Transparency = 1, CanCollide = false, CanQuery = false }
-	)
-
-	return { boards = boards, tank = tank, runStart = runStart }
-end
-
 function MapBuilder.build()
 	setupLighting()
 	removeTemplateSpawns()
@@ -605,7 +418,7 @@ function MapBuilder.build()
 	local map = Instance.new("Folder")
 	map.Name = "Map"
 
-	local lobby = buildLobby(map)
+	local lobby = LobbyBuilder.build(map)
 
 	-- Stages
 	local layout = { rooms = {}, boards = lobby.boards, tank = lobby.tank, runStart = lobby.runStart }
@@ -615,7 +428,6 @@ function MapBuilder.build()
 		layout.rooms[index] = room
 		z = room.zEnd
 	end
-	addSign(layout.rooms[1].lintel, Enum.NormalId.Front, string.upper(Config.GameName), Config.Tagline)
 
 	-- Exit
 	local exit = Instance.new("Folder")

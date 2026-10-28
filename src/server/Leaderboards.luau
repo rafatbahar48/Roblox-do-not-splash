@@ -17,14 +17,15 @@ local REFRESH_INTERVAL = 60
 local ROWS = 10
 
 local BOARDS = {
-	{ id = "Escapes", title = "MOST ESCAPES", ascending = false, color = Color3.fromRGB(46, 150, 150) },
-	{ id = "Easy", title = "FASTEST · EASY", ascending = true, color = Color3.fromRGB(70, 160, 110) },
-	{ id = "Normal", title = "FASTEST · NORMAL", ascending = true, color = Color3.fromRGB(210, 150, 60) },
-	{ id = "Hard", title = "FASTEST · HARD", ascending = true, color = Color3.fromRGB(190, 60, 60) },
+	-- Header colours match the lobby's 1970s palette (LobbyBuilder.luau).
+	{ id = "Escapes", title = "MOST ESCAPES", ascending = false, color = Color3.fromRGB(40, 150, 150) },
+	{ id = "Easy", title = "FASTEST · EASY", ascending = true, color = Color3.fromRGB(232, 178, 58) },
+	{ id = "Normal", title = "FASTEST · NORMAL", ascending = true, color = Color3.fromRGB(214, 112, 52) },
+	{ id = "Hard", title = "FASTEST · HARD", ascending = true, color = Color3.fromRGB(232, 98, 80) },
 }
 
-local WHITE = Color3.fromRGB(240, 246, 248)
-local MUTED = Color3.fromRGB(150, 166, 172)
+local WHITE = Color3.fromRGB(246, 238, 220)
+local MUTED = Color3.fromRGB(150, 176, 172)
 
 local Leaderboards = {}
 
@@ -86,7 +87,7 @@ local function buildBoard(board, part)
 	label(header, {
 		Position = UDim2.fromScale(0.04, 0.12),
 		Size = UDim2.fromScale(0.92, 0.76),
-		Font = Enum.Font.GothamBlack,
+		Font = Enum.Font.FredokaOne,
 		Text = board.title,
 	})
 

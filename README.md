@@ -8,7 +8,7 @@ A Roblox horror obby. Cross flooded pool rooms by jumping from tile to tile. Som
 - **Tiles to watch for:** creaky tiles (slightly yellow), sinking tiles (thin, bluish slabs that go under a second after you step on them), drifting rafts (orange) and pillars.
 - **7 stages** with checkpoints. Each one has a hidden shell to collect. After the last stage, walk through the exit to escape.
 - **Easy, Normal and Hard:** harder modes make you louder and the creature faster.
-- **The lobby** is warm and bright on purpose, so the rooms feel darker after it. It has an aquarium (stand by the glass and its creature comes to stare at you), a shop kiosk (G) and record boards: most escapes and the fastest escape on each difficulty.
+- **The lobby** is the reception of a 1970s swim club, warm and bright on purpose so the rooms feel darker after it: checkered floor, orange tiles, lockers, the pool rules, a sunburst round the door. It has an aquarium (stand by the glass and its creature comes to stare at you), the Swim Shop vending machine (G) and record boards: most escapes and the fastest escape on each difficulty.
 - **Run timer:** starts when you walk through stage 1's door and stops at the exit. A run counts for the easiest difficulty you played during it. Your best time on each difficulty is saved.
 - **Pearls:** earned for each stage cleared, each shell found and each escape. Spend them in the **Shop** (button under the difficulty buttons, or B).
 - **Shop:** 6 skins, 6 accessories, and 2 boosts you carry and use: **Updraft** (Q / L1 / Fly button) lifts you and lets you glide for 2 seconds, and **Hush** (F / Y / Hush button) makes you completely silent for 5 seconds.
@@ -46,7 +46,7 @@ Or skip the live sync: run `rojo build -o StillWater.rbxl` and open the file in 
 | Noise amounts, creature speed and hearing, pebbles, difficulty modes | `src/shared/Config.luau` |
 | Name and tagline on the lobby sign | `Config.GameName`, `Config.Tagline` |
 | How rooms and tiles are built, lighting, fog and colour grading | `src/server/MapBuilder.luau` |
-| Lobby layout: aquarium, kiosk, record boards, spawn | `buildLobby` in `src/server/MapBuilder.luau` |
+| Lobby: colours, lockers, signs and pool rules, aquarium, Swim Shop, record wall, spawn | `src/server/LobbyBuilder.luau` |
 | The aquarium creature | `src/server/LobbyTank.luau` |
 | Record boards (titles, colours, refresh rate) | `src/server/Leaderboards.luau` |
 | Bright lobby and exit lighting | `src/client/Mood.luau` |
@@ -73,7 +73,9 @@ src/
     Remotes.luau         RemoteEvents
   server/              ServerScriptService.Server
     Main.server.luau     starts everything
-    MapBuilder.luau      builds lobby, stages and exit; lighting
+    MapBuilder.luau      builds stages and exit; lighting
+    LobbyBuilder.luau    builds the 1970s swim club lobby
+    Parts.luau           part-building helpers both builders use
     LobbyTank.luau       the creature in the lobby aquarium
     Leaderboards.luau    record boards (OrderedDataStores)
     Noise.luau           per-player noise, splashes, hard landings, Hush

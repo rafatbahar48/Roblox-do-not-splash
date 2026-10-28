@@ -19,11 +19,13 @@ local CHECK_INTERVAL = 0.25
 local FADE = TweenInfo.new(1.5, Enum.EasingStyle.Sine, Enum.EasingDirection.Out)
 
 local SAFE = {
+	-- Checked against the lobby in Studio: brighter than this washes the
+	-- cream walls and ceiling out to white.
 	lighting = {
-		Brightness = 1.6,
-		Ambient = Color3.fromRGB(128, 122, 110),
-		OutdoorAmbient = Color3.fromRGB(118, 112, 100),
-		EnvironmentDiffuseScale = 0.5,
+		Brightness = 1,
+		Ambient = Color3.fromRGB(100, 95, 88),
+		OutdoorAmbient = Color3.fromRGB(95, 90, 82),
+		EnvironmentDiffuseScale = 0.3,
 		FogStart = 90,
 		FogEnd = 420,
 		FogColor = Color3.fromRGB(226, 214, 192),
