@@ -11,11 +11,12 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Effects = require(script.Parent.Effects)
 
 local SETTINGS = Config.Noise
+local CAUSE_MEMORY = 3 -- seconds a loud noise stays "what gave you away"
 
 local Noise = {}
 
 local layout
-local states = {} -- [Player] = { noise, inWater, lastVelocityY, room, root, humanoid, reported, hushedUntil, hushed }
+local states = {} -- [Player] = { noise, inWater, lastVelocityY, room, root, humanoid, reported, hushedUntil, hushed, cause, causeAmount, causeAt }
 local pointSources = {} -- { position, loudness, room }
 
 local function noiseMultiplier(player)
@@ -27,7 +28,17 @@ function Noise.init(newLayout)
 	layout = newLayout
 
 	local function track(player)
-		states[player] = { noise = 0, inWater = false, lastVelocityY = 0, reported = -1, hushedUntil = 0, hushed = false }
+		states[player] = {
+			noise = 0,
+			inWater = false,
+			lastVelocityY = 0,
+			reported = -1,
+			hushedUntil = 0,
+			hushed = false,
+			cause = nil,
+			causeAmount = 0,
+			causeAt = -math.huge,
+		}
 	end
 	for _, player in Players:GetPlayers() do
 		track(player)
@@ -47,11 +58,28 @@ function Noise.pointSources()
 end
 
 -- Adds noise to a player, scaled by their difficulty. Nothing while hushed.
-function Noise.add(player, amount)
+-- cause ("splash", "wading", "landing" or "creak") is remembered so a caught
+-- player can be told what gave them away: the loudest noise of the last few
+-- seconds, or after a quiet spell, whatever came next.
+function Noise.add(player, amount, cause)
 	local state = states[player]
 	if state and os.clock() >= state.hushedUntil then
-		state.noise = math.min(SETTINGS.Max, state.noise + amount * noiseMultiplier(player))
+		local added = amount * noiseMultiplier(player)
+		state.noise = math.min(SETTINGS.Max, state.noise + added)
+		local now = os.clock()
+		if cause and (now - state.causeAt > CAUSE_MEMORY or added >= state.causeAmount) then
+			state.cause, state.causeAmount, state.causeAt = cause, added, now
+		end
 	end
+end
+
+-- What most recently gave a player away, and how loud they are right now.
+function Noise.causeOf(player)
+	local state = states[player]
+	if not state then
+		return nil, 0
+	end
+	return state.cause, math.floor(state.noise + 0.5)
 end
 
 function Noise.clear(player)
@@ -102,19 +130,19 @@ function Noise.step(dt)
 			local inWater = room ~= nil and layout.inPool(room, position) and position.Y < room.surfaceY + 1.5
 
 			if inWater and not state.inWater then
-				Noise.add(player, SETTINGS.Splash)
+				Noise.add(player, SETTINGS.Splash, "splash")
 				Effects.splash(Vector3.new(position.X, room.surfaceY, position.Z), 8)
 			end
 			setWalkSpeed(humanoid, if inWater then Config.Wading.WalkSpeed else Config.WalkSpeed)
 
 			if inWater then
-				Noise.add(player, SETTINGS.WadingPerSecond * dt)
+				Noise.add(player, SETTINGS.WadingPerSecond * dt, "wading")
 			else
 				-- A hard landing: falling fast last frame, stopped this frame.
 				local velocityY = root.AssemblyLinearVelocity.Y
 				if state.lastVelocityY < -SETTINGS.HardLandingSpeed and velocityY > -5 then
 					local extra = (-state.lastVelocityY - SETTINGS.HardLandingSpeed) * SETTINGS.HardLandingPerStud
-					Noise.add(player, math.min(extra, SETTINGS.HardLandingMax))
+					Noise.add(player, math.min(extra, SETTINGS.HardLandingMax), "landing")
 				end
 			end
 

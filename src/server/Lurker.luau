@@ -124,7 +124,8 @@ function Lurker:lunge(player, state)
 		local target = root.Position
 		local strike = CFrame.lookAt(target, target + self.heading)
 		if player.Parent then
-			Remotes.Caught:FireClient(player, target)
+			local cause, loudness = Noise.causeOf(player)
+			Remotes.Caught:FireClient(player, target, cause, loudness)
 		end
 		self.anchor:SetAttribute("Lunging", true)
 		Effects.splash(Vector3.new(target.X, self.room.surfaceY, target.Z), 6)

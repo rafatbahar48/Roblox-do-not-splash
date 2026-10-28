@@ -36,7 +36,7 @@ local function setupCreaky(tile)
 			return
 		end
 		lastCreak[player] = now
-		Noise.add(player, Config.Noise.CreakyTile)
+		Noise.add(player, Config.Noise.CreakyTile, "creak")
 		Effects.sound("Creak", tile.Position)
 		tile.Color = baseColor:Lerp(Color3.new(0, 0, 0), 0.15)
 		task.delay(0.25, function()

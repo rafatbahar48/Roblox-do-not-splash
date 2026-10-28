@@ -46,7 +46,8 @@ Or skip the live sync: run `rojo build -o StillWater.rbxl` and open the file in 
 | How rooms and tiles are built, lighting, fog and colour grading | `src/server/MapBuilder.luau` |
 | Creature behaviour | `src/server/Lurker.luau` |
 | Creature look and swimming animation | `src/client/LurkerVisuals.luau` |
-| Fear effects: vignette, heartbeat, faltering lights, death camera | `src/client/Fear.luau` |
+| Fear effects: vignette, heartbeat, faltering lights, camera shake | `src/client/Fear.luau` |
+| Being caught: dragged under, "what it heard" recap, coming back up | `src/client/DeathScene.luau` (the cause comes from `src/server/Noise.luau`) |
 | Shop items, names, prices and skin colours | `src/shared/Catalog.luau` |
 | Accessory shapes | `src/server/Cosmetics.luau` |
 | Pearls per stage, shell and escape; boost timing | `Config.Pearls`, `Config.Boosts` |
@@ -81,6 +82,7 @@ src/
     ShopUi.luau          the shop window
     Boosts.luau          boost input and Updraft flight
     LurkerVisuals.luau   creature bodies and swimming animation
-    Fear.luau            vignette, heartbeat, faltering lights, shake, death camera
+    Fear.luau            vignette, heartbeat, faltering lights, shake
+    DeathScene.luau      the pulled-under death sequence and "what it heard" recap
     Throw.luau           throw input (E / R2 / touch button)
 ```

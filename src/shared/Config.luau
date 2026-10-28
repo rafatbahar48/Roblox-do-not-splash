@@ -6,7 +6,7 @@ Config.GameName = "Still Water"
 Config.Tagline = "Stay out of the water. It is listening."
 
 Config.DataStoreName = "StillWater_v1"
-Config.RespawnTime = 3
+Config.RespawnTime = 4 -- long enough to read what gave you away
 Config.WalkSpeed = 16
 
 -- Longest gap (in studs, edge to edge) the level generator will ever ask a

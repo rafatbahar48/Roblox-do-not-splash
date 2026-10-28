@@ -1,14 +1,12 @@
 -- Fear effects on this client: a dark vignette that closes in and beats like
 -- a heart while something hunts you, ceiling lights that falter in any room
--- where something is hunting, a camera shake when it strikes nearby, and a
--- short death camera that turns you to face it when it catches you.
+-- where something is hunting, and a camera shake when it strikes nearby.
+-- Being caught is DeathScene.luau; these effects stand aside while it plays.
 
 local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
-local TweenService = game:GetService("TweenService")
 
-local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local DeathScene = require(script.Parent.DeathScene)
 
 local player = Players.LocalPlayer
 
@@ -22,10 +20,8 @@ local FALTER_INTERVAL = 0.07
 local Fear = {}
 
 local edges = {}
-local flash, blackout
 local baseFov
 local fovTouched = false
-local dying = false
 local huntLevel = 0
 local beatClock = 0
 local shake = 0
@@ -47,17 +43,6 @@ local function makeEdge(gui, rotation, position, size)
 	gradient.Parent = frame
 	frame.Parent = gui
 	table.insert(edges, frame)
-end
-
-local function cover(gui, color, zIndex)
-	local frame = Instance.new("Frame")
-	frame.BackgroundColor3 = color
-	frame.BackgroundTransparency = 1
-	frame.BorderSizePixel = 0
-	frame.Size = UDim2.fromScale(1, 1)
-	frame.ZIndex = zIndex
-	frame.Parent = gui
-	return frame
 end
 
 local function lightsFor(index)
@@ -115,7 +100,7 @@ local function watchAnchor(anchor)
 	end
 	anchors[anchor] = true
 	anchor:GetAttributeChangedSignal("Lunging"):Connect(function()
-		if not anchor:GetAttribute("Lunging") or dying then
+		if not anchor:GetAttribute("Lunging") or DeathScene.playing() then
 			return
 		end
 		local distance = (anchor.Position - workspace.CurrentCamera.CFrame.Position).Magnitude
@@ -125,43 +110,8 @@ local function watchAnchor(anchor)
 	end)
 end
 
-local function endDeathCam()
-	if not dying then
-		return
-	end
-	dying = false
-	local camera = workspace.CurrentCamera
-	camera.CameraType = Enum.CameraType.Custom
-	camera.FieldOfView = baseFov
-	TweenService:Create(blackout, TweenInfo.new(0.6), { BackgroundTransparency = 1 }):Play()
-end
-
-local function startDeathCam(position)
-	if typeof(position) ~= "Vector3" or dying then
-		return
-	end
-	dying = true
-	shake = 0
-	local camera = workspace.CurrentCamera
-	local eye = camera.CFrame.Position
-	camera.CameraType = Enum.CameraType.Scriptable
-	TweenService:Create(camera, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-		CFrame = CFrame.lookAt(eye, position),
-		FieldOfView = baseFov - 15,
-	}):Play()
-
-	flash.BackgroundTransparency = 0.2
-	TweenService:Create(flash, TweenInfo.new(0.7), { BackgroundTransparency = 1 }):Play()
-	task.delay(0.6, function()
-		if dying then
-			TweenService:Create(blackout, TweenInfo.new(1), { BackgroundTransparency = 0 }):Play()
-		end
-	end)
-	-- In case no new character arrives (left the game, respawn failed).
-	task.delay(8, endDeathCam)
-end
-
 local function step(dt)
+	local dying = DeathScene.playing()
 	local hunted = player:GetAttribute("Hunted") == true and not dying
 	huntLevel += ((if hunted then 1 else 0) - huntLevel) * math.min(1, dt * 3)
 
@@ -178,7 +128,9 @@ local function step(dt)
 		frame.BackgroundColor3 = color
 	end
 
-	if not dying then
+	if dying then
+		fovTouched = false -- the death scene owns the camera now
+	else
 		local camera = workspace.CurrentCamera
 		if huntLevel > 0.001 then
 			camera.FieldOfView = baseFov - 5 * huntLevel - pulse * 1.5
@@ -210,19 +162,6 @@ function Fear.start()
 	makeEdge(gui, 270, UDim2.fromScale(0, 0.75), UDim2.fromScale(1, 0.25))
 	gui.Parent = player:WaitForChild("PlayerGui")
 
-	-- The death camera's flash and fade go over everything, HUD included.
-	local overlay = Instance.new("ScreenGui")
-	overlay.Name = "FearOverlay"
-	overlay.IgnoreGuiInset = true
-	overlay.ResetOnSpawn = false
-	overlay.DisplayOrder = 10
-	flash = cover(overlay, Color3.fromRGB(140, 0, 0), 1)
-	blackout = cover(overlay, BLACK, 2)
-	overlay.Parent = gui.Parent
-
-	Remotes.Caught.OnClientEvent:Connect(startDeathCam)
-	player.CharacterAdded:Connect(endDeathCam)
-
 	task.spawn(function()
 		local folder = workspace:WaitForChild("Lurkers")
 		folder.ChildAdded:Connect(watchAnchor)
@@ -236,7 +175,8 @@ function Fear.start()
 
 	RunService.RenderStepped:Connect(step)
 	RunService:BindToRenderStep("FearShake", Enum.RenderPriority.Camera.Value + 1, function(dt)
-		if shake <= 0 then
+		if shake <= 0 or DeathScene.playing() then
+			shake = 0
 			return
 		end
 		local camera = workspace.CurrentCamera
