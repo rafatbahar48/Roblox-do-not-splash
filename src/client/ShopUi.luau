@@ -3,6 +3,7 @@
 -- requests; the server decides what actually happens (server/Shop.luau).
 
 local Players = game:GetService("Players")
+local ProximityPromptService = game:GetService("ProximityPromptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 
@@ -312,6 +313,13 @@ function ShopUi.start()
 
 	UserInputService.InputBegan:Connect(function(input, processed)
 		if not processed and input.KeyCode == Enum.KeyCode.B then
+			ShopUi.toggle()
+		end
+	end)
+
+	-- The kiosk in the lobby (MapBuilder.luau) opens it too.
+	ProximityPromptService.PromptTriggered:Connect(function(prompt)
+		if prompt.Name == "OpenShop" and not (gui and gui.Enabled) then
 			ShopUi.toggle()
 		end
 	end)

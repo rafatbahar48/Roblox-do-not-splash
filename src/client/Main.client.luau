@@ -3,6 +3,7 @@ local DeathScene = require(script.Parent.DeathScene)
 local Fear = require(script.Parent.Fear)
 local Hud = require(script.Parent.Hud)
 local LurkerVisuals = require(script.Parent.LurkerVisuals)
+local Mood = require(script.Parent.Mood)
 local ShopUi = require(script.Parent.ShopUi)
 local Throw = require(script.Parent.Throw)
 
@@ -13,3 +14,4 @@ Boosts.start()
 DeathScene.start()
 Fear.start()
 LurkerVisuals.start()
+task.spawn(Mood.start) -- waits for the server's lighting

@@ -11,6 +11,12 @@
 --   EquippedSkin       id of the skin worn, if any
 --   EquippedAccessory  id of the accessory worn, if any
 --   Boost_<id>         how many of each boost the player carries
+--   RunStartedAt       server time (workspace:GetServerTimeNow) the current
+--                      run began, while one is being timed
+--
+-- A run is timed from walking through stage 1's door to escaping. It counts
+-- for the easiest difficulty played along the way, and the best time on each
+-- difficulty is saved and sent to the record boards (Leaderboards.luau).
 
 local DataStoreService = game:GetService("DataStoreService")
 local Players = game:GetService("Players")
@@ -18,9 +24,11 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Catalog = require(ReplicatedStorage.Shared.Catalog)
 local Config = require(ReplicatedStorage.Shared.Config)
+local Format = require(ReplicatedStorage.Shared.Format)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Stages = require(ReplicatedStorage.Shared.Stages)
 local Cosmetics = require(script.Parent.Cosmetics)
+local Leaderboards = require(script.Parent.Leaderboards)
 
 local AUTOSAVE_INTERVAL = 120
 local RESTART_COOLDOWN = 2
@@ -110,6 +118,16 @@ local function load(player)
 		end
 	end
 
+	local bestTimes = {}
+	if type(data.bestTimes) == "table" then
+		for name in Config.Difficulties do
+			local seconds = tonumber(data.bestTimes[name])
+			if seconds and seconds == seconds and seconds > 0 then
+				bestTimes[name] = seconds
+			end
+		end
+	end
+
 	-- A run that already escaped starts over, so the exit can't pay twice.
 	local checkpoint = math.clamp(math.floor(tonumber(data.checkpoint) or 0), 0, #Stages)
 	if data.escaped == true then
@@ -126,6 +144,8 @@ local function load(player)
 		owned = owned,
 		equipped = equipped,
 		boosts = boosts,
+		bestTimes = bestTimes, -- [difficulty name] = seconds
+		run = nil, -- { startedAt = os.clock(), easiest = difficulty order } while timing
 		canSave = loaded,
 	}
 end
@@ -153,6 +173,7 @@ local function save(player, profile)
 		owned = owned,
 		equipped = { skin = profile.equipped.skin, accessory = profile.equipped.accessory },
 		boosts = profile.boosts,
+		bestTimes = profile.bestTimes,
 	}, { player.UserId })
 	pendingSaves -= 1
 	if not ok then
@@ -264,7 +285,46 @@ local function onPlayerAdded(player)
 	end
 	profiles[player] = profile
 	sync(player, profile)
+	Leaderboards.seed(player, profile.wins, profile.bestTimes)
 	spawnPlayer(player)
+end
+
+local function difficultyByOrder(order)
+	for name, difficulty in Config.Difficulties do
+		if difficulty.order == order then
+			return name
+		end
+	end
+	return Config.DefaultDifficulty
+end
+
+local function onRunStart(hit)
+	local player, profile = playerFromHit(hit)
+	if not player or profile.checkpoint ~= 0 or profile.run then
+		return
+	end
+	profile.run = { startedAt = os.clock(), easiest = Config.Difficulties[profile.difficulty].order }
+	player:SetAttribute("RunStartedAt", workspace:GetServerTimeNow())
+end
+
+-- Stops the run clock at the exit. Returns a line for the escape screen.
+local function finishRun(player, profile)
+	local run = profile.run
+	if not run then
+		return ""
+	end
+	profile.run = nil
+	player:SetAttribute("RunStartedAt", nil)
+
+	local seconds = math.floor((os.clock() - run.startedAt) * 10) / 10
+	local difficulty = difficultyByOrder(run.easiest)
+	local best = profile.bestTimes[difficulty]
+	if best and seconds >= best then
+		return ("\nTime %s on %s   (best %s)"):format(Format.time(seconds), difficulty, Format.time(best))
+	end
+	profile.bestTimes[difficulty] = seconds
+	Leaderboards.recordTime(player, difficulty, seconds)
+	return ("\nTime %s on %s   New best!"):format(Format.time(seconds), difficulty)
 end
 
 local function addPearls(player, profile, amount)
@@ -301,11 +361,13 @@ local function onExit(hit)
 	end
 	profile.escaped = true
 	profile.wins += 1
+	local timeLine = finishRun(player, profile)
 	addPearls(player, profile, Config.Pearls.PerEscape)
+	Leaderboards.recordEscape(player, profile.wins)
 	Remotes.Notify:FireClient(
 		player,
 		"win",
-		("You got out. Escapes: %d   Shells: %d/%d   +%d pearls"):format(profile.wins, shellCount(profile), #Stages, Config.Pearls.PerEscape)
+		("You got out. Escapes: %d   Shells: %d/%d   +%d pearls%s"):format(profile.wins, shellCount(profile), #Stages, Config.Pearls.PerEscape, timeLine)
 	)
 	task.spawn(save, player, profile)
 end
@@ -347,11 +409,15 @@ function Progress.init(newLayout)
 		end
 	end
 	layout.exitDoor.Touched:Connect(onExit)
+	layout.runStart.Touched:Connect(onRunStart)
 
 	Remotes.SetDifficulty.OnServerEvent:Connect(function(player, name)
 		local profile = profiles[player]
 		if profile and type(name) == "string" and Config.Difficulties[name] then
 			profile.difficulty = name
+			if profile.run then
+				profile.run.easiest = math.min(profile.run.easiest, Config.Difficulties[name].order)
+			end
 			sync(player, profile)
 		end
 	end)
@@ -365,6 +431,8 @@ function Progress.init(newLayout)
 		lastRestart[player] = now
 		profile.checkpoint = 0
 		profile.escaped = false
+		profile.run = nil
+		player:SetAttribute("RunStartedAt", nil)
 		sync(player, profile)
 		spawnPlayer(player)
 	end)

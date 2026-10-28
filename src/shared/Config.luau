@@ -107,7 +107,7 @@ Config.Room = {
 	DoorWidth = 8,
 	DoorHeight = 10,
 	LightSpacing = 16,
-	LobbyLength = 30,
+	LobbyLength = 64,
 	ExitLength = 24,
 }
 

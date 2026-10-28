@@ -9,6 +9,7 @@ local UserInputService = game:GetService("UserInputService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local Format = require(ReplicatedStorage.Shared.Format)
 local Stages = require(ReplicatedStorage.Shared.Stages)
 local ShopUi = require(script.Parent.ShopUi)
 
@@ -113,6 +114,15 @@ function Hud.start()
 		Font = Enum.Font.GothamMedium,
 		TextSize = 14,
 		TextTransparency = 0.2,
+		Parent = gui,
+	})
+	-- Run timer, while a run is being timed (server/Progress.luau).
+	local runTimer = text({
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.new(0.5, 0, 0, 54),
+		Size = UDim2.fromOffset(200, 20),
+		Font = Enum.Font.RobotoMono,
+		TextSize = 18,
 		Parent = gui,
 	})
 
@@ -226,7 +236,7 @@ function Hud.start()
 	local winPanel = create("Frame", {
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		Position = UDim2.fromScale(0.5, 0.5),
-		Size = UDim2.fromOffset(340, 190),
+		Size = UDim2.fromOffset(360, 220),
 		BackgroundColor3 = PANEL,
 		BackgroundTransparency = 0.1,
 		Visible = false,
@@ -241,8 +251,8 @@ function Hud.start()
 		Parent = winPanel,
 	})
 	local winDetails = text({
-		Position = UDim2.fromOffset(16, 60),
-		Size = UDim2.new(1, -32, 0, 50),
+		Position = UDim2.fromOffset(16, 58),
+		Size = UDim2.new(1, -32, 0, 80),
 		Font = Enum.Font.GothamMedium,
 		TextSize = 15,
 		TextWrapped = true,
@@ -403,6 +413,9 @@ function Hud.start()
 		shown += (target - shown) * math.min(1, dt * 10)
 		fill.Size = UDim2.fromScale(shown, 1)
 		fill.BackgroundColor3 = if player:GetAttribute("Hushed") then HUSH else WHITE:Lerp(RED, shown)
+
+		local started = player:GetAttribute("RunStartedAt")
+		runTimer.Text = if started then Format.time(workspace:GetServerTimeNow() - started) else ""
 	end)
 end
 
