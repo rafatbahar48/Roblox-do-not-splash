@@ -61,6 +61,29 @@ Config.Wading = {
 	WalkSpeed = 9,
 }
 
+-- Pearls are the shop currency. A stage pays out each time a run clears it,
+-- a shell pays once ever, and an escape pays every time.
+Config.Pearls = {
+	PerStage = 10,
+	PerShell = 25,
+	PerEscape = 60,
+}
+
+-- Consumable boosts sold in the shop (prices live in Catalog.luau).
+Config.Boosts = {
+	MaxCarried = 9,
+	updraft = {
+		duration = 2, -- seconds of flight
+		height = 6, -- studs it lifts you above where you started
+		glideSpeed = 18,
+		cooldown = 1, -- seconds after it ends before another can start
+	},
+	hush = {
+		duration = 5, -- seconds of making no noise at all
+		cooldown = 1,
+	},
+}
+
 Config.Raft = {
 	Range = 5, -- how far a raft drifts either side of its centre
 	MinPeriod = 5,

@@ -1,26 +1,36 @@
--- Checkpoints, shells, escapes, difficulty, spawning and saving.
+-- Checkpoints, shells, escapes, difficulty, pearls, shop items, spawning and
+-- saving.
 --
 -- Player attributes the client reads:
---   Checkpoint   number of stages cleared (0 = start in the lobby)
---   Difficulty   "Easy", "Normal" or "Hard"
---   Pebbles      pebbles left this life
---   ShellsFound  comma-separated stage numbers whose shell was collected
+--   Checkpoint         number of stages cleared (0 = start in the lobby)
+--   Difficulty         "Easy", "Normal" or "Hard"
+--   Pebbles            pebbles left this life
+--   ShellsFound        comma-separated stage numbers whose shell was collected
+--   Pearls             pearls to spend in the shop
+--   Owned              comma-separated ids of skins and accessories owned
+--   EquippedSkin       id of the skin worn, if any
+--   EquippedAccessory  id of the accessory worn, if any
+--   Boost_<id>         how many of each boost the player carries
 
 local DataStoreService = game:GetService("DataStoreService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local Catalog = require(ReplicatedStorage.Shared.Catalog)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Stages = require(ReplicatedStorage.Shared.Stages)
+local Cosmetics = require(script.Parent.Cosmetics)
 
 local AUTOSAVE_INTERVAL = 120
+local RESTART_COOLDOWN = 2
 
 local Progress = {}
 
 local layout
 local profiles = {} -- [Player] = profile
 local pendingSaves = 0 -- saves still in flight, so BindToClose can wait for them
+local lastRestart = {} -- [Player] = time
 
 local store
 do
@@ -36,6 +46,15 @@ end
 
 local function keyFor(player)
 	return "player_" .. player.UserId
+end
+
+-- A saved count, cleaned up: a whole number from 0 to max.
+local function wholeNumber(value, max)
+	local number = tonumber(value)
+	if not number or number ~= number then
+		return 0
+	end
+	return math.clamp(math.floor(number), 0, max or math.huge)
 end
 
 local function load(player)
@@ -63,12 +82,50 @@ local function load(player)
 		end
 	end
 
+	local owned = {}
+	if type(data.owned) == "table" then
+		for _, id in data.owned do
+			local item = type(id) == "string" and Catalog.byId[id]
+			if item and item.kind ~= "boost" then
+				owned[id] = true
+			end
+		end
+	end
+
+	local equipped = {}
+	if type(data.equipped) == "table" then
+		for slot, kind in Catalog.slots do
+			local id = data.equipped[slot]
+			local item = type(id) == "string" and Catalog.byId[id]
+			if item and item.kind == kind and owned[id] then
+				equipped[slot] = id
+			end
+		end
+	end
+
+	local boosts = {}
+	for _, item in Catalog.items do
+		if item.kind == "boost" then
+			boosts[item.id] = wholeNumber(type(data.boosts) == "table" and data.boosts[item.id], Config.Boosts.MaxCarried)
+		end
+	end
+
+	-- A run that already escaped starts over, so the exit can't pay twice.
+	local checkpoint = math.clamp(math.floor(tonumber(data.checkpoint) or 0), 0, #Stages)
+	if data.escaped == true then
+		checkpoint = 0
+	end
+
 	return {
-		checkpoint = math.clamp(math.floor(tonumber(data.checkpoint) or 0), 0, #Stages),
+		checkpoint = checkpoint,
 		shells = shells,
-		wins = math.max(0, math.floor(tonumber(data.wins) or 0)),
+		wins = wholeNumber(data.wins),
 		difficulty = if Config.Difficulties[data.difficulty] then data.difficulty else Config.DefaultDifficulty,
 		escaped = false,
+		pearls = wholeNumber(data.pearls),
+		owned = owned,
+		equipped = equipped,
+		boosts = boosts,
 		canSave = loaded,
 	}
 end
@@ -81,12 +138,21 @@ local function save(player, profile)
 	for index in profile.shells do
 		table.insert(shells, index)
 	end
+	local owned = {}
+	for id in profile.owned do
+		table.insert(owned, id)
+	end
 	pendingSaves += 1
 	local ok, err = pcall(store.SetAsync, store, keyFor(player), {
 		checkpoint = profile.checkpoint,
 		shells = shells,
 		wins = profile.wins,
 		difficulty = profile.difficulty,
+		escaped = profile.escaped,
+		pearls = profile.pearls,
+		owned = owned,
+		equipped = { skin = profile.equipped.skin, accessory = profile.equipped.accessory },
+		boosts = profile.boosts,
 	}, { player.UserId })
 	pendingSaves -= 1
 	if not ok then
@@ -108,23 +174,36 @@ local function sync(player, profile)
 		table.insert(found, index)
 	end
 	table.sort(found)
+	local owned = {}
+	for id in profile.owned do
+		table.insert(owned, id)
+	end
+	table.sort(owned)
 
 	player:SetAttribute("Checkpoint", profile.checkpoint)
 	player:SetAttribute("Difficulty", profile.difficulty)
 	player:SetAttribute("ShellsFound", table.concat(found, ","))
+	player:SetAttribute("Pearls", profile.pearls)
+	player:SetAttribute("Owned", table.concat(owned, ","))
+	player:SetAttribute("EquippedSkin", profile.equipped.skin)
+	player:SetAttribute("EquippedAccessory", profile.equipped.accessory)
+	for id, count in profile.boosts do
+		player:SetAttribute("Boost_" .. id, count)
+	end
 
 	local stats = player:FindFirstChild("leaderstats")
 	if stats then
 		stats.Stage.Value = math.min(profile.checkpoint + 1, #Stages)
 		stats.Shells.Value = shellCount(profile)
 		stats.Escapes.Value = profile.wins
+		stats.Pearls.Value = profile.pearls
 	end
 end
 
 local function makeLeaderstats(player)
 	local stats = Instance.new("Folder")
 	stats.Name = "leaderstats"
-	for _, name in { "Stage", "Shells", "Escapes" } do
+	for _, name in { "Stage", "Shells", "Escapes", "Pearls" } do
 		local value = Instance.new("IntValue")
 		value.Name = name
 		value.Parent = stats
@@ -156,6 +235,10 @@ end
 
 local function onCharacterAdded(player, character)
 	player:SetAttribute("Pebbles", Config.Pebbles.PerLife)
+	local profile = profiles[player]
+	if profile then
+		task.spawn(Cosmetics.apply, player, character, profile.equipped)
+	end
 	local humanoid = character:WaitForChild("Humanoid", 10)
 	if not humanoid then
 		return
@@ -184,6 +267,11 @@ local function onPlayerAdded(player)
 	spawnPlayer(player)
 end
 
+local function addPearls(player, profile, amount)
+	profile.pearls += amount
+	sync(player, profile)
+end
+
 local function onCheckpoint(room, hit)
 	local player, profile = playerFromHit(hit)
 	if not player or room.index <= profile.checkpoint then
@@ -191,9 +279,9 @@ local function onCheckpoint(room, hit)
 	end
 	profile.checkpoint = room.index
 	player:SetAttribute("Pebbles", Config.Pebbles.PerLife)
-	sync(player, profile)
+	addPearls(player, profile, Config.Pearls.PerStage)
 	local text = if room.index == #Stages then "Every stage cleared. Find the way out." else "Stage " .. room.index .. " cleared"
-	Remotes.Notify:FireClient(player, "checkpoint", text)
+	Remotes.Notify:FireClient(player, "checkpoint", ("%s   +%d pearls"):format(text, Config.Pearls.PerStage))
 end
 
 local function onShell(room, hit)
@@ -202,8 +290,8 @@ local function onShell(room, hit)
 		return
 	end
 	profile.shells[room.index] = true
-	sync(player, profile)
-	Remotes.Notify:FireClient(player, "shell", ("Shell found (%d/%d)"):format(shellCount(profile), #Stages))
+	addPearls(player, profile, Config.Pearls.PerShell)
+	Remotes.Notify:FireClient(player, "shell", ("Shell found (%d/%d)   +%d pearls"):format(shellCount(profile), #Stages, Config.Pearls.PerShell))
 end
 
 local function onExit(hit)
@@ -213,9 +301,34 @@ local function onExit(hit)
 	end
 	profile.escaped = true
 	profile.wins += 1
-	sync(player, profile)
-	Remotes.Notify:FireClient(player, "win", ("You got out. Escapes: %d   Shells: %d/%d"):format(profile.wins, shellCount(profile), #Stages))
+	addPearls(player, profile, Config.Pearls.PerEscape)
+	Remotes.Notify:FireClient(
+		player,
+		"win",
+		("You got out. Escapes: %d   Shells: %d/%d   +%d pearls"):format(profile.wins, shellCount(profile), #Stages, Config.Pearls.PerEscape)
+	)
 	task.spawn(save, player, profile)
+end
+
+-- The profile of a player who has finished loading, or nil.
+function Progress.getProfile(player)
+	return profiles[player]
+end
+
+-- Pushes a player's profile out to their attributes and leaderstats.
+function Progress.sync(player)
+	local profile = profiles[player]
+	if profile then
+		sync(player, profile)
+	end
+end
+
+-- For other systems and testing: gives (or with a negative amount, takes) pearls.
+function Progress.addPearls(player, amount)
+	local profile = profiles[player]
+	if profile and type(amount) == "number" then
+		addPearls(player, profile, math.max(-profile.pearls, math.floor(amount)))
+	end
 end
 
 function Progress.init(newLayout)
@@ -245,9 +358,11 @@ function Progress.init(newLayout)
 
 	Remotes.Restart.OnServerEvent:Connect(function(player)
 		local profile = profiles[player]
-		if not profile then
+		local now = os.clock()
+		if not profile or (lastRestart[player] and now - lastRestart[player] < RESTART_COOLDOWN) then
 			return
 		end
+		lastRestart[player] = now
 		profile.checkpoint = 0
 		profile.escaped = false
 		sync(player, profile)
@@ -262,6 +377,7 @@ function Progress.init(newLayout)
 	Players.PlayerRemoving:Connect(function(player)
 		local profile = profiles[player]
 		profiles[player] = nil
+		lastRestart[player] = nil
 		if profile then
 			save(player, profile)
 		end

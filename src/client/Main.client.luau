@@ -1,5 +1,13 @@
+local Boosts = require(script.Parent.Boosts)
+local Fear = require(script.Parent.Fear)
 local Hud = require(script.Parent.Hud)
+local LurkerVisuals = require(script.Parent.LurkerVisuals)
+local ShopUi = require(script.Parent.ShopUi)
 local Throw = require(script.Parent.Throw)
 
 Hud.start()
+ShopUi.start()
 Throw.start()
+Boosts.start()
+Fear.start()
+LurkerVisuals.start()

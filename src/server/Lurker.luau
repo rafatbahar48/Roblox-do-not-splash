@@ -1,18 +1,23 @@
 -- One creature living under the water of one room. It drifts around until it
 -- hears something, then swims to the loudest thing it can hear. Players in the
 -- water within reach are dragged under; so are loud players on nearby tiles.
+--
+-- The server only moves an invisible anchor part. Each client builds the body
+-- and animates it (client/LurkerVisuals.luau) from the anchor and these
+-- attributes:
+--   Room      index of the room it lives in
+--   Alert     true while it is chasing something
+--   Lunging   true while it strikes
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Effects = require(script.Parent.Effects)
 local Noise = require(script.Parent.Noise)
 
 local SETTINGS = Config.Lurker
-local DARK = Color3.fromRGB(12, 16, 18)
-local EYE_IDLE = Color3.fromRGB(90, 24, 24)
-local EYE_ALERT = Color3.fromRGB(255, 40, 40)
 
 local Lurker = {}
 Lurker.__index = Lurker
@@ -26,53 +31,28 @@ local function speedMultiplier(player)
 	return difficulty.lurkerSpeedMultiplier
 end
 
-local function addPart(model, name, size, offset, color, material, shape)
-	local part = Instance.new("Part")
-	part.Name = name
-	part.Size = size
-	part.CFrame = offset
-	part.Color = color
-	part.Material = material
-	if shape then
-		part.Shape = shape
-	end
-	part.Anchored = true
-	part.CanCollide = false
-	part.CanQuery = false
-	part.CanTouch = false
-	part.CastShadow = false
-	part.Parent = model
-	return part
+local function buildAnchor(parent, room)
+	local anchor = Instance.new("Part")
+	anchor.Name = "Lurker"
+	anchor.Size = Vector3.new(1, 1, 1)
+	anchor.Transparency = 1
+	anchor.Anchored = true
+	anchor.CanCollide = false
+	anchor.CanQuery = false
+	anchor.CanTouch = false
+	anchor.CastShadow = false
+	anchor:SetAttribute("Room", room.index)
+	anchor:SetAttribute("Alert", false)
+	anchor:SetAttribute("Lunging", false)
+	anchor.Parent = parent
+	return anchor
 end
 
--- Built facing -Z around the origin; PivotTo moves it into place.
-local function buildModel(parent)
-	local model = Instance.new("Model")
-	model.Name = "Lurker"
-
-	local body = addPart(model, "Body", Vector3.new(2.6, 1.4, 7), CFrame.new(), DARK, Enum.Material.SmoothPlastic)
-	addPart(model, "Head", Vector3.new(2.2, 1.6, 2.4), CFrame.new(0, 0.3, -4.4), DARK, Enum.Material.SmoothPlastic)
-	addPart(model, "Tail", Vector3.new(1.2, 0.6, 4), CFrame.new(0, 0, 5.4), DARK, Enum.Material.SmoothPlastic)
-	local eyes = {
-		addPart(model, "LeftEye", Vector3.new(0.45, 0.45, 0.45), CFrame.new(-0.55, 1.2, -5.1), EYE_IDLE, Enum.Material.Neon, Enum.PartType.Ball),
-		addPart(model, "RightEye", Vector3.new(0.45, 0.45, 0.45), CFrame.new(0.55, 1.2, -5.1), EYE_IDLE, Enum.Material.Neon, Enum.PartType.Ball),
-	}
-	local glow = Instance.new("PointLight")
-	glow.Color = EYE_ALERT
-	glow.Range = 8
-	glow.Brightness = 0
-	glow.Parent = eyes[1]
-
-	model.PrimaryPart = body
-	model.Parent = parent
-	return model, eyes, glow
-end
-
-local function movePivot(model, from, to, duration)
+local function moveAnchor(anchor, from, to, duration)
 	local start = os.clock()
 	while true do
 		local alpha = math.min(1, (os.clock() - start) / duration)
-		model:PivotTo(from:Lerp(to, alpha))
+		anchor.CFrame = from:Lerp(to, alpha)
 		if alpha >= 1 then
 			return
 		end
@@ -84,7 +64,7 @@ function Lurker.new(room, parent, rng)
 	local self = setmetatable({}, Lurker)
 	self.room = room
 	self.rng = rng
-	self.model, self.eyes, self.glow = buildModel(parent)
+	self.anchor = buildAnchor(parent, room)
 	self.position = Vector3.new(0, room.surfaceY - SETTINGS.Depth, 0)
 	self.position = self:randomPoint()
 	self.heading = Vector3.new(0, 0, -1)
@@ -95,7 +75,7 @@ function Lurker.new(room, parent, rng)
 	self.wanderUntil = 0
 	self.searchSpot = nil
 	self.searchUntil = 0
-	self.model:PivotTo(CFrame.lookAt(self.position, self.position + self.heading))
+	self.anchor.CFrame = CFrame.lookAt(self.position, self.position + self.heading)
 	return self
 end
 
@@ -114,10 +94,7 @@ function Lurker:setAlert(alert)
 		return
 	end
 	self.alert = alert
-	for _, eye in self.eyes do
-		eye.Color = if alert then EYE_ALERT else EYE_IDLE
-	end
-	self.glow.Brightness = if alert then 3 else 0
+	self.anchor:SetAttribute("Alert", alert)
 end
 
 function Lurker:moveToward(goal, speed, dt)
@@ -136,23 +113,31 @@ function Lurker:moveToward(goal, speed, dt)
 		local heading = self.heading:Lerp(direction, math.min(1, dt * 6))
 		self.heading = if heading.Magnitude > 0.01 then heading.Unit else direction
 	end
-	self.model:PivotTo(CFrame.lookAt(self.position, self.position + self.heading))
+	self.anchor.CFrame = CFrame.lookAt(self.position, self.position + self.heading)
 end
 
 function Lurker:lunge(player, state)
 	self.busy = true
 	local root, humanoid = state.root, state.humanoid
 	task.spawn(function()
-		local rest = self.model:GetPivot()
-		local strike = CFrame.lookAt(root.Position, root.Position + self.heading)
-		Effects.splash(Vector3.new(root.Position.X, self.room.surfaceY, root.Position.Z), 6)
-		Effects.sound("Lunge", root.Position)
-		movePivot(self.model, rest, strike, 0.18)
+		local rest = self.anchor.CFrame
+		local target = root.Position
+		local strike = CFrame.lookAt(target, target + self.heading)
+		if player.Parent then
+			Remotes.Caught:FireClient(player, target)
+		end
+		self.anchor:SetAttribute("Lunging", true)
+		Effects.splash(Vector3.new(target.X, self.room.surfaceY, target.Z), 6)
+		Effects.sound("Lunge", target)
+		moveAnchor(self.anchor, rest, strike, 0.22)
 		if humanoid.Parent and humanoid.Health > 0 then
 			humanoid.Health = 0
 		end
 		Noise.clear(player)
-		movePivot(self.model, strike, rest, 0.6)
+		-- Hang there for a moment before sinking back.
+		task.wait(0.35)
+		self.anchor:SetAttribute("Lunging", false)
+		moveAnchor(self.anchor, strike, rest, 0.8)
 		self.busy = false
 	end)
 end

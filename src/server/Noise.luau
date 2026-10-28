@@ -1,7 +1,8 @@
 -- Tracks how much noise each player is making, and short-lived noises at
 -- points in the world (pebbles). The lurkers listen to both.
 --
--- Each player's noise is published as the "Noise" attribute for the HUD.
+-- Each player's noise is published as the "Noise" attribute for the HUD, and
+-- "Hushed" is true while a Hush boost keeps them silent.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -14,7 +15,7 @@ local SETTINGS = Config.Noise
 local Noise = {}
 
 local layout
-local states = {} -- [Player] = { noise, inWater, lastVelocityY, room, root, humanoid, reported }
+local states = {} -- [Player] = { noise, inWater, lastVelocityY, room, root, humanoid, reported, hushedUntil, hushed }
 local pointSources = {} -- { position, loudness, room }
 
 local function noiseMultiplier(player)
@@ -26,7 +27,7 @@ function Noise.init(newLayout)
 	layout = newLayout
 
 	local function track(player)
-		states[player] = { noise = 0, inWater = false, lastVelocityY = 0, reported = -1 }
+		states[player] = { noise = 0, inWater = false, lastVelocityY = 0, reported = -1, hushedUntil = 0, hushed = false }
 	end
 	for _, player in Players:GetPlayers() do
 		track(player)
@@ -45,10 +46,10 @@ function Noise.pointSources()
 	return pointSources
 end
 
--- Adds noise to a player, scaled by their difficulty.
+-- Adds noise to a player, scaled by their difficulty. Nothing while hushed.
 function Noise.add(player, amount)
 	local state = states[player]
-	if state then
+	if state and os.clock() >= state.hushedUntil then
 		state.noise = math.min(SETTINGS.Max, state.noise + amount * noiseMultiplier(player))
 	end
 end
@@ -57,6 +58,15 @@ function Noise.clear(player)
 	local state = states[player]
 	if state then
 		state.noise = 0
+	end
+end
+
+-- Silences a player completely for a while (the Hush boost).
+function Noise.hush(player, duration)
+	local state = states[player]
+	if state then
+		state.noise = 0
+		state.hushedUntil = math.max(state.hushedUntil, os.clock() + duration)
 	end
 end
 
@@ -120,6 +130,11 @@ function Noise.step(dt)
 		if rounded ~= state.reported then
 			state.reported = rounded
 			player:SetAttribute("Noise", rounded)
+		end
+		local hushed = os.clock() < state.hushedUntil
+		if hushed ~= state.hushed then
+			state.hushed = hushed
+			player:SetAttribute("Hushed", hushed)
 		end
 	end
 

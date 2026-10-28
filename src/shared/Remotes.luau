@@ -8,6 +8,11 @@ local NAMES = {
 	"ThrowPebble", -- client -> server: Vector3 aim point
 	"Restart", -- client -> server: go back to stage 1
 	"Notify", -- server -> client: kind, text
+	"BuyItem", -- client -> server: item id
+	"EquipItem", -- client -> server: slot ("skin" or "accessory"), item id or nil to take it off
+	"UseBoost", -- client -> server: boost id
+	"BoostStarted", -- server -> client: boost id, duration
+	"Caught", -- server -> client: position of the thing that caught you
 }
 
 local folder

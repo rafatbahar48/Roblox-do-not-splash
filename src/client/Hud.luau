@@ -10,12 +10,15 @@ local UserInputService = game:GetService("UserInputService")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Stages = require(ReplicatedStorage.Shared.Stages)
+local ShopUi = require(script.Parent.ShopUi)
 
 local player = Players.LocalPlayer
 
 local WHITE = Color3.fromRGB(240, 246, 248)
 local RED = Color3.fromRGB(255, 60, 60)
 local PANEL = Color3.fromRGB(14, 22, 26)
+local HUSH = Color3.fromRGB(180, 160, 255)
+local GREEN = Color3.fromRGB(60, 150, 120)
 
 local Hud = {}
 
@@ -67,6 +70,7 @@ function Hud.start()
 	local gui = create("ScreenGui", {
 		Name = "Hud",
 		ResetOnSpawn = false,
+		DisplayOrder = 2,
 		ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
 	})
 
@@ -136,7 +140,7 @@ function Hud.start()
 		BorderSizePixel = 0,
 		Parent = meter,
 	})
-	text({
+	local noiseLabel = text({
 		AnchorPoint = Vector2.new(0.5, 1),
 		Position = UDim2.new(0.5, 0, 0, -4),
 		Size = UDim2.new(1, 0, 0, 16),
@@ -151,6 +155,32 @@ function Hud.start()
 		Font = Enum.Font.GothamMedium,
 		TextSize = 14,
 		Parent = meter,
+	})
+	local boostLabel = text({
+		AnchorPoint = Vector2.new(0.5, 1),
+		Position = UDim2.new(0.5, 0, 0, -42),
+		Size = UDim2.new(2, 0, 0, 18),
+		Font = Enum.Font.GothamMedium,
+		TextSize = 14,
+		TextColor3 = Color3.fromRGB(190, 235, 255),
+		Parent = meter,
+	})
+
+	-- Pearls and the shop, under the difficulty buttons
+	local shopButton = button({
+		Position = UDim2.fromOffset(12, 48),
+		Size = UDim2.fromOffset(74, 28),
+		BackgroundColor3 = GREEN,
+		BackgroundTransparency = 0,
+		Text = "Shop",
+		Parent = gui,
+	})
+	shopButton.Activated:Connect(ShopUi.toggle)
+	local pearlsLabel = text({
+		Position = UDim2.fromOffset(96, 48),
+		Size = UDim2.fromOffset(200, 28),
+		TextXAlignment = Enum.TextXAlignment.Left,
+		Parent = gui,
 	})
 
 	-- Difficulty buttons
@@ -262,6 +292,28 @@ function Hud.start()
 		pebbleLabel.Text = ("Pebbles: %d   ·   %s"):format(count, hint)
 	end
 
+	local function updatePearls()
+		local pearls = player:GetAttribute("Pearls") or 0
+		local hint = if UserInputService.KeyboardEnabled then "   ·   B for shop" else ""
+		pearlsLabel.Text = ("%d pearls%s"):format(pearls, hint)
+	end
+
+	local function updateBoosts()
+		local touch = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+		local parts = {}
+		for _, boost in { { id = "updraft", name = "Fly", key = "Q" }, { id = "hush", name = "Hush", key = "F" } } do
+			local count = player:GetAttribute("Boost_" .. boost.id) or 0
+			if count > 0 then
+				table.insert(parts, if touch then ("%s ×%d"):format(boost.name, count) else ("%s ×%d (%s)"):format(boost.name, count, boost.key))
+			end
+		end
+		boostLabel.Text = table.concat(parts, "   ·   ")
+	end
+
+	local function updateHushed()
+		noiseLabel.Text = if player:GetAttribute("Hushed") then "HUSHED" else "NOISE"
+	end
+
 	local function updateDifficulty()
 		local current = player:GetAttribute("Difficulty") or Config.DefaultDifficulty
 		for name, btn in difficultyButtons do
@@ -330,9 +382,16 @@ function Hud.start()
 	player:GetAttributeChangedSignal("Difficulty"):Connect(updateDifficulty)
 	player:GetAttributeChangedSignal("Hunted"):Connect(updateHunted)
 	player:GetAttributeChangedSignal("ShellsFound"):Connect(hideFoundShells)
+	player:GetAttributeChangedSignal("Pearls"):Connect(updatePearls)
+	player:GetAttributeChangedSignal("Boost_updraft"):Connect(updateBoosts)
+	player:GetAttributeChangedSignal("Boost_hush"):Connect(updateBoosts)
+	player:GetAttributeChangedSignal("Hushed"):Connect(updateHushed)
 	updateStage()
 	updatePebbles()
 	updateDifficulty()
+	updatePearls()
+	updateBoosts()
+	updateHushed()
 	task.spawn(function()
 		workspace:WaitForChild("Map")
 		hideFoundShells()
@@ -343,7 +402,7 @@ function Hud.start()
 		local target = (player:GetAttribute("Noise") or 0) / Config.Noise.Max
 		shown += (target - shown) * math.min(1, dt * 10)
 		fill.Size = UDim2.fromScale(shown, 1)
-		fill.BackgroundColor3 = WHITE:Lerp(RED, shown)
+		fill.BackgroundColor3 = if player:GetAttribute("Hushed") then HUSH else WHITE:Lerp(RED, shown)
 	end)
 end
 

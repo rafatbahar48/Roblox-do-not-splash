@@ -8,7 +8,9 @@ A Roblox horror obby. Cross flooded pool rooms by jumping from tile to tile. Som
 - **Tiles to watch for:** creaky tiles (slightly yellow), sinking tiles (thin, bluish slabs that go under a second after you step on them), drifting rafts (orange) and pillars.
 - **7 stages** with checkpoints. Each one has a hidden shell to collect. After the last stage, walk through the exit to escape.
 - **Easy, Normal and Hard:** harder modes make you louder and the creature faster.
-- Your progress, shells, escapes and difficulty are saved.
+- **Pearls:** earned for each stage cleared, each shell found and each escape. Spend them in the **Shop** (button under the difficulty buttons, or B).
+- **Shop:** 6 skins, 6 accessories, and 2 boosts you carry and use: **Updraft** (Q / L1 / Fly button) lifts you and lets you glide for 2 seconds, and **Hush** (F / Y / Hush button) makes you completely silent for 5 seconds.
+- Your progress, shells, escapes, difficulty, pearls and items are saved.
 
 The whole map is built by script when the server starts, so everything lives in the Luau files under `src/`.
 
@@ -41,8 +43,13 @@ Or skip the live sync: run `rojo build -o StillWater.rbxl` and open the file in 
 | Stages: length, gaps, tile mix, number of creatures, flickering lights | `src/shared/Stages.luau`. Add an entry to add a stage. |
 | Noise amounts, creature speed and hearing, pebbles, difficulty modes | `src/shared/Config.luau` |
 | Name and tagline on the lobby sign | `Config.GameName`, `Config.Tagline` |
-| How rooms and tiles are built | `src/server/MapBuilder.luau` |
+| How rooms and tiles are built, lighting, fog and colour grading | `src/server/MapBuilder.luau` |
 | Creature behaviour | `src/server/Lurker.luau` |
+| Creature look and swimming animation | `src/client/LurkerVisuals.luau` |
+| Fear effects: vignette, heartbeat, faltering lights, death camera | `src/client/Fear.luau` |
+| Shop items, names, prices and skin colours | `src/shared/Catalog.luau` |
+| Accessory shapes | `src/server/Cosmetics.luau` |
+| Pearls per stage, shell and escape; boost timing | `Config.Pearls`, `Config.Boosts` |
 | HUD | `src/client/Hud.luau` |
 
 Each stage's tile layout comes from a fixed random seed, so a stage looks the same every time. Change a stage's numbers to get a new layout.
@@ -54,19 +61,26 @@ src/
   shared/              ReplicatedStorage.Shared
     Config.luau          tuning
     Stages.luau          stage list
+    Catalog.luau         shop items
     Remotes.luau         RemoteEvents
   server/              ServerScriptService.Server
     Main.server.luau     starts everything
-    MapBuilder.luau      builds lobby, stages and exit
-    Noise.luau           per-player noise, splashes, hard landings
-    Lurker.luau          one creature
+    MapBuilder.luau      builds lobby, stages and exit; lighting
+    Noise.luau           per-player noise, splashes, hard landings, Hush
+    Lurker.luau          one creature (moves an invisible anchor)
     Lurkers.luau         spawns and updates all creatures
     Hazards.luau         creaky/sinking tiles, rafts, flickering lights
     Pebbles.luau         thrown pebbles
-    Progress.luau        checkpoints, shells, escapes, saving, spawning
+    Progress.luau        checkpoints, shells, escapes, pearls, items, saving, spawning
+    Shop.luau            buying, wearing and using items (all checks on the server)
+    Cosmetics.luau       puts skins and accessories on characters
     Effects.luau         splash rings and sounds
   client/              StarterPlayerScripts.Client
     Main.client.luau
-    Hud.luau             stage, noise meter, warnings, difficulty buttons
+    Hud.luau             stage, noise meter, warnings, difficulty buttons, pearls
+    ShopUi.luau          the shop window
+    Boosts.luau          boost input and Updraft flight
+    LurkerVisuals.luau   creature bodies and swimming animation
+    Fear.luau            vignette, heartbeat, faltering lights, shake, death camera
     Throw.luau           throw input (E / R2 / touch button)
 ```

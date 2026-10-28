@@ -7,6 +7,7 @@ local MapBuilder = require(script.Parent.MapBuilder)
 local Noise = require(script.Parent.Noise)
 local Pebbles = require(script.Parent.Pebbles)
 local Progress = require(script.Parent.Progress)
+local Shop = require(script.Parent.Shop)
 
 local layout = MapBuilder.build()
 
@@ -15,6 +16,7 @@ Hazards.init(layout)
 Lurkers.init(layout)
 Pebbles.init()
 Progress.init(layout)
+Shop.init()
 Effects.startAmbience()
 
 RunService.Heartbeat:Connect(function(dt)

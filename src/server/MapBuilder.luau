@@ -17,14 +17,15 @@ local BASE_Y = FLOOR_Y - 1 -- underside of everything
 local WALL = 2
 
 local COLORS = {
-	wall = Color3.fromRGB(226, 233, 235),
-	floor = Color3.fromRGB(200, 224, 230),
-	tile = Color3.fromRGB(236, 240, 241),
-	creaky = Color3.fromRGB(229, 226, 210),
-	sinking = Color3.fromRGB(208, 224, 233),
-	raft = Color3.fromRGB(240, 196, 120),
-	water = Color3.fromRGB(64, 160, 196),
-	light = Color3.fromRGB(255, 247, 228),
+	wall = Color3.fromRGB(196, 206, 202),
+	floor = Color3.fromRGB(164, 184, 184),
+	tile = Color3.fromRGB(214, 222, 220),
+	creaky = Color3.fromRGB(222, 210, 170),
+	sinking = Color3.fromRGB(170, 198, 222),
+	raft = Color3.fromRGB(226, 170, 96),
+	water = Color3.fromRGB(26, 70, 80),
+	light = Color3.fromRGB(236, 238, 214),
+	deadLight = Color3.fromRGB(84, 88, 86),
 	checkpoint = Color3.fromRGB(120, 230, 170),
 	shell = Color3.fromRGB(255, 186, 200),
 	exit = Color3.fromRGB(255, 238, 196),
@@ -83,8 +84,9 @@ local function addSign(part, face, title, subtitle)
 	gui.Parent = part
 end
 
--- Side walls, ceiling and ceiling lights for the stretch z0..z1.
-local function buildShell(folder, z0, z1, lights)
+-- Side walls, ceiling and ceiling lights for the stretch z0..z1. With an rng,
+-- some of the panels have died: they stay dark and are left out of lights.
+local function buildShell(folder, z0, z1, lights, rng)
 	local wallMaterial = Enum.Material.CeramicTiles
 	box(folder, "LeftWall", Vector3.new(-HALF_WIDTH - WALL, BASE_Y, z0), Vector3.new(-HALF_WIDTH, SURFACE_Y + ROOM.Height, z1), COLORS.wall, wallMaterial)
 	box(folder, "RightWall", Vector3.new(HALF_WIDTH, BASE_Y, z0), Vector3.new(HALF_WIDTH + WALL, SURFACE_Y + ROOM.Height, z1), COLORS.wall, wallMaterial)
@@ -100,22 +102,25 @@ local function buildShell(folder, z0, z1, lights)
 	local count = math.max(1, math.floor((z1 - z0) / ROOM.LightSpacing))
 	for i = 1, count do
 		local z = z0 + (i - 0.5) * (z1 - z0) / count
+		local dead = rng ~= nil and rng:NextNumber() < 0.22
 		local panel = block(
 			folder,
-			"LightPanel",
+			if dead then "DeadPanel" else "LightPanel",
 			Vector3.new(6, 0.3, 2),
 			CFrame.new(0, SURFACE_Y + ROOM.Height - 0.15, z),
-			COLORS.light,
-			Enum.Material.Neon,
+			if dead then COLORS.deadLight else COLORS.light,
+			if dead then Enum.Material.SmoothPlastic else Enum.Material.Neon,
 			{ CanCollide = false, CanQuery = false, CastShadow = false }
 		)
-		local light = Instance.new("PointLight")
-		light.Range = 26
-		light.Brightness = 1.3
-		light.Color = COLORS.light
-		light.Shadows = true
-		light.Parent = panel
-		table.insert(lights, panel)
+		if not dead then
+			local light = Instance.new("PointLight")
+			light.Range = 24
+			light.Brightness = 1.1
+			light.Color = COLORS.light
+			light.Shadows = true
+			light.Parent = panel
+			table.insert(lights, panel)
+		end
 	end
 end
 
@@ -306,7 +311,8 @@ local function buildRoom(map, index, stage, z0)
 	local poolEnd = z1 - ROOM.EndLanding
 	local lights = {}
 
-	buildShell(folder, z0, z1, lights)
+	-- Its own seed, so dead lights don't change the tile layout.
+	buildShell(folder, z0, z1, lights, Random.new(index * 3571))
 	local lintel = buildCrossWall(folder, z0, true)
 	addSign(lintel, Enum.NormalId.Back, "STAGE " .. index, stage.name)
 
@@ -314,7 +320,9 @@ local function buildRoom(map, index, stage, z0)
 	landing(folder, "EndLanding", poolEnd, z1)
 	box(folder, "PoolFloor", Vector3.new(-HALF_WIDTH, BASE_Y, poolStart), Vector3.new(HALF_WIDTH, FLOOR_Y, poolEnd), COLORS.floor, Enum.Material.CeramicTiles)
 	box(folder, "Water", Vector3.new(-HALF_WIDTH, FLOOR_Y, poolStart), Vector3.new(HALF_WIDTH, SURFACE_Y, poolEnd), COLORS.water, Enum.Material.Glass, {
-		Transparency = 0.4,
+		-- Murky enough that what lives in it is mostly a shape and a pair of eyes.
+		Transparency = 0.22,
+		Reflectance = 0.08,
 		CanCollide = false,
 		CanTouch = false,
 		CastShadow = false,
@@ -379,19 +387,35 @@ end
 
 local function setupLighting()
 	for _, child in Lighting:GetChildren() do
-		-- An Atmosphere overrides fog, and the fog is most of the mood.
-		if child:IsA("Atmosphere") then
+		-- An Atmosphere overrides fog, and the fog is most of the mood. Template
+		-- post effects are replaced by ours below.
+		if child:IsA("Atmosphere") or child:IsA("PostEffect") then
 			child:Destroy()
 		end
 	end
 	Lighting.ClockTime = 0
-	Lighting.Brightness = 1
-	Lighting.Ambient = Color3.fromRGB(70, 82, 88)
-	Lighting.OutdoorAmbient = Color3.fromRGB(60, 70, 75)
-	Lighting.FogColor = Color3.fromRGB(150, 186, 192)
-	Lighting.FogStart = 20
-	Lighting.FogEnd = 160
+	Lighting.Brightness = 0.6
+	Lighting.Ambient = Color3.fromRGB(34, 42, 46)
+	Lighting.OutdoorAmbient = Color3.fromRGB(28, 34, 38)
+	Lighting.EnvironmentDiffuseScale = 0.15
+	Lighting.EnvironmentSpecularScale = 0.6 -- wet tiles catch the light
+	Lighting.FogColor = Color3.fromRGB(22, 38, 42)
+	Lighting.FogStart = 8
+	Lighting.FogEnd = 100
 	Lighting.GlobalShadows = true
+
+	-- Cold, washed-out colours, and a soft glow around anything neon.
+	local grade = Instance.new("ColorCorrectionEffect")
+	grade.Saturation = -0.25
+	grade.Contrast = 0.12
+	grade.TintColor = Color3.fromRGB(214, 232, 236)
+	grade.Parent = Lighting
+
+	local bloom = Instance.new("BloomEffect")
+	bloom.Intensity = 0.7
+	bloom.Size = 28
+	bloom.Threshold = 1.4
+	bloom.Parent = Lighting
 end
 
 -- The Baseplate template ships with its own SpawnLocation, which would let
