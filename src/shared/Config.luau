@@ -107,8 +107,22 @@ Config.Room = {
 	DoorWidth = 8,
 	DoorHeight = 10,
 	LightSpacing = 16,
-	LobbyLength = 64,
+	-- The lobby is an open courtyard in front of the building the stages are in.
+	LobbyLength = 110,
+	LobbyWidth = 100,
+	FacadeHeight = 30, -- how tall the building's front is
 	ExitLength = 24,
+	-- Stage 1's front wall has a doorway per difficulty, at these x positions.
+	-- Walking through one picks that difficulty (server/LobbyDoors.luau).
+	EntranceDoors = { Easy = 13, Normal = 0, Hard = -13 },
+}
+
+-- Party doors in the lobby (server/Parties.luau, client/PartyUi.luau).
+Config.Party = {
+	MaxSize = 4,
+	Countdown = 20, -- seconds a new party waits for others to join
+	FullCountdown = 5, -- seconds left once it is full
+	SetupTimeout = 45, -- seconds the setup pop-up stays open
 }
 
 -- Paste sound ids from the Creator Store, for example "rbxassetid://123456".

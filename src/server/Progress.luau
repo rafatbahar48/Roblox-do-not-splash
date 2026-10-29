@@ -283,6 +283,11 @@ local function onPlayerAdded(player)
 	if not player.Parent then
 		return
 	end
+	-- A party sent here from another server's party door brings its difficulty.
+	local joinData = player:GetJoinData().TeleportData
+	if type(joinData) == "table" and type(joinData.difficulty) == "string" and Config.Difficulties[joinData.difficulty] then
+		profile.difficulty = joinData.difficulty
+	end
 	profiles[player] = profile
 	sync(player, profile)
 	Leaderboards.seed(player, profile.wins, profile.bestTimes)
@@ -298,13 +303,19 @@ local function difficultyByOrder(order)
 	return Config.DefaultDifficulty
 end
 
-local function onRunStart(hit)
-	local player, profile = playerFromHit(hit)
-	if not player or profile.checkpoint ~= 0 or profile.run then
+local function startRun(player, profile)
+	if profile.checkpoint ~= 0 or profile.run then
 		return
 	end
 	profile.run = { startedAt = os.clock(), easiest = Config.Difficulties[profile.difficulty].order }
 	player:SetAttribute("RunStartedAt", workspace:GetServerTimeNow())
+end
+
+local function onRunStart(hit)
+	local player, profile = playerFromHit(hit)
+	if player then
+		startRun(player, profile)
+	end
 end
 
 -- Stops the run clock at the exit. Returns a line for the escape screen.
@@ -385,6 +396,29 @@ function Progress.sync(player)
 	end
 end
 
+-- Sets a player's difficulty: the HUD buttons, the lobby doors and parties.
+-- A run in progress counts for the easiest difficulty played along the way.
+function Progress.setDifficulty(player, name)
+	local profile = profiles[player]
+	if not profile or type(name) ~= "string" or not Config.Difficulties[name] or profile.difficulty == name then
+		return
+	end
+	profile.difficulty = name
+	if profile.run then
+		profile.run.easiest = math.min(profile.run.easiest, Config.Difficulties[name].order)
+	end
+	sync(player, profile)
+end
+
+-- Starts a player's run clock, as walking through stage 1's doors does. For a
+-- party that is moved straight into stage 1 (Parties.luau).
+function Progress.startRun(player)
+	local profile = profiles[player]
+	if profile then
+		startRun(player, profile)
+	end
+end
+
 -- For other systems and testing: gives (or with a negative amount, takes) pearls.
 function Progress.addPearls(player, amount)
 	local profile = profiles[player]
@@ -411,16 +445,7 @@ function Progress.init(newLayout)
 	layout.exitDoor.Touched:Connect(onExit)
 	layout.runStart.Touched:Connect(onRunStart)
 
-	Remotes.SetDifficulty.OnServerEvent:Connect(function(player, name)
-		local profile = profiles[player]
-		if profile and type(name) == "string" and Config.Difficulties[name] then
-			profile.difficulty = name
-			if profile.run then
-				profile.run.easiest = math.min(profile.run.easiest, Config.Difficulties[name].order)
-			end
-			sync(player, profile)
-		end
-	end)
+	Remotes.SetDifficulty.OnServerEvent:Connect(Progress.setDifficulty)
 
 	Remotes.Restart.OnServerEvent:Connect(function(player)
 		local profile = profiles[player]

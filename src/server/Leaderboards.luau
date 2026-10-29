@@ -17,15 +17,17 @@ local REFRESH_INTERVAL = 60
 local ROWS = 10
 
 local BOARDS = {
-	-- Header colours match the lobby's 1970s palette (LobbyBuilder.luau).
-	{ id = "Escapes", title = "MOST ESCAPES", ascending = false, color = Color3.fromRGB(40, 150, 150) },
-	{ id = "Easy", title = "FASTEST · EASY", ascending = true, color = Color3.fromRGB(232, 178, 58) },
-	{ id = "Normal", title = "FASTEST · NORMAL", ascending = true, color = Color3.fromRGB(214, 112, 52) },
-	{ id = "Hard", title = "FASTEST · HARD", ascending = true, color = Color3.fromRGB(232, 98, 80) },
+	-- Header colours match the lobby's Splash Park palette (LobbyBuilder.luau).
+	{ id = "Escapes", title = "MOST ESCAPES", ascending = false, color = Color3.fromRGB(111, 227, 180) },
+	{ id = "Easy", title = "FASTEST · EASY", ascending = true, color = Color3.fromRGB(99, 201, 255) },
+	{ id = "Normal", title = "FASTEST · NORMAL", ascending = true, color = Color3.fromRGB(255, 221, 74) },
+	{ id = "Hard", title = "FASTEST · HARD", ascending = true, color = Color3.fromRGB(255, 111, 177) },
 }
 
-local WHITE = Color3.fromRGB(246, 238, 220)
-local MUTED = Color3.fromRGB(150, 176, 172)
+local WHITE = Color3.fromRGB(255, 255, 255)
+local INK = Color3.fromRGB(43, 34, 87) -- header text, the same ink as the boards
+local LEMON = Color3.fromRGB(255, 221, 74)
+local MUTED = Color3.fromRGB(170, 176, 225)
 
 local Leaderboards = {}
 
@@ -88,6 +90,7 @@ local function buildBoard(board, part)
 		Position = UDim2.fromScale(0.04, 0.12),
 		Size = UDim2.fromScale(0.92, 0.76),
 		Font = Enum.Font.FredokaOne,
+		TextColor3 = INK,
 		Text = board.title,
 	})
 
@@ -101,7 +104,7 @@ local function buildBoard(board, part)
 		board.rows[i] = {
 			rank = label(row, { Size = UDim2.fromScale(0.1, 1), TextColor3 = MUTED, Text = "#" .. i }),
 			name = label(row, { Position = UDim2.fromScale(0.12, 0), Size = UDim2.fromScale(0.58, 1), Font = Enum.Font.GothamMedium, TextXAlignment = Enum.TextXAlignment.Left }),
-			value = label(row, { Position = UDim2.fromScale(0.7, 0), Size = UDim2.fromScale(0.3, 1), Font = Enum.Font.RobotoMono, TextXAlignment = Enum.TextXAlignment.Right }),
+			value = label(row, { Position = UDim2.fromScale(0.7, 0), Size = UDim2.fromScale(0.3, 1), Font = Enum.Font.RobotoMono, TextColor3 = LEMON, TextXAlignment = Enum.TextXAlignment.Right }),
 		}
 	end
 

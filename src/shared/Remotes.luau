@@ -13,6 +13,10 @@ local NAMES = {
 	"UseBoost", -- client -> server: boost id
 	"BoostStarted", -- server -> client: boost id, duration
 	"Caught", -- server -> client: where it struck, what it heard ("splash", ...), how loud you were
+	"PartySetup", -- server -> client: party door number to set up a party on, or nil to close the pop-up
+	"CreateParty", -- client -> server: party door number, size, difficulty name, friends only
+	"LeaveParty", -- client -> server: leave your party, or cancel setting one up
+	"PartyStatus", -- server -> client: { count, size, difficulty, leavesAt, owner } for your party, or nil
 }
 
 local folder

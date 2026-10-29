@@ -1,6 +1,6 @@
--- Lighting by where you are: warm and bright in the lobby and on the way
--- out, cold and dark in the flooded rooms. The contrast is the point: the
--- rooms feel darker for having just left somewhere safe.
+-- Lighting by where you are: a moonlit night in the open courtyard and on
+-- the way out, cold and dark in the flooded rooms. The contrast is the point:
+-- the rooms feel darker for having just left somewhere colourful and safe.
 --
 -- Changes made here are only seen on this screen. The dark values are the
 -- ones the server set (MapBuilder.luau's setupLighting).
@@ -19,21 +19,22 @@ local CHECK_INTERVAL = 0.25
 local FADE = TweenInfo.new(1.5, Enum.EasingStyle.Sine, Enum.EasingDirection.Out)
 
 local SAFE = {
-	-- Checked against the lobby in Studio: brighter than this washes the
-	-- cream walls and ceiling out to white.
+	-- Midnight under an open sky: moonlight, a purple-blue fill so the neon
+	-- and lamps stand out, and a soft haze far off.
 	lighting = {
-		Brightness = 1,
-		Ambient = Color3.fromRGB(100, 95, 88),
-		OutdoorAmbient = Color3.fromRGB(95, 90, 82),
-		EnvironmentDiffuseScale = 0.3,
-		FogStart = 90,
-		FogEnd = 420,
-		FogColor = Color3.fromRGB(226, 214, 192),
+		ClockTime = 0,
+		Brightness = 1.8,
+		Ambient = Color3.fromRGB(84, 80, 124),
+		OutdoorAmbient = Color3.fromRGB(96, 94, 150),
+		EnvironmentDiffuseScale = 0.4,
+		FogStart = 160,
+		FogEnd = 700,
+		FogColor = Color3.fromRGB(24, 24, 52),
 	},
 	grade = {
-		Saturation = 0.05,
-		Contrast = 0.04,
-		TintColor = Color3.fromRGB(255, 246, 232),
+		Saturation = 0.18,
+		Contrast = 0.08,
+		TintColor = Color3.fromRGB(255, 250, 255),
 	},
 }
 

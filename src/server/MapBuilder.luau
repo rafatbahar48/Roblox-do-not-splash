@@ -105,25 +105,30 @@ local function buildShell(folder, z0, z1, lights, rng)
 	end
 end
 
--- The wall across the corridor at z, with or without a doorway.
--- Returns the piece above the door (or the whole wall) for signs.
-local function buildCrossWall(folder, z, withDoor)
+-- The wall across the corridor at z, with a doorway centred on each x in
+-- doorXs, or solid without them. Returns the piece above the door nearest the
+-- middle (or the whole wall) for signs.
+local function buildCrossWall(folder, z, doorXs)
 	local min, max = z - 0.5, z + 0.5
 	local top = SURFACE_Y + ROOM.Height
-	if not withDoor then
+	if not doorXs then
 		return box(folder, "EndWall", Vector3.new(-HALF_WIDTH, TILE_TOP, min), Vector3.new(HALF_WIDTH, top, max), COLORS.wall, Enum.Material.CeramicTiles)
 	end
 	local half = ROOM.DoorWidth / 2
-	box(folder, "DoorWall", Vector3.new(-HALF_WIDTH, TILE_TOP, min), Vector3.new(-half, top, max), COLORS.wall, Enum.Material.CeramicTiles)
-	box(folder, "DoorWall", Vector3.new(half, TILE_TOP, min), Vector3.new(HALF_WIDTH, top, max), COLORS.wall, Enum.Material.CeramicTiles)
-	return box(
-		folder,
-		"Lintel",
-		Vector3.new(-half, TILE_TOP + ROOM.DoorHeight, min),
-		Vector3.new(half, top, max),
-		COLORS.wall,
-		Enum.Material.CeramicTiles
-	)
+	local xs = table.clone(doorXs)
+	table.sort(xs)
+	local left = -HALF_WIDTH
+	local middle, middleX
+	for _, x in xs do
+		box(folder, "DoorWall", Vector3.new(left, TILE_TOP, min), Vector3.new(x - half, top, max), COLORS.wall, Enum.Material.CeramicTiles)
+		local lintel = box(folder, "Lintel", Vector3.new(x - half, TILE_TOP + ROOM.DoorHeight, min), Vector3.new(x + half, top, max), COLORS.wall, Enum.Material.CeramicTiles)
+		if not middle or math.abs(x) < math.abs(middleX) then
+			middle, middleX = lintel, x
+		end
+		left = x + half
+	end
+	box(folder, "DoorWall", Vector3.new(left, TILE_TOP, min), Vector3.new(HALF_WIDTH, top, max), COLORS.wall, Enum.Material.CeramicTiles)
+	return middle
 end
 
 local function landing(folder, name, z0, z1)
@@ -294,7 +299,15 @@ local function buildRoom(map, index, stage, z0)
 
 	-- Its own seed, so dead lights don't change the tile layout.
 	buildShell(folder, z0, z1, lights, Random.new(index * 3571))
-	local lintel = buildCrossWall(folder, z0, true)
+	-- Stage 1 opens onto the lobby through one doorway per difficulty.
+	local doorXs = { 0 }
+	if index == 1 then
+		doorXs = {}
+		for _, x in ROOM.EntranceDoors do
+			table.insert(doorXs, x)
+		end
+	end
+	local lintel = buildCrossWall(folder, z0, doorXs)
 	addSign(lintel, Enum.NormalId.Back, "STAGE " .. index, stage.name)
 
 	landing(folder, "StartLanding", z0, poolStart)
@@ -421,7 +434,14 @@ function MapBuilder.build()
 	local lobby = LobbyBuilder.build(map)
 
 	-- Stages
-	local layout = { rooms = {}, boards = lobby.boards, tank = lobby.tank, runStart = lobby.runStart }
+	local layout = {
+		rooms = {},
+		boards = lobby.boards,
+		tank = lobby.tank,
+		runStart = lobby.runStart,
+		doors = lobby.doors,
+		partyDoors = lobby.partyDoors,
+	}
 	local z = 0
 	for index, stage in Stages do
 		local room = buildRoom(map, index, stage, z)
@@ -436,9 +456,9 @@ function MapBuilder.build()
 	local exitEnd = z + ROOM.ExitLength
 	buildShell(exit, z, exitEnd, {})
 	landing(exit, "Floor", z, exitEnd)
-	local exitLintel = buildCrossWall(exit, z, true)
+	local exitLintel = buildCrossWall(exit, z, { 0 })
 	addSign(exitLintel, Enum.NormalId.Back, "THE WAY OUT", "Walk into the light")
-	buildCrossWall(exit, exitEnd, false)
+	buildCrossWall(exit, exitEnd)
 	layout.exitDoor = block(
 		exit,
 		"ExitDoor",

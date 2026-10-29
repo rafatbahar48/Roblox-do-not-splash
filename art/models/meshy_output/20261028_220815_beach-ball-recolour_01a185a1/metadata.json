@@ -1,0 +1,54 @@
+{
+  "schema_version": 2,
+  "project_name": "beach-ball-recolour",
+  "folder": "20261028_220815_beach-ball-recolour_01a185a1",
+  "root_task_id": "01a185a1-001a-7261-b16c-bcf33a0c9cb9",
+  "created_at": "2026-10-29T03:08:15.064Z",
+  "updated_at": "2026-10-29T03:08:47.618Z",
+  "tasks": [
+    {
+      "task_id": "01a185a1-001a-7261-b16c-bcf33a0c9cb9",
+      "task_type": "retexture",
+      "resource": "retexture",
+      "endpoint": "/openapi/v1/retexture",
+      "stage": "retexture",
+      "parent_task_id": null,
+      "status": "SUCCEEDED",
+      "files": [],
+      "task_json": "task_01a185a1-001a-7261-b16c-bcf33a0c9cb9.json",
+      "operation_id": null,
+      "created_at": "2026-10-29T03:08:32.679Z",
+      "updated_at": "2026-10-29T03:08:32.679Z"
+    },
+    {
+      "task_id": "01a185a1-001a-7261-b16c-bcf33a0c9cb9",
+      "task_type": "retexture",
+      "resource": "retexture",
+      "endpoint": "/openapi/v1/retexture",
+      "stage": "preview",
+      "parent_task_id": null,
+      "status": "SUCCEEDED",
+      "files": [
+        "preview.png"
+      ],
+      "task_json": null,
+      "operation_id": null,
+      "created_at": "2026-10-29T03:08:38.424Z",
+      "updated_at": "2026-10-29T03:08:38.424Z"
+    },
+    {
+      "task_id": "01a185a1-001a-7261-b16c-bcf33a0c9cb9",
+      "task_type": "retexture",
+      "resource": "retexture",
+      "endpoint": "/openapi/v1/retexture",
+      "stage": "delivered",
+      "parent_task_id": null,
+      "status": "SUCCEEDED",
+      "files": [],
+      "task_json": null,
+      "operation_id": null,
+      "created_at": "2026-10-29T03:08:41.609Z",
+      "updated_at": "2026-10-29T03:08:47.618Z"
+    }
+  ]
+}

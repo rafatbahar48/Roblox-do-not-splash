@@ -1,0 +1,15 @@
+{
+  "assets": [
+    { "asset_id": "b727c35b-14a4-4a87-b24d-46777b0a1ca6", "sha12": "2c408d00c78d", "label": "Splash Park lobby concept", "file": "concepts/splash-park-lobby.png" },
+    { "asset_id": "ec118cb1-1e51-43dd-89cc-eac393ebbbcf", "sha12": "0655b0213284", "label": "HUD buttons sheet", "file": "ui/hud-buttons-sheet.png" },
+    { "asset_id": "daa182b3-304a-4021-b630-751ccea8abac", "sha12": "5a426425ef8e", "label": "Shop button", "file": "ui/button-shop.png" },
+    { "asset_id": "a3170912-e599-455f-9846-d79b4612f74f", "sha12": "8d6e420d3604", "label": "Wear button", "file": "ui/button-wear.png" },
+    { "asset_id": "793e5302-d8e8-4b40-8e84-be3be90dbe4c", "sha12": "bca3a6515688", "label": "Records button", "file": "ui/button-records.png" },
+    { "asset_id": "f3b8974c-203f-4c68-a15e-535dc7a05187", "sha12": "e3120ff94499", "label": "Settings button", "file": "ui/button-settings.png" },
+    { "asset_id": "14583863-a00f-464a-b85d-7ab73f24eb65", "sha12": "25bbc77c440c", "label": "Updraft boost button", "file": "ui/boost-updraft.png" },
+    { "asset_id": "29dce4b1-84cf-48c8-acbc-ede3e7336daf", "sha12": "3c1fff63c8ec", "label": "Hush boost button", "file": "ui/boost-hush.png" },
+    { "asset_id": "252bf8ce-d872-4f38-adb9-976f8f1a4290", "sha12": "4b6374d16d6a", "label": "Pebble button", "file": "ui/button-pebble.png" },
+    { "asset_id": "b69d4d6d-9b42-4ca9-bec9-251988d0874b", "sha12": "c6a1bf35e048", "label": "Pearl currency icon", "file": "ui/icon-pearl.png" },
+    { "asset_id": "9173bcf7-39a0-43b9-ad0c-8820087e99e3", "sha12": "11a8d39f6cf1", "label": "Clean slide reference for Meshy", "file": "meshy-refs/slide-clean.png" }
+  ]
+}
