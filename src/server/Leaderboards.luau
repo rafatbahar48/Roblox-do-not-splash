@@ -10,6 +10,7 @@ local DataStoreService = game:GetService("DataStoreService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local Candy = require(ReplicatedStorage.Shared.Candy)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
 
@@ -17,17 +18,18 @@ local REFRESH_INTERVAL = 60
 local ROWS = 10
 
 local BOARDS = {
-	-- Header colours match the lobby's Splash Park palette (LobbyBuilder.luau).
-	{ id = "Escapes", title = "MOST ESCAPES", ascending = false, color = Color3.fromRGB(111, 227, 180) },
-	{ id = "Easy", title = "FASTEST · EASY", ascending = true, color = Color3.fromRGB(99, 201, 255) },
-	{ id = "Normal", title = "FASTEST · NORMAL", ascending = true, color = Color3.fromRGB(255, 221, 74) },
-	{ id = "Hard", title = "FASTEST · HARD", ascending = true, color = Color3.fromRGB(255, 111, 177) },
+	-- The difficulty colours match the doors (LobbyBuilder.luau).
+	{ id = "Escapes", title = "MOST ESCAPES", ascending = false, color = Candy.SKY },
+	{ id = "Easy", title = "FASTEST · EASY", ascending = true, color = Candy.MINT },
+	{ id = "Normal", title = "FASTEST · NORMAL", ascending = true, color = Candy.LEMON },
+	{ id = "Hard", title = "FASTEST · HARD", ascending = true, color = Candy.PINK },
 }
 
-local WHITE = Color3.fromRGB(255, 255, 255)
-local INK = Color3.fromRGB(43, 34, 87) -- header text, the same ink as the boards
-local LEMON = Color3.fromRGB(255, 221, 74)
-local MUTED = Color3.fromRGB(170, 176, 225)
+local WHITE, INK, LEMON = Candy.WHITE, Candy.INK, Candy.LEMON
+local MUTED = Color3.fromRGB(170, 176, 225) -- on the dark board
+local STRIPE = Color3.fromRGB(58, 48, 112) -- every other row
+-- Gold, silver and bronze for the top three.
+local MEDALS = { LEMON, Color3.fromRGB(222, 228, 242), Color3.fromRGB(255, 170, 110) }
 
 local Leaderboards = {}
 
@@ -62,56 +64,77 @@ local function shown(board, value)
 end
 
 local function label(parent, props)
-	local result = Instance.new("TextLabel")
-	result.BackgroundTransparency = 1
-	result.Font = Enum.Font.GothamBold
-	result.TextColor3 = WHITE
-	result.TextScaled = true
-	for key, value in props do
-		result[key] = value
-	end
-	result.Parent = parent
-	return result
+	props.Parent = parent
+	return Candy.text(props)
 end
 
+-- A board: a glossy header in the board's colour with its title in bubbly
+-- lettering, ten rows with medals for the top three, and a footer.
 local function buildBoard(board, part)
 	local gui = Instance.new("SurfaceGui")
 	gui.Face = Enum.NormalId.Left -- the side facing into the lobby
 	gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
 	gui.PixelsPerStud = 50
 	gui.LightInfluence = 0
+	-- 450 x 375 pixels on a 9 x 7.5 stud board.
 
-	local header = Instance.new("Frame")
-	header.Size = UDim2.fromScale(1, 0.14)
-	header.BackgroundColor3 = board.color
-	header.BorderSizePixel = 0
-	header.Parent = gui
-	label(header, {
-		Position = UDim2.fromScale(0.04, 0.12),
-		Size = UDim2.fromScale(0.92, 0.76),
-		Font = Enum.Font.FredokaOne,
-		TextColor3 = INK,
-		Text = board.title,
+	local header = Candy.create("Frame", {
+		Name = "Header",
+		Position = UDim2.fromOffset(12, 12),
+		Size = UDim2.new(1, -24, 0, 62),
+		BackgroundColor3 = board.color,
+		Parent = gui,
+	}, {
+		Candy.corner(18),
+		Candy.stroke(3),
+		Candy.create("UIGradient", { Rotation = 90, Color = ColorSequence.new(board.color:Lerp(WHITE, 0.4), board.color) }),
+		Candy.create("Frame", {
+			Name = "Shine",
+			Position = UDim2.fromOffset(10, 4),
+			Size = UDim2.new(1, -20, 0.3, 0),
+			BackgroundColor3 = WHITE,
+			BackgroundTransparency = 0.55,
+		}, { Candy.corner(12) }),
 	})
+	Candy.title(header, {
+		Name = "Title",
+		Position = UDim2.fromOffset(16, 8),
+		Size = UDim2.new(1, -32, 0, 42),
+		TextColor3 = WHITE,
+		Text = board.title,
+	}, 3, 3)
 
 	board.rows = {}
 	for i = 1, ROWS do
-		local row = Instance.new("Frame")
-		row.Position = UDim2.fromScale(0.04, 0.17 + (i - 1) * 0.071)
-		row.Size = UDim2.fromScale(0.92, 0.062)
-		row.BackgroundTransparency = 1
-		row.Parent = gui
+		local row = Candy.create("Frame", {
+			Name = "Row" .. i,
+			Position = UDim2.fromOffset(12, 86 + (i - 1) * 25),
+			Size = UDim2.new(1, -24, 0, 23),
+			BackgroundColor3 = STRIPE,
+			BackgroundTransparency = if i % 2 == 1 then 0 else 1,
+			Parent = gui,
+		}, { Candy.corner(UDim.new(0.5, 0)) })
+		local medal = MEDALS[i]
+		local rank = Candy.create("Frame", {
+			Name = "Rank",
+			Position = UDim2.fromOffset(4, 1),
+			Size = UDim2.fromOffset(32, 21),
+			BackgroundColor3 = medal or STRIPE,
+			BackgroundTransparency = if medal then 0 else 1,
+			Parent = row,
+		}, { Candy.corner(UDim.new(0.5, 0)), if medal then Candy.stroke(2) else nil })
+		label(rank, { Position = UDim2.fromScale(0.15, 0.12), Size = UDim2.fromScale(0.7, 0.76), TextColor3 = if medal then INK else MUTED, Text = tostring(i) })
 		board.rows[i] = {
-			rank = label(row, { Size = UDim2.fromScale(0.1, 1), TextColor3 = MUTED, Text = "#" .. i }),
-			name = label(row, { Position = UDim2.fromScale(0.12, 0), Size = UDim2.fromScale(0.58, 1), Font = Enum.Font.GothamMedium, TextXAlignment = Enum.TextXAlignment.Left }),
-			value = label(row, { Position = UDim2.fromScale(0.7, 0), Size = UDim2.fromScale(0.3, 1), Font = Enum.Font.RobotoMono, TextColor3 = LEMON, TextXAlignment = Enum.TextXAlignment.Right }),
+			rank = rank,
+			name = label(row, { Position = UDim2.fromOffset(46, 2), Size = UDim2.new(0.66, -46, 1, -4), Font = Enum.Font.GothamBold, TextColor3 = WHITE, TextXAlignment = Enum.TextXAlignment.Left }),
+			value = label(row, { Position = UDim2.new(0.66, 0, 0, 2), Size = UDim2.new(0.34, -10, 1, -4), TextColor3 = LEMON, TextXAlignment = Enum.TextXAlignment.Right }),
 		}
 	end
 
 	board.footer = label(gui, {
-		Position = UDim2.fromScale(0.04, 0.905),
-		Size = UDim2.fromScale(0.92, 0.06),
-		Font = Enum.Font.GothamMedium,
+		Position = UDim2.new(0, 12, 1, -36),
+		Size = UDim2.new(1, -24, 0, 18),
+		Font = Enum.Font.GothamBold,
 		TextColor3 = MUTED,
 	})
 	gui.Parent = part
@@ -154,7 +177,7 @@ end
 local function draw(board, entries, allTime)
 	for i, row in board.rows do
 		local entry = entries[i]
-		row.name.Text = if entry then entry.name elseif i == 1 then "No records yet" else ""
+		row.name.Text = if entry then entry.name elseif i == 1 then "No records yet. Be the first!" else ""
 		row.value.Text = if entry then shown(board, entry.value) else ""
 		row.rank.Visible = entry ~= nil
 	end

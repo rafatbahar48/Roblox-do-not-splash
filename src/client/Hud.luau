@@ -1,70 +1,79 @@
--- The on-screen HUD: stage name, noise meter, pebbles, difficulty buttons,
--- the "it heard you" warning, short notifications and the escape screen.
+-- The on-screen HUD, in the candy style of the Hud board in the Look Book:
+--
+--   top left      pearls, and which stage you are on
+--   top middle    the run timer, and "IT HEARD YOU" while something hunts you
+--   top right     the difficulty buttons
+--   left          the noise meter (only in the stages)
+--   bottom        the shop button
+--   bottom right  pebble, Updraft and Hush buttons (only in the stages)
+--
+-- plus short notifications and the escape screen.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local TextService = game:GetService("TextService")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 
+local Candy = require(ReplicatedStorage.Shared.Candy)
 local Config = require(ReplicatedStorage.Shared.Config)
-local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Format = require(ReplicatedStorage.Shared.Format)
+local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Stages = require(ReplicatedStorage.Shared.Stages)
+local Boosts = require(script.Parent.Boosts)
+local ItemIcons = require(script.Parent.ItemIcons)
 local ShopUi = require(script.Parent.ShopUi)
+local Throw = require(script.Parent.Throw)
 
 local player = Players.LocalPlayer
 
-local WHITE = Color3.fromRGB(240, 246, 248)
+local INK, WHITE, MUTED = Candy.INK, Candy.WHITE, Candy.MUTED
 local RED = Color3.fromRGB(255, 60, 60)
-local PANEL = Color3.fromRGB(14, 22, 26)
-local HUSH = Color3.fromRGB(180, 160, 255)
-local GREEN = Color3.fromRGB(60, 150, 120)
+local DIFFICULTY_COLORS = { Easy = Candy.MINT, Normal = Candy.LEMON, Hard = Candy.PINK }
+local SEGMENTS = 6 -- in the noise meter
+local MARGIN = 16
 
 local Hud = {}
 
-local function create(className, props, children)
-	local instance = Instance.new(className)
-	for key, value in props do
-		instance[key] = value
-	end
-	for _, child in children or {} do
-		child.Parent = instance
-	end
-	return instance
+local create, text = Candy.create, Candy.text
+
+local function textWidth(value, size, font)
+	return TextService:GetTextSize(value, size, font or Enum.Font.FredokaOne, Vector2.new(2000, 100)).X
 end
 
-local function text(props)
-	local label = create("TextLabel", {
-		BackgroundTransparency = 1,
-		Font = Enum.Font.GothamBold,
-		TextColor3 = WHITE,
-		TextStrokeTransparency = 0.6,
-		TextSize = 16,
+-- A round button with a picture, a name under it, a key hint and a count.
+-- Returns the face and its count badge.
+local function actionButton(parent, size, position, color, name, key, drawIcon)
+	local face = Candy.button(parent, {
+		name = name,
+		anchor = Vector2.new(1, 1),
+		position = position,
+		size = UDim2.fromOffset(size, size + Candy.LIP),
+		radius = size / 2,
+		outline = 4,
+		color = color,
 	})
-	for key, value in props do
-		label[key] = value
+	face.Label.AnchorPoint = Vector2.new(0.5, 1)
+	face.Label.Position = UDim2.new(0.5, 0, 1, -size * 0.14)
+	face.Label.Size = UDim2.new(0.8, 0, 0, size * 0.15)
+	face.Label.Text = string.upper(name)
+	local well = create("Frame", {
+		Name = "Picture",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.42),
+		Size = UDim2.fromOffset(size * 0.5, size * 0.5),
+		BackgroundTransparency = 1,
+		ZIndex = 3,
+		Parent = face,
+	})
+	drawIcon(well)
+	-- The key on the top left, how many you have on the top right.
+	if UserInputService.KeyboardEnabled then
+		Candy.badge(face.Parent, key, 30, UDim2.fromOffset(-4, -4))
 	end
-	return label
-end
-
-local function corner(radius)
-	return create("UICorner", { CornerRadius = UDim.new(0, radius) })
-end
-
-local function button(props)
-	local btn = create("TextButton", {
-		AutoButtonColor = true,
-		BackgroundColor3 = PANEL,
-		BackgroundTransparency = 0.25,
-		Font = Enum.Font.GothamBold,
-		TextColor3 = WHITE,
-		TextSize = 14,
-	}, { corner(6) })
-	for key, value in props do
-		btn[key] = value
-	end
-	return btn
+	local count = Candy.badge(face.Parent, "", 30, UDim2.new(1, 4, 0, -4), Vector2.new(1, 0), Candy.LEMON)
+	return face, count
 end
 
 function Hud.start()
@@ -85,192 +94,315 @@ function Hud.start()
 		Size = UDim2.new(1, 0, 1, 60),
 		Parent = gui,
 	})
-	local warning = text({
-		Name = "Warning",
-		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = UDim2.fromScale(0.5, 0.3),
-		Size = UDim2.fromOffset(500, 50),
-		Font = Enum.Font.GothamBlack,
-		TextSize = 34,
-		TextColor3 = RED,
-		TextTransparency = 1,
-		TextStrokeTransparency = 1,
-		Text = "IT HEARD YOU",
-		Parent = gui,
-	})
 
-	-- Stage name
-	local stageLabel = text({
-		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, 8),
-		Size = UDim2.fromOffset(400, 24),
-		TextSize = 20,
-		Parent = gui,
-	})
-	local stageName = text({
-		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, 32),
-		Size = UDim2.fromOffset(400, 18),
-		Font = Enum.Font.GothamMedium,
-		TextSize = 14,
-		TextTransparency = 0.2,
-		Parent = gui,
-	})
-	-- Run timer, while a run is being timed (server/Progress.luau).
-	local runTimer = text({
-		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, 54),
-		Size = UDim2.fromOffset(200, 20),
-		Font = Enum.Font.RobotoMono,
-		TextSize = 18,
-		Parent = gui,
-	})
+	-- Top left: pearls, and the stage under them --------------------------------
 
-	-- Noise meter
-	local meter = create("Frame", {
-		AnchorPoint = Vector2.new(0.5, 1),
-		Position = UDim2.new(0.5, 0, 1, -24),
-		Size = UDim2.fromOffset(260, 10),
-		BackgroundColor3 = PANEL,
-		BackgroundTransparency = 0.3,
-		BorderSizePixel = 0,
-		Parent = gui,
-	}, { corner(5) })
-	local fill = create("Frame", {
-		Size = UDim2.fromScale(0, 1),
-		BackgroundColor3 = WHITE,
-		BorderSizePixel = 0,
-		Parent = meter,
-	}, { corner(5) })
-	create("Frame", {
-		Name = "LungeMark",
-		Position = UDim2.fromScale(Config.Lurker.LungeNoise / Config.Noise.Max, 0),
-		Size = UDim2.new(0, 2, 1, 0),
-		BackgroundColor3 = RED,
-		BorderSizePixel = 0,
-		Parent = meter,
-	})
-	local noiseLabel = text({
-		AnchorPoint = Vector2.new(0.5, 1),
-		Position = UDim2.new(0.5, 0, 0, -4),
-		Size = UDim2.new(1, 0, 0, 16),
-		TextSize = 12,
-		Text = "NOISE",
-		Parent = meter,
-	})
-	local pebbleLabel = text({
-		AnchorPoint = Vector2.new(0.5, 1),
-		Position = UDim2.new(0.5, 0, 0, -22),
-		Size = UDim2.new(2, 0, 0, 18),
-		Font = Enum.Font.GothamMedium,
-		TextSize = 14,
-		Parent = meter,
-	})
-	local boostLabel = text({
-		AnchorPoint = Vector2.new(0.5, 1),
-		Position = UDim2.new(0.5, 0, 0, -42),
-		Size = UDim2.new(2, 0, 0, 18),
-		Font = Enum.Font.GothamMedium,
-		TextSize = 14,
-		TextColor3 = Color3.fromRGB(190, 235, 255),
-		Parent = meter,
-	})
-
-	-- Pearls and the shop, under the difficulty buttons
-	local shopButton = button({
-		Position = UDim2.fromOffset(12, 48),
-		Size = UDim2.fromOffset(74, 28),
-		BackgroundColor3 = GREEN,
-		BackgroundTransparency = 0,
-		Text = "Shop",
-		Parent = gui,
-	})
-	shopButton.Activated:Connect(ShopUi.toggle)
+	local pearlsPill = Candy.raised(gui, { name = "Pearls", position = UDim2.fromOffset(MARGIN, 12), size = UDim2.fromOffset(150, 59), radius = 27 })
+	Candy.pearl(pearlsPill, 40, UDim2.new(0, 7, 0.5, 0), Vector2.new(0, 0.5))
 	local pearlsLabel = text({
-		Position = UDim2.fromOffset(96, 48),
-		Size = UDim2.fromOffset(200, 28),
+		Name = "Count",
+		Position = UDim2.fromOffset(56, 0),
+		Size = UDim2.new(1, -66, 1, 0),
+		TextSize = 26,
 		TextXAlignment = Enum.TextXAlignment.Left,
-		Parent = gui,
+		Text = "0",
+		Parent = pearlsPill,
 	})
 
-	-- Difficulty buttons
-	local difficultyBar = create("Frame", {
-		Position = UDim2.fromOffset(12, 12),
-		Size = UDim2.fromOffset(240, 30),
-		BackgroundTransparency = 1,
+	local stagePill = create("Frame", {
+		Name = "Stage",
+		Position = UDim2.fromOffset(MARGIN, 82),
+		Size = UDim2.fromOffset(0, 38),
+		AutomaticSize = Enum.AutomaticSize.X,
+		BackgroundColor3 = WHITE,
 		Parent = gui,
 	}, {
+		Candy.corner(UDim.new(0.5, 0)),
+		Candy.stroke(3),
+		create("UIPadding", { PaddingLeft = UDim.new(0, 16), PaddingRight = UDim.new(0, 16) }),
 		create("UIListLayout", {
 			FillDirection = Enum.FillDirection.Horizontal,
-			Padding = UDim.new(0, 6),
+			VerticalAlignment = Enum.VerticalAlignment.Center,
+			Padding = UDim.new(0, 8),
 			SortOrder = Enum.SortOrder.LayoutOrder,
 		}),
 	})
+	local stageLabel = text({ LayoutOrder = 1, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromScale(0, 1), TextSize = 17, Text = "", Parent = stagePill })
+	text({ LayoutOrder = 2, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromScale(0, 1), TextSize = 17, TextColor3 = MUTED, Text = "·", Parent = stagePill })
+	local stageName = text({ LayoutOrder = 3, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromScale(0, 1), TextSize = 17, TextColor3 = MUTED, Text = "", Parent = stagePill })
+
+	-- Top middle: run timer and the warning ------------------------------------
+
+	local timerPill = Candy.raised(gui, {
+		name = "Timer",
+		anchor = Vector2.new(0.5, 0),
+		position = UDim2.new(0.5, 0, 0, 12),
+		size = UDim2.fromOffset(160, 59),
+		radius = 27,
+	})
+	local runTimer = text({ Size = UDim2.fromScale(1, 1), Font = Enum.Font.RobotoMono, TextSize = 26, Text = "", Parent = timerPill })
+
+	local warning = create("CanvasGroup", {
+		Name = "Warning",
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.new(0.5, 0, 0, 80),
+		Size = UDim2.fromOffset(250, 52),
+		BackgroundTransparency = 1,
+		GroupTransparency = 1,
+		Parent = gui,
+	})
+	local warningBody = Candy.raised(warning, { position = UDim2.fromOffset(4, 4), size = UDim2.new(1, -8, 1, -6), color = Candy.PINK, radius = 14, lip = 4, outline = 3 })
+	text({ Position = UDim2.fromScale(0.08, 0.2), Size = UDim2.fromScale(0.84, 0.6), Text = "IT HEARD YOU", Parent = warningBody })
+
+	-- Top right: difficulty ------------------------------------------------------
+
+	local difficultyBar = Candy.raised(gui, {
+		name = "Difficulty",
+		anchor = Vector2.new(1, 0),
+		position = UDim2.new(1, -MARGIN, 0, 12),
+		size = UDim2.fromOffset(3 * 86 + 10, 57),
+		radius = 26,
+	})
 	local difficultyButtons = {}
 	for name, difficulty in Config.Difficulties do
-		local btn = button({
+		local btn = create("TextButton", {
 			Name = name,
-			LayoutOrder = difficulty.order,
-			Size = UDim2.fromOffset(74, 28),
+			Position = UDim2.fromOffset(5 + (difficulty.order - 1) * 86, 4),
+			Size = UDim2.fromOffset(84, 44),
+			BackgroundColor3 = DIFFICULTY_COLORS[name] or Candy.MINT,
+			AutoButtonColor = false,
+			Font = Enum.Font.FredokaOne,
+			TextSize = 18,
+			TextColor3 = INK,
 			Text = name,
 			Parent = difficultyBar,
-		})
+		}, { Candy.corner(UDim.new(0.5, 0)), Candy.stroke(3) })
 		btn.Activated:Connect(function()
 			Remotes.SetDifficulty:FireServer(name)
 		end)
 		difficultyButtons[name] = btn
 	end
 
-	-- Notifications
-	local toast = text({
-		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.fromScale(0.5, 0.16),
-		Size = UDim2.fromOffset(500, 30),
-		TextSize = 22,
-		TextTransparency = 1,
-		TextStrokeTransparency = 1,
-		Parent = gui,
+	-- Left: the noise meter ------------------------------------------------------
+
+	local noisePanel = Candy.raised(gui, {
+		name = "Noise",
+		anchor = Vector2.new(0, 0.5),
+		position = UDim2.new(0, MARGIN, 0.5, 0),
+		size = UDim2.fromOffset(72, 169),
+		radius = 20,
+	})
+	local segments = {}
+	for i = 1, SEGMENTS do
+		-- Segments loud enough to be grabbed at are pink.
+		local threshold = i / SEGMENTS * Config.Noise.Max
+		local color = if threshold > Config.Lurker.LungeNoise then Candy.PINK elseif i > 2 then Candy.LEMON else Candy.MINT
+		segments[i] = {
+			color = color,
+			frame = create("Frame", {
+				AnchorPoint = Vector2.new(0.5, 0),
+				Position = UDim2.new(0.5, 0, 0, 14 + (SEGMENTS - i) * 19),
+				Size = UDim2.fromOffset(34, 14),
+				BackgroundColor3 = Candy.DIM,
+				Parent = noisePanel,
+			}, { Candy.corner(4) }),
+		}
+	end
+	local noiseLabel = text({
+		AnchorPoint = Vector2.new(0.5, 1),
+		Position = UDim2.new(0.5, 0, 1, -10),
+		Size = UDim2.new(1, -8, 0, 16),
+		TextSize = 13,
+		Text = "NOISE",
+		Parent = noisePanel,
 	})
 
-	-- Escape screen
-	local winPanel = create("Frame", {
-		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = UDim2.fromScale(0.5, 0.5),
-		Size = UDim2.fromOffset(360, 220),
-		BackgroundColor3 = PANEL,
-		BackgroundTransparency = 0.1,
-		Visible = false,
+	-- Bottom: the shop button ----------------------------------------------------
+
+	local dock = create("Frame", {
+		Name = "Dock",
+		AnchorPoint = Vector2.new(0.5, 1),
+		Position = UDim2.new(0.5, 0, 1, -12),
+		Size = UDim2.fromOffset(120, 124),
+		BackgroundColor3 = WHITE,
+		BackgroundTransparency = 0.8,
 		Parent = gui,
-	}, { corner(10) })
-	text({
-		Position = UDim2.fromOffset(0, 18),
-		Size = UDim2.new(1, 0, 0, 34),
-		Font = Enum.Font.GothamBlack,
-		TextSize = 28,
+	}, { Candy.corner(28) })
+	local shopButton = Candy.button(dock, {
+		name = "Shop",
+		anchor = Vector2.new(0.5, 0),
+		position = UDim2.new(0.5, 0, 0, 12),
+		size = UDim2.fromOffset(92, 101),
+		radius = 20,
+		outline = 4,
+		text = "SHOP",
+		color = Candy.LEMON,
+	})
+	shopButton.Label.AnchorPoint = Vector2.new(0.5, 1)
+	shopButton.Label.Position = UDim2.new(0.5, 0, 1, -10)
+	shopButton.Label.Size = UDim2.new(1, -16, 0, 17)
+	-- A little shop stall: a striped awning with a scalloped edge over a
+	-- counter with a pearl on it.
+	local stall = create("Frame", {
+		Name = "Stall",
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.new(0.5, 0, 0, 12),
+		Size = UDim2.fromOffset(48, 46),
+		BackgroundTransparency = 1,
+		ZIndex = 3,
+		Parent = shopButton,
+	})
+	create("Frame", {
+		Name = "Counter",
+		Position = UDim2.fromOffset(5, 18),
+		Size = UDim2.fromOffset(38, 26),
+		BackgroundColor3 = WHITE,
+		ZIndex = 3,
+		Parent = stall,
+	}, { Candy.corner(4), Candy.stroke(3) })
+	local awning = create("Frame", {
+		Name = "Awning",
+		Size = UDim2.fromOffset(48, 14),
+		BackgroundColor3 = WHITE,
+		ClipsDescendants = true,
+		ZIndex = 4,
+		Parent = stall,
+	}, { Candy.stroke(3) })
+	for i = 0, 3 do
+		create("Frame", {
+			Position = UDim2.fromOffset(i * 12, 0),
+			Size = UDim2.fromOffset(12, 14),
+			BackgroundColor3 = if i % 2 == 0 then Candy.PINK else WHITE,
+			BorderSizePixel = 0,
+			ZIndex = 4,
+			Parent = awning,
+		})
+		create("Frame", {
+			Position = UDim2.fromOffset(i * 12, 8),
+			Size = UDim2.fromOffset(12, 12),
+			BackgroundColor3 = if i % 2 == 0 then Candy.PINK else WHITE,
+			ZIndex = 3,
+			Parent = stall,
+		}, { Candy.corner(UDim.new(0.5, 0)), Candy.stroke(2.5) })
+	end
+	Candy.pearl(stall, 14, UDim2.fromOffset(17, 26)).ZIndex = 5
+	if UserInputService.KeyboardEnabled then
+		Candy.badge(shopButton.Parent, "B", 30, UDim2.fromOffset(-6, -6))
+	end
+	shopButton.Activated:Connect(function()
+		ShopUi.toggle()
+	end)
+
+	-- Bottom right: pebble and boost buttons -------------------------------------
+
+	-- Lifted clear of the jump button on touch screens.
+	local actionsLift = if UserInputService.TouchEnabled then 150 else 0
+	local actions = create("Frame", {
+		Name = "Actions",
+		AnchorPoint = Vector2.new(1, 1),
+		Position = UDim2.new(1, -24, 1, -24 - actionsLift),
+		Size = UDim2.fromOffset(250, 250),
+		BackgroundTransparency = 1,
+		Parent = gui,
+	})
+	local pebbleButton, pebbleCount = actionButton(actions, 112, UDim2.fromScale(1, 1), Candy.LEMON, "Pebble", "E", function(well)
+		local stone = create("Frame", {
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.fromScale(0.5, 0.55),
+			Size = UDim2.fromScale(0.8, 0.6),
+			BackgroundColor3 = Color3.fromRGB(176, 178, 196),
+			ZIndex = 4,
+			Parent = well,
+		}, { Candy.corner(UDim.new(0.5, 0)), Candy.stroke(3) })
+		create("Frame", {
+			Position = UDim2.fromScale(0.2, 0.18),
+			Size = UDim2.fromScale(0.3, 0.25),
+			BackgroundColor3 = WHITE,
+			BackgroundTransparency = 0.3,
+			ZIndex = 5,
+			Parent = stone,
+		}, { Candy.corner(UDim.new(0.5, 0)) })
+	end)
+	pebbleButton.Activated:Connect(Throw.fromButton)
+
+	local boostButtons = {}
+	for _, boost in {
+		{ id = "updraft", name = "Updraft", key = "Q", color = Candy.MINT, position = UDim2.new(1, -130, 1, -6) },
+		{ id = "hush", name = "Hush", key = "F", color = Candy.PINK, position = UDim2.new(1, -12, 1, -130) },
+	} do
+		local face, count = actionButton(actions, 88, boost.position, boost.color, boost.name, boost.key, function(well)
+			ItemIcons.draw(well, { kind = "boost", id = boost.id, swatch = WHITE })
+		end)
+		face.Activated:Connect(function()
+			Boosts.use(boost.id)
+		end)
+		boostButtons[boost.id] = { face = face, count = count }
+	end
+
+	-- Notifications --------------------------------------------------------------
+
+	local toast = create("CanvasGroup", {
+		Name = "Toast",
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.fromScale(0.5, 0.2),
+		Size = UDim2.fromOffset(300, 54),
+		BackgroundTransparency = 1,
+		GroupTransparency = 1,
+		Parent = gui,
+	})
+	local toastBody = Candy.raised(toast, { position = UDim2.fromOffset(4, 4), size = UDim2.new(1, -8, 1, -6), radius = 22, lip = 4, outline = 3 })
+	local toastText = text({ Position = UDim2.fromOffset(16, 0), Size = UDim2.new(1, -32, 1, 0), TextSize = 20, Text = "", Parent = toastBody })
+
+	-- Escape screen --------------------------------------------------------------
+
+	local winBody = Candy.raised(gui, {
+		name = "Escaped",
+		anchor = Vector2.new(0.5, 0.5),
+		position = UDim2.fromScale(0.5, 0.5),
+		size = UDim2.fromOffset(420, 290),
+		radius = 28,
+		lip = 8,
+		outline = 5,
+	})
+	local winPanel = winBody.Parent
+	winPanel.Visible = false
+	Candy.fit(winPanel, Vector2.new(430, 300), 24)
+	local winHeader = create("Frame", {
+		Size = UDim2.new(1, 0, 0, 78),
+		BackgroundColor3 = Candy.SKY,
+		Parent = winBody,
+	}, { Candy.corner(28) })
+	create("Frame", { Position = UDim2.new(0, 0, 1, -28), Size = UDim2.new(1, 0, 0, 28), BackgroundColor3 = Candy.SKY, BorderSizePixel = 0, Parent = winHeader })
+	create("Frame", { Position = UDim2.new(0, 0, 1, 0), Size = UDim2.new(1, 0, 0, 4), BackgroundColor3 = INK, BorderSizePixel = 0, Parent = winHeader })
+	Candy.title(winHeader, {
+		Position = UDim2.fromOffset(20, 12),
+		Size = UDim2.new(1, -40, 0, 50),
+		TextColor3 = Candy.LEMON,
 		Text = "YOU MADE IT OUT",
-		Parent = winPanel,
-	})
+	}, 3, 4)
 	local winDetails = text({
-		Position = UDim2.fromOffset(16, 58),
-		Size = UDim2.new(1, -32, 0, 80),
-		Font = Enum.Font.GothamMedium,
-		TextSize = 15,
+		Position = UDim2.fromOffset(24, 96),
+		Size = UDim2.new(1, -48, 0, 92),
+		Font = Enum.Font.GothamBold,
+		TextSize = 16,
+		TextColor3 = MUTED,
 		TextWrapped = true,
-		Parent = winPanel,
+		Text = "",
+		Parent = winBody,
 	})
-	local playAgain = button({
-		Position = UDim2.new(0, 20, 1, -56),
-		Size = UDim2.new(0.5, -26, 0, 38),
-		BackgroundColor3 = Color3.fromRGB(60, 150, 120),
-		BackgroundTransparency = 0,
-		Text = "Play again",
-		Parent = winPanel,
+	local playAgain = Candy.button(winBody, {
+		position = UDim2.new(0, 24, 1, -82),
+		size = UDim2.new(0.5, -30, 0, 60),
+		radius = 28,
+		text = "Play again",
+		color = Candy.MINT,
 	})
-	local close = button({
-		Position = UDim2.new(0.5, 6, 1, -56),
-		Size = UDim2.new(0.5, -26, 0, 38),
-		Text = "Close",
-		Parent = winPanel,
+	local close = Candy.button(winBody, {
+		position = UDim2.new(0.5, 6, 1, -82),
+		size = UDim2.new(0.5, -30, 0, 60),
+		radius = 28,
+		text = "Close",
+		color = WHITE,
 	})
 	playAgain.Activated:Connect(function()
 		winPanel.Visible = false
@@ -287,37 +419,33 @@ function Hud.start()
 	local function updateStage()
 		local checkpoint = player:GetAttribute("Checkpoint") or 0
 		if checkpoint >= #Stages then
-			stageLabel.Text = "THE WAY OUT"
+			stageLabel.Text = "The way out"
 			stageName.Text = "Walk into the light"
 		else
 			local index = checkpoint + 1
-			stageLabel.Text = ("STAGE %d / %d"):format(index, #Stages)
+			stageLabel.Text = ("Stage %d of %d"):format(index, #Stages)
 			stageName.Text = Stages[index].name
 		end
 	end
 
 	local function updatePebbles()
 		local count = player:GetAttribute("Pebbles") or 0
-		local hint = if UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled then "tap Throw" else "E to throw"
-		pebbleLabel.Text = ("Pebbles: %d   ·   %s"):format(count, hint)
+		pebbleCount.Label.Text = tostring(count)
+		Candy.paint(pebbleButton, if count > 0 then Candy.LEMON else Candy.CLOUD, if count > 0 then INK else MUTED, count == 0)
 	end
 
 	local function updatePearls()
-		local pearls = player:GetAttribute("Pearls") or 0
-		local hint = if UserInputService.KeyboardEnabled then "   ·   B for shop" else ""
-		pearlsLabel.Text = ("%d pearls%s"):format(pearls, hint)
+		local pearls = tostring(player:GetAttribute("Pearls") or 0)
+		pearlsLabel.Text = pearls
+		pearlsPill.Parent.Size = UDim2.fromOffset(math.max(110, 56 + textWidth(pearls, 26) + 22), 59)
 	end
 
 	local function updateBoosts()
-		local touch = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
-		local parts = {}
-		for _, boost in { { id = "updraft", name = "Fly", key = "Q" }, { id = "hush", name = "Hush", key = "F" } } do
-			local count = player:GetAttribute("Boost_" .. boost.id) or 0
-			if count > 0 then
-				table.insert(parts, if touch then ("%s ×%d"):format(boost.name, count) else ("%s ×%d (%s)"):format(boost.name, count, boost.key))
-			end
+		for id, button in boostButtons do
+			local count = player:GetAttribute("Boost_" .. id) or 0
+			button.face.Parent.Visible = count > 0
+			button.count.Label.Text = tostring(count)
 		end
-		boostLabel.Text = table.concat(parts, "   ·   ")
 	end
 
 	local function updateHushed()
@@ -327,17 +455,17 @@ function Hud.start()
 	local function updateDifficulty()
 		local current = player:GetAttribute("Difficulty") or Config.DefaultDifficulty
 		for name, btn in difficultyButtons do
-			btn.BackgroundColor3 = if name == current then Color3.fromRGB(60, 150, 120) else PANEL
+			local on = name == current
+			btn.BackgroundTransparency = if on then 0 else 1
+			btn.UIStroke.Enabled = on
+			btn.TextColor3 = if on then INK else MUTED
 		end
 	end
 
 	local function updateHunted()
 		local hunted = player:GetAttribute("Hunted") == true
 		local info = TweenInfo.new(if hunted then 0.2 else 0.8)
-		TweenService:Create(warning, info, {
-			TextTransparency = if hunted then 0 else 1,
-			TextStrokeTransparency = if hunted then 0.5 else 1,
-		}):Play()
+		TweenService:Create(warning, info, { GroupTransparency = if hunted then 0 else 1 }):Play()
 		TweenService:Create(danger, info, { BackgroundTransparency = if hunted then 0.82 else 1 }):Play()
 	end
 
@@ -368,12 +496,12 @@ function Hud.start()
 	local function showToast(message)
 		toastId += 1
 		local id = toastId
-		toast.Text = message
-		toast.TextTransparency = 0
-		toast.TextStrokeTransparency = 0.6
+		toastText.Text = message
+		toast.Size = UDim2.fromOffset(textWidth(message, 20) + 48, 54)
+		toast.GroupTransparency = 0
 		task.delay(3, function()
 			if id == toastId then
-				TweenService:Create(toast, TweenInfo.new(0.6), { TextTransparency = 1, TextStrokeTransparency = 1 }):Play()
+				TweenService:Create(toast, TweenInfo.new(0.6), { GroupTransparency = 1 }):Play()
 			end
 		end)
 	end
@@ -402,19 +530,35 @@ function Hud.start()
 	updatePearls()
 	updateBoosts()
 	updateHushed()
+	updateHunted()
 	task.spawn(function()
 		workspace:WaitForChild("Map")
 		hideFoundShells()
 	end)
 
+	-- The lobby and the way out start where Mood.luau says they do.
+	local exitZ = 0
+	for _, stage in Stages do
+		exitZ += stage.length
+	end
+
 	local shown = 0
 	RunService.RenderStepped:Connect(function(dt)
+		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+		local inStages = root ~= nil and root.Position.Z >= 0 and root.Position.Z < exitZ
+		noisePanel.Parent.Visible = inStages
+		actions.Visible = inStages
+
 		local target = (player:GetAttribute("Noise") or 0) / Config.Noise.Max
 		shown += (target - shown) * math.min(1, dt * 10)
-		fill.Size = UDim2.fromScale(shown, 1)
-		fill.BackgroundColor3 = if player:GetAttribute("Hushed") then HUSH else WHITE:Lerp(RED, shown)
+		local lit = if shown > 0.02 then math.max(1, math.round(shown * SEGMENTS)) else 0
+		local hushed = player:GetAttribute("Hushed")
+		for i, segment in segments do
+			segment.frame.BackgroundColor3 = if i > lit then Candy.DIM elseif hushed then Candy.LILAC else segment.color
+		end
 
 		local started = player:GetAttribute("RunStartedAt")
+		timerPill.Parent.Visible = started ~= nil
 		runTimer.Text = if started then Format.time(workspace:GetServerTimeNow() - started) else ""
 	end)
 end

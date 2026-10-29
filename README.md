@@ -8,11 +8,12 @@ A Roblox horror obby. Cross flooded pool rooms by jumping from tile to tile. Som
 - **Tiles to watch for:** creaky tiles (slightly yellow), sinking tiles (thin, bluish slabs that go under a second after you step on them), drifting rafts (orange) and pillars.
 - **7 stages** with checkpoints. Each one has a hidden shell to collect. After the last stage, walk through the exit to escape.
 - **Easy, Normal and Hard:** harder modes make you louder and the creature faster.
-- **The lobby** is a big open courtyard at night, under the stars, in front of the old brick building the stages are in: lit windows, the game's sign in neon, lamp posts, string lights, grass beds with palms and benches. It is colourful on purpose, so the rooms feel darker after it. The building's west wing has a flooded ground-floor window (stand by the glass and the creature inside comes to stare at you); the east wall has the record boards (most escapes and the fastest escape on each difficulty) and the shop hut (G).
+- **The lobby** is a big open courtyard at night, under the stars, in front of the old brick building the stages are in: lit windows, the game's sign in neon, lamp posts, string lights, grass beds with palms and benches. It is colourful on purpose, so the rooms feel darker after it. Nothing in the lobby shows what waits inside. The east wall has the record boards (most escapes and the fastest escape on each difficulty) and the shop hut (G).
 - **Three doors into stage 1**, one per difficulty (Easy, Normal, Hard). Stepping on a door's pad picks that difficulty; its screen shows how many people are in the water on it.
 - **Party doors:** step on a party door's pad and a pop-up sets up a party: size (1 to 4), difficulty, friends only. Others join by stepping on the pad. When the countdown ends the party leaves together for a private server of its own (in Studio, which can't teleport, it goes straight into stage 1 instead).
 - **Run timer:** starts when you walk through any of stage 1's doors and stops at the exit. A run counts for the easiest difficulty you played during it. Your best time on each difficulty is saved.
-- **Pearls:** earned for each stage cleared, each shell found and each escape. Spend them in the **Shop** (button under the difficulty buttons, or B).
+- **Pearls:** earned for each stage cleared, each shell found and each escape. Spend them in the **Shop** (the button at the bottom of the screen, or B).
+- **The HUD** is in the same candy style as the menus: pearls and your stage top left, the run timer top middle, difficulty top right, the shop button at the bottom. In the stages it adds the noise meter on the left and round pebble, Updraft and Hush buttons bottom right, which work on touch screens too.
 - **Shop:** 6 skins, 6 accessories, and 2 boosts you carry and use: **Updraft** (Q / L1 / Fly button) lifts you and lets you glide for 2 seconds, and **Hush** (F / Y / Hush button) makes you completely silent for 5 seconds.
 - Your progress, shells, escapes, difficulty, pearls and items are saved.
 
@@ -48,12 +49,11 @@ Or skip the live sync: run `rojo build -o StillWater.rbxl` and open the file in 
 | Noise amounts, creature speed and hearing, pebbles, difficulty modes | `src/shared/Config.luau` |
 | Name and tagline on the lobby sign | `Config.GameName`, `Config.Tagline` |
 | How rooms and tiles are built, lighting, fog and colour grading | `src/server/MapBuilder.luau` |
-| Lobby: size (`Config.Room.LobbyWidth`, `LobbyLength`), the building, doors and party doors, signs, flooded window, record wall, lamps and string lights, where each prop stands, spawn | `src/server/LobbyBuilder.luau` |
+| Lobby: size (`Config.Room.LobbyWidth`, `LobbyLength`), the building, doors and party doors, signs, record wall, lamps and string lights, where each prop stands, spawn | `src/server/LobbyBuilder.luau` |
 | Where the difficulty doors are; party size and countdowns | `Config.Room.EntranceDoors`, `Config.Party` |
 | Difficulty door pads and screens | `src/server/LobbyDoors.luau` |
 | Parties: joining, leaving, countdown, sending a party to its own server | `src/server/Parties.luau` |
 | The party pop-up and banner | `src/client/PartyUi.luau` |
-| The aquarium creature | `src/server/LobbyTank.luau` |
 | Record boards (titles, colours, refresh rate) | `src/server/Leaderboards.luau` |
 | Moonlit lobby and exit lighting | `src/client/Mood.luau` |
 | Creature behaviour | `src/server/Lurker.luau` |
@@ -64,6 +64,8 @@ Or skip the live sync: run `rojo build -o StillWater.rbxl` and open the file in 
 | Accessory shapes | `src/server/Cosmetics.luau` |
 | Pearls per stage, shell and escape; boost timing | `Config.Pearls`, `Config.Boosts` |
 | HUD | `src/client/Hud.luau` |
+| The candy look shared by the HUD, menus and record boards: colours, raised panels, chunky buttons, lettering | `src/shared/Candy.luau` |
+| Shop item pictures | `src/client/ItemIcons.luau` |
 
 Each stage's tile layout comes from a fixed random seed, so a stage looks the same every time. Change a stage's numbers to get a new layout.
 
@@ -76,6 +78,7 @@ src/
     Stages.luau          stage list
     Catalog.luau         shop items
     Format.luau          time formatting
+    Candy.luau           the shared candy UI look (colours, panels, buttons)
     Remotes.luau         RemoteEvents
   server/              ServerScriptService.Server
     Main.server.luau     starts everything
@@ -84,7 +87,6 @@ src/
     Parts.luau           part-building helpers both builders use
     LobbyDoors.luau      the difficulty doors' pads and screens
     Parties.luau         party doors: parties, countdowns, private servers
-    LobbyTank.luau       the creature behind the lobby's flooded window
     Leaderboards.luau    record boards (OrderedDataStores)
     Noise.luau           per-player noise, splashes, hard landings, Hush
     Lurker.luau          one creature (moves an invisible anchor)
@@ -97,13 +99,14 @@ src/
     Effects.luau         splash rings and sounds
   client/              StarterPlayerScripts.Client
     Main.client.luau
-    Hud.luau             stage, noise meter, warnings, difficulty buttons, pearls
+    Hud.luau             pearls, stage, timer, difficulty, noise meter, shop and action buttons
     ShopUi.luau          the shop window
+    ItemIcons.luau       pictures of the shop's items
     PartyUi.luau         the party pop-up and banner
-    Boosts.luau          boost input and Updraft flight
+    Boosts.luau          boost input (Q / F / the HUD's buttons) and Updraft flight
     LurkerVisuals.luau   creature bodies and swimming animation
     Fear.luau            vignette, heartbeat, faltering lights, shake
     DeathScene.luau      the pulled-under death sequence and "what it heard" recap
     Mood.luau            moonlit lobby and exit lighting, dark rooms
-    Throw.luau           throw input (E / R2 / touch button)
+    Throw.luau           throw input (E / R2 / the HUD's pebble button)
 ```

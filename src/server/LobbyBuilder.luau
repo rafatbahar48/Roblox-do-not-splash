@@ -6,8 +6,7 @@
 --                  stone archways into stage 1, one per difficulty, each with
 --                  a glowing pad and a screen (server/LobbyDoors.luau), and a
 --                  party door either side (server/Parties.luau)
---   west wing      a flooded ground-floor window; the creature inside comes
---                  to stare at anyone by the glass (LobbyTank.luau)
+--   west wing      more of the building: brick, rows of mostly dark windows
 --   east wall      the record boards (Leaderboards.luau), and the float hut,
 --                  which is the shop
 --   courtyard      paving, a lit path to the doors, grass beds with palms,
@@ -63,26 +62,21 @@ local C = {
 	aqua = Color3.fromRGB(47, 230, 224),
 	pink = Color3.fromRGB(255, 79, 163),
 	mint = Color3.fromRGB(111, 227, 180),
+	sky = Color3.fromRGB(99, 201, 255),
 	lemon = Color3.fromRGB(255, 221, 74),
 	candy = Color3.fromRGB(255, 111, 177),
 	ink = Color3.fromRGB(43, 34, 87),
 	white = Color3.fromRGB(250, 252, 252),
 	door = Color3.fromRGB(70, 76, 110),
-	glass = Color3.fromRGB(90, 130, 160),
 	puddle = Color3.fromRGB(110, 140, 200),
-	tank = Color3.fromRGB(40, 70, 72),
-	tankWater = Color3.fromRGB(30, 96, 110),
-	tankLight = Color3.fromRGB(90, 220, 230),
-	sand = Color3.fromRGB(150, 140, 110),
-	rock = Color3.fromRGB(90, 96, 92),
-	weed = Color3.fromRGB(50, 120, 70),
 }
 
--- One colour per difficulty door, and what its screen says.
+-- One colour per difficulty door, and what its screen says. The screens
+-- never say what is inside.
 local DOORS = {
-	Easy = { color = C.mint, blurb = "Quieter steps. A slower creature." },
+	Easy = { color = C.mint, blurb = "Quieter steps. More room for mistakes." },
 	Normal = { color = C.lemon, blurb = "The water as it was meant to be." },
-	Hard = { color = C.candy, blurb = "Every step is louder. It's faster." },
+	Hard = { color = C.candy, blurb = "Every step is louder. No room for mistakes." },
 }
 
 local BRICK = Enum.Material.Brick
@@ -122,15 +116,6 @@ local function bubbleText(gui, thickness, props)
 	stroke.LineJoinMode = Enum.LineJoinMode.Round
 	stroke.Parent = text
 	return text
-end
-
--- A white sign board with an ink border, flat against a wall. normal points
--- out of the wall; returns the SurfaceGui on its front.
-local function signBoard(folder, name, size, center, normal)
-	local look = CFrame.lookAt(center, center + normal)
-	block(folder, name .. "Border", size + Vector3.new(0.5, 0.5, -0.05), look * CFrame.new(0, 0, 0.02), C.ink, nil, DECOR)
-	local board = block(folder, name, size, look * CFrame.new(0, 0, -0.05), C.white, nil, DECOR)
-	return surface(board, Enum.NormalId.Front)
 end
 
 -- A lit screen with a neon border, flat against a wall. normal points out of
@@ -519,91 +504,23 @@ local function buildFacade(folder)
 	return doors, partyDoors, front
 end
 
--- The west wing: a tall brick wall with a flooded ground-floor window, and
--- the tank behind it. Returns the tank's bounds.
+-- The west wing: more of the old building, a tall brick wall with two rows of
+-- windows, most of them dark.
 local function buildWestWing(folder)
-	local tank = {
-		min = Vector3.new(-HALF - WALL - 14, TILE_TOP - 1, Z0 + 28),
-		max = Vector3.new(-HALF - WALL, TILE_TOP + 12, Z0 + 62),
-		glassX = -HALF, -- the courtyard side of the window
-	}
-	tank.windowZ0, tank.windowZ1 = tank.min.Z + 2, tank.max.Z - 2
-	local windowY0, windowY1 = TILE_TOP + 1, TILE_TOP + 10
 	local wx0, wx1 = -HALF - WALL, -HALF
-	local frame = 0.8
-
-	box(folder, "WestWing", Vector3.new(wx0, BASE_Y, Z0), Vector3.new(wx1, windowY0, FACE), C.brick, BRICK)
-	box(folder, "WestWing", Vector3.new(wx0, windowY1, Z0), Vector3.new(wx1, WING_TOP, FACE), C.brick, BRICK)
-	box(folder, "WestWing", Vector3.new(wx0, windowY0, Z0), Vector3.new(wx1, windowY1, tank.windowZ0), C.brick, BRICK)
-	box(folder, "WestWing", Vector3.new(wx0, windowY0, tank.windowZ1), Vector3.new(wx1, windowY1, FACE), C.brick, BRICK)
+	box(folder, "WestWing", Vector3.new(wx0, BASE_Y, Z0), Vector3.new(wx1, WING_TOP, FACE), C.brick, BRICK)
 	box(folder, "WingCornice", Vector3.new(wx0 - 0.5, WING_TOP, Z0), Vector3.new(wx1 + 0.8, WING_TOP + 1, FACE), C.stone, Enum.Material.Concrete)
 	strip(folder, Vector3.new(wx1, WING_TOP - 0.3, Z0), Vector3.new(wx1 + 0.15, WING_TOP, FACE), C.pink)
-	strip(folder, Vector3.new(wx1, TILE_TOP, Z0), Vector3.new(wx1 + 0.15, TILE_TOP + 0.3, tank.windowZ0 - frame), C.aqua)
-	strip(folder, Vector3.new(wx1, TILE_TOP, tank.windowZ1 + frame), Vector3.new(wx1 + 0.15, TILE_TOP + 0.3, FACE), C.aqua)
-	box(folder, "Glass", Vector3.new(wx0, windowY0, tank.windowZ0), Vector3.new(wx0 + 0.4, windowY1, tank.windowZ1), C.glass, Enum.Material.Glass, {
-		Transparency = 0.7,
-		Reflectance = 0.2,
-		CastShadow = false,
-	})
+	strip(folder, Vector3.new(wx1, TILE_TOP, Z0), Vector3.new(wx1 + 0.15, TILE_TOP + 0.3, FACE), C.aqua)
 
-	-- A stone frame and sill, with a thin aqua neon edge.
-	local inner = wx1 + 0.5
-	box(folder, "WindowFrame", Vector3.new(wx1, TILE_TOP, tank.windowZ0 - frame), Vector3.new(inner, windowY1 + frame, tank.windowZ0), C.stone, Enum.Material.Concrete, DECOR)
-	box(folder, "WindowFrame", Vector3.new(wx1, TILE_TOP, tank.windowZ1), Vector3.new(inner, windowY1 + frame, tank.windowZ1 + frame), C.stone, Enum.Material.Concrete, DECOR)
-	box(folder, "WindowFrame", Vector3.new(wx1, windowY1, tank.windowZ0), Vector3.new(inner, windowY1 + frame, tank.windowZ1), C.stone, Enum.Material.Concrete, DECOR)
-	box(folder, "WindowSill", Vector3.new(wx1, TILE_TOP, tank.windowZ0), Vector3.new(inner + 0.4, windowY0, tank.windowZ1), C.stone, Enum.Material.Concrete, DECOR)
-	local z0, z1, top = tank.windowZ0 - frame, tank.windowZ1 + frame, windowY1 + frame
-	box(folder, "WindowEdge", Vector3.new(inner, TILE_TOP, z0 - 0.25), Vector3.new(inner + 0.1, top + 0.25, z0), C.aqua, Enum.Material.Neon, NEON)
-	box(folder, "WindowEdge", Vector3.new(inner, TILE_TOP, z1), Vector3.new(inner + 0.1, top + 0.25, z1 + 0.25), C.aqua, Enum.Material.Neon, NEON)
-	box(folder, "WindowEdge", Vector3.new(inner, top, z0), Vector3.new(inner + 0.1, top + 0.25, z1), C.aqua, Enum.Material.Neon, NEON)
-
-	local plaque = signBoard(folder, "WindowSign", Vector3.new(14, 1.9, 0.2), Vector3.new(wx1 + 0.3, windowY1 + 2.3, (tank.windowZ0 + tank.windowZ1) / 2), Vector3.xAxis)
-	label(plaque, { Position = UDim2.fromScale(0.04, 0.06), Size = UDim2.fromScale(0.92, 0.56), Font = Enum.Font.FredokaOne, TextColor3 = C.ink, Text = "FLOODED WING" })
-	label(plaque, { Position = UDim2.fromScale(0.04, 0.64), Size = UDim2.fromScale(0.92, 0.3), Font = Enum.Font.FredokaOne, TextColor3 = C.pink, Text = "Please don't tap the glass" })
-
-	-- Upstairs windows along the wing.
 	local rng = Random.new(1958)
 	for z = Z0 + 6, FACE - 4, 8 do
+		window(folder, Vector3.new(wx1, TILE_TOP + 6, z), Vector3.xAxis, rng:NextNumber() < 0.2)
 		window(folder, Vector3.new(wx1, TILE_TOP + 17, z), Vector3.xAxis, rng:NextNumber() < 0.35)
 	end
-	for _, z in { tank.windowZ0 - 5, tank.windowZ1 + 5 } do
-		wallLamp(folder, Vector3.new(wx1 + 0.2, TILE_TOP + 9, z), Vector3.xAxis)
+	for _, z in { Z0 + 25, Z0 + 65 } do
+		wallLamp(folder, Vector3.new(wx1 + 0.2, TILE_TOP + 10, z), Vector3.xAxis)
 	end
-
-	-- The tank: dark walls, a silty floor, rocks, weed and a glow from below.
-	local t0, t1 = tank.min, tank.max
-	box(folder, "TankBack", Vector3.new(t0.X - 1, t0.Y - 1, t0.Z - 1), Vector3.new(t0.X, t1.Y + 1, t1.Z + 1), C.tank, Enum.Material.CeramicTiles)
-	box(folder, "TankFloor", Vector3.new(t0.X, t0.Y - 1, t0.Z - 1), Vector3.new(t1.X, t0.Y, t1.Z + 1), C.sand, Enum.Material.Sand)
-	box(folder, "TankTop", Vector3.new(t0.X, t1.Y, t0.Z - 1), Vector3.new(t1.X, t1.Y + 1, t1.Z + 1), C.tank, Enum.Material.CeramicTiles)
-	box(folder, "TankEnd", Vector3.new(t0.X, t0.Y, t0.Z - 1), Vector3.new(t1.X, t1.Y, t0.Z), C.tank, Enum.Material.CeramicTiles)
-	box(folder, "TankEnd", Vector3.new(t0.X, t0.Y, t1.Z), Vector3.new(t1.X, t1.Y, t1.Z + 1), C.tank, Enum.Material.CeramicTiles)
-	box(folder, "TankWater", t0, Vector3.new(t1.X, t1.Y - 0.6, t1.Z), C.tankWater, nil, {
-		Transparency = 0.55,
-		CanCollide = false,
-		CanQuery = false,
-		CanTouch = false,
-		CastShadow = false,
-	})
-	for _ = 1, 6 do
-		local size = rng:NextNumber(1, 2.2)
-		local at = Vector3.new(rng:NextNumber(t0.X + 1.5, t1.X - 3), t0.Y + size * 0.3, rng:NextNumber(t0.Z + 2, t1.Z - 2))
-		block(folder, "TankRock", Vector3.one * size, CFrame.new(at), C.rock, Enum.Material.Slate, { Shape = Enum.PartType.Ball, CanCollide = false, CanQuery = false })
-	end
-	for _ = 1, 10 do
-		local height = rng:NextNumber(3, 7)
-		local at = Vector3.new(rng:NextNumber(t0.X + 1, t0.X + 7), t0.Y + height / 2, rng:NextNumber(t0.Z + 1.5, t1.Z - 1.5))
-		local lean = CFrame.Angles(rng:NextNumber(-0.15, 0.15), 0, rng:NextNumber(-0.15, 0.15))
-		block(folder, "TankWeed", Vector3.new(0.3, height, 0.3), CFrame.new(at) * lean, C.weed, Enum.Material.Grass, DECOR)
-	end
-	for _, along in { 0.25, 0.75 } do
-		glow(folder, Vector3.new((t0.X + t1.X) / 2, t0.Y + 0.6, t0.Z + (t1.Z - t0.Z) * along), C.tankLight, 18, 1.6)
-	end
-
-	-- Benches facing the window.
-	for _, z in { tank.windowZ0 + 8, tank.windowZ1 - 8 } do
-		bench(folder, CFrame.new(wx1 + 9, TILE_TOP + 1.6, z) * CFrame.Angles(0, math.pi / 2, 0))
-	end
-	return tank
 end
 
 -- The east side: a low wall with railings, the record boards on a tall
@@ -625,9 +542,11 @@ local function buildEastSide(folder)
 	box(folder, "RecordsWall", Vector3.new(HALF - 0.5, BASE_Y, z0), Vector3.new(HALF + WALL, TILE_TOP + 18, z1), C.brick, BRICK)
 	box(folder, "RecordsCornice", Vector3.new(HALF - 1, TILE_TOP + 18, z0 - 0.5), Vector3.new(HALF + WALL + 0.5, TILE_TOP + 19, z1 + 0.5), C.stone, Enum.Material.Concrete)
 	strip(folder, Vector3.new(HALF - 0.65, TILE_TOP + 17.6, z0), Vector3.new(HALF - 0.5, TILE_TOP + 17.9, z1), C.pink)
+	-- Each board glows softly in its header's colour (Leaderboards.luau).
+	local glows = { Escapes = C.sky, Easy = C.mint, Normal = C.lemon, Hard = C.candy }
 	for i, id in { "Escapes", "Easy", "Normal", "Hard" } do
 		local z = first + (i - 1) * spacing
-		block(folder, "BoardGlow", Vector3.new(0.2, 8.6, 10.1), CFrame.new(HALF - 0.6, y, z), C.lemon, Enum.Material.Neon, NEON)
+		block(folder, "BoardGlow", Vector3.new(0.2, 8.6, 10.1), CFrame.new(HALF - 0.6, y, z), glows[id]:Lerp(Color3.new(), 0.45), Enum.Material.Neon, NEON)
 		block(folder, "BoardFrame", Vector3.new(0.3, 8.1, 9.6), CFrame.new(HALF - 0.8, y, z), C.ink)
 		boards[id] = block(folder, "Board" .. id, Vector3.new(0.4, 7.5, 9), CFrame.new(HALF - 1, y, z), C.ink)
 	end
@@ -726,7 +645,7 @@ local function buildCourtyard(folder, doorFront)
 	end
 
 	-- String lights from four tall poles, criss-crossing over the courtyard
-	-- and up to the building. The poles keep clear of the window and boards.
+	-- and up to the building. The poles keep clear of the record boards.
 	local height = TILE_TOP + 15
 	local poles = {
 		Vector3.new(-HALF + 3, height, Z0 + 6),
@@ -794,7 +713,7 @@ function LobbyBuilder.build(map)
 
 	buildGround(folder)
 	local doors, partyDoors, doorFront = buildFacade(folder)
-	local tank = buildWestWing(folder)
+	buildWestWing(folder)
 	local boards = buildEastSide(folder)
 	buildSouthSide(folder)
 	buildCourtyard(folder, doorFront)
@@ -819,7 +738,7 @@ function LobbyBuilder.build(map)
 		CanQuery = false,
 	})
 
-	return { boards = boards, tank = tank, runStart = runStart, doors = doors, partyDoors = partyDoors }
+	return { boards = boards, runStart = runStart, doors = doors, partyDoors = partyDoors }
 end
 
 return LobbyBuilder

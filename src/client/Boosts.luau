@@ -1,7 +1,7 @@
 -- Boost input and the Updraft flight. Q (or L1) uses an Updraft, F (or Y) a
--- Hush; on touch screens a button shows while you carry any. The server
--- checks and spends the boost (server/Shop.luau) and answers with
--- BoostStarted. Only then does Updraft lift you; Hush happens on the server.
+-- Hush; so do the HUD's boost buttons (Hud.luau), which show while you carry
+-- any. The server checks and spends the boost (server/Shop.luau) and answers
+-- with BoostStarted. Only then does Updraft lift you; Hush happens on the server.
 
 local ContextActionService = game:GetService("ContextActionService")
 local Players = game:GetService("Players")
@@ -14,13 +14,12 @@ local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local player = Players.LocalPlayer
 
 local BOOSTS = {
-	{ id = "updraft", action = "UseUpdraft", title = "Fly", keys = { Enum.KeyCode.Q, Enum.KeyCode.ButtonL1 } },
-	{ id = "hush", action = "UseHush", title = "Hush", keys = { Enum.KeyCode.F, Enum.KeyCode.ButtonY } },
+	{ id = "updraft", action = "UseUpdraft", keys = { Enum.KeyCode.Q, Enum.KeyCode.ButtonL1 } },
+	{ id = "hush", action = "UseHush", keys = { Enum.KeyCode.F, Enum.KeyCode.ButtonY } },
 }
 
 local Boosts = {}
 
-local bound = {} -- [boost id] = true while its action is bound
 local flying = false
 
 -- Lifts the character a few studs and lets it glide where it is walking.
@@ -74,39 +73,28 @@ local function fly(duration)
 	end)
 end
 
+-- Asks the server to use one of boost id, if you carry any.
+function Boosts.use(id)
+	if (player:GetAttribute("Boost_" .. id) or 0) > 0 then
+		Remotes.UseBoost:FireServer(id)
+	end
+end
+
 local function onAction(actionName, inputState)
 	if inputState ~= Enum.UserInputState.Begin then
 		return Enum.ContextActionResult.Pass
 	end
 	for _, boost in BOOSTS do
-		if boost.action == actionName and (player:GetAttribute("Boost_" .. boost.id) or 0) > 0 then
-			Remotes.UseBoost:FireServer(boost.id)
+		if boost.action == actionName then
+			Boosts.use(boost.id)
 		end
 	end
 	return Enum.ContextActionResult.Sink
 end
 
--- Binds a boost's keys and touch button while the player carries any.
-local function refresh(boost)
-	local count = player:GetAttribute("Boost_" .. boost.id) or 0
-	if count > 0 then
-		if not bound[boost.id] then
-			ContextActionService:BindAction(boost.action, onAction, true, table.unpack(boost.keys))
-			bound[boost.id] = true
-		end
-		ContextActionService:SetTitle(boost.action, ("%s %d"):format(boost.title, count))
-	elseif bound[boost.id] then
-		ContextActionService:UnbindAction(boost.action)
-		bound[boost.id] = nil
-	end
-end
-
 function Boosts.start()
 	for _, boost in BOOSTS do
-		player:GetAttributeChangedSignal("Boost_" .. boost.id):Connect(function()
-			refresh(boost)
-		end)
-		refresh(boost)
+		ContextActionService:BindAction(boost.action, onAction, false, table.unpack(boost.keys))
 	end
 
 	Remotes.BoostStarted.OnClientEvent:Connect(function(id, duration)

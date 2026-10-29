@@ -9,24 +9,21 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
+local Candy = require(ReplicatedStorage.Shared.Candy)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 
 local player = Players.LocalPlayer
 
-local INK = Color3.fromRGB(43, 34, 87)
-local WHITE = Color3.fromRGB(255, 255, 255)
-local MUTED = Color3.fromRGB(74, 69, 128)
-local SKY = Color3.fromRGB(99, 201, 255)
-local MINT = Color3.fromRGB(111, 227, 180)
-local LEMON = Color3.fromRGB(255, 221, 74)
-local PINK = Color3.fromRGB(255, 111, 177)
+local INK, WHITE, MUTED = Candy.INK, Candy.WHITE, Candy.MUTED
+local SKY, MINT, LEMON, PINK = Candy.SKY, Candy.MINT, Candy.LEMON, Candy.PINK
 local DIFFICULTIES = {
 	{ name = "Easy", color = MINT },
 	{ name = "Normal", color = LEMON },
 	{ name = "Hard", color = PINK },
 }
-local LIP = 5 -- how far the darker edge shows under a chunky button
+
+local create, text, outlined, paint = Candy.create, Candy.text, Candy.outlined, Candy.paint
 
 local PartyUi = {}
 
@@ -36,90 +33,8 @@ local doorIndex -- the party door the pop-up is for
 local choice = { size = Config.Party.MaxSize, difficulty = Config.DefaultDifficulty, friendsOnly = false }
 local status -- the server's latest word on our party, or nil
 
-local function create(className, props, children)
-	local instance = Instance.new(className)
-	for key, value in props do
-		instance[key] = value
-	end
-	for _, child in children or {} do
-		child.Parent = instance
-	end
-	return instance
-end
-
-local function text(props)
-	local label = create("TextLabel", {
-		BackgroundTransparency = 1,
-		Font = Enum.Font.FredokaOne,
-		TextColor3 = INK,
-		TextScaled = true,
-		ZIndex = 3,
-	})
-	for key, value in props do
-		label[key] = value
-	end
-	return label
-end
-
--- Bubbly lettering with an ink outline, like the lobby's signs.
-local function outlined(props, thickness)
-	local label = text(props)
-	create("UIStroke", { Color = INK, Thickness = thickness or 3, LineJoinMode = Enum.LineJoinMode.Round, Parent = label })
-	return label
-end
-
--- A shiny, chunky button: a glossy face with a highlight across the top and
--- an ink outline, on a darker lip. Returns the clickable face; set its colour
--- with paint(face, color).
 local function chunkyButton(parent, size, position, labelText, radius)
-	local holder = create("Frame", { BackgroundTransparency = 1, Size = size, Position = position or UDim2.new(), Parent = parent })
-	create("Frame", {
-		Name = "Lip",
-		Position = UDim2.fromOffset(0, LIP),
-		Size = UDim2.new(1, 0, 1, -LIP),
-		BackgroundColor3 = INK,
-		Parent = holder,
-	}, { create("UICorner", { CornerRadius = UDim.new(0, radius) }) })
-	local face = create("TextButton", {
-		Name = "Face",
-		Size = UDim2.new(1, 0, 1, -LIP),
-		BackgroundColor3 = WHITE,
-		AutoButtonColor = false,
-		Text = "",
-		ZIndex = 2,
-		Parent = holder,
-	}, {
-		create("UICorner", { CornerRadius = UDim.new(0, radius) }),
-		create("UIStroke", { Color = INK, Thickness = 3, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }),
-		create("UIGradient", { Name = "Gloss", Rotation = 90 }),
-		create("Frame", {
-			Name = "Shine",
-			Position = UDim2.new(0, 6, 0, 3),
-			Size = UDim2.new(1, -12, 0.34, 0),
-			BackgroundColor3 = WHITE,
-			BackgroundTransparency = 0.55,
-			ZIndex = 2,
-		}, { create("UICorner", { CornerRadius = UDim.new(0, radius) }) }),
-		text({ Name = "Label", Size = UDim2.new(1, -16, 0.62, 0), Position = UDim2.fromScale(0.5, 0.52), AnchorPoint = Vector2.new(0.5, 0.5), Text = labelText }),
-	})
-	-- Sink into the lip while held.
-	face.MouseButton1Down:Connect(function()
-		face.Position = UDim2.fromOffset(0, LIP - 2)
-	end)
-	face.MouseButton1Up:Connect(function()
-		face.Position = UDim2.new()
-	end)
-	face.MouseLeave:Connect(function()
-		face.Position = UDim2.new()
-	end)
-	return face
-end
-
-local function paint(face, color, labelColor)
-	local light = color:Lerp(WHITE, 0.4)
-	face.Gloss.Color = ColorSequence.new(light, color)
-	face.Label.TextColor3 = labelColor or INK
-	face.Parent.Lip.BackgroundColor3 = color:Lerp(INK, 0.55)
+	return Candy.button(parent, { size = size, position = position, text = labelText, radius = radius })
 end
 
 local function close()
@@ -140,14 +55,7 @@ local function buildPopup()
 		create("UICorner", { CornerRadius = UDim.new(0, 28) }),
 		create("UIStroke", { Color = INK, Thickness = 5 }),
 	})
-	-- Shrink to fit small screens.
-	local scale = create("UIScale", { Parent = popup })
-	local function fit()
-		local viewport = workspace.CurrentCamera.ViewportSize
-		scale.Scale = math.min(1, (viewport.Y - 40) / 430, (viewport.X - 24) / 470)
-	end
-	workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(fit)
-	fit()
+	Candy.fit(popup, Vector2.new(470, 430), 24)
 
 	local header = create("Frame", {
 		Size = UDim2.new(1, 0, 0, 78),

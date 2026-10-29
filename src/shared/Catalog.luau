@@ -142,7 +142,7 @@ Catalog.items = {
 		kind = "boost",
 		name = "Updraft",
 		price = 40,
-		blurb = "Fly for 2 seconds. Press Q or tap Fly.",
+		blurb = "Fly for 2 seconds. Press Q or tap Updraft.",
 		swatch = Color3.fromRGB(170, 230, 255),
 	},
 	{

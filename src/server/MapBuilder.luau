@@ -439,7 +439,6 @@ function MapBuilder.build()
 	local layout = {
 		rooms = {},
 		boards = lobby.boards,
-		tank = lobby.tank,
 		runStart = lobby.runStart,
 		doors = lobby.doors,
 		partyDoors = lobby.partyDoors,
