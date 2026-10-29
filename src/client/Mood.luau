@@ -23,10 +23,10 @@ local SAFE = {
 	-- and lamps stand out, and a soft haze far off.
 	lighting = {
 		ClockTime = 0,
-		Brightness = 1.8,
-		Ambient = Color3.fromRGB(84, 80, 124),
-		OutdoorAmbient = Color3.fromRGB(96, 94, 150),
-		EnvironmentDiffuseScale = 0.4,
+		Brightness = 0.9,
+		Ambient = Color3.fromRGB(56, 54, 90),
+		OutdoorAmbient = Color3.fromRGB(62, 62, 104),
+		EnvironmentDiffuseScale = 0.25,
 		FogStart = 160,
 		FogEnd = 700,
 		FogColor = Color3.fromRGB(24, 24, 52),
@@ -36,19 +36,28 @@ local SAFE = {
 		Contrast = 0.08,
 		TintColor = Color3.fromRGB(255, 250, 255),
 	},
+	-- A soft halo round the lamps and bulbs, not a glare.
+	bloom = {
+		Intensity = 0.3,
+		Size = 18,
+		Threshold = 1.8,
+	},
 }
 
 local Mood = {}
 
 function Mood.start()
-	local grade = Lighting:WaitForChild("Grade", 10)
-	local dark = { lighting = {}, grade = {} }
-	for key in SAFE.lighting do
-		dark.lighting[key] = Lighting[key]
-	end
-	if grade then
-		for key in SAFE.grade do
-			dark.grade[key] = grade[key]
+	-- What each part of SAFE applies to. A missing effect is left out.
+	local targets = {
+		lighting = Lighting,
+		grade = Lighting:WaitForChild("Grade", 10),
+		bloom = Lighting:WaitForChild("Glow", 10),
+	}
+	local dark = {}
+	for name, target in targets do
+		dark[name] = {}
+		for key in SAFE[name] do
+			dark[name][key] = target[key]
 		end
 	end
 
@@ -64,9 +73,8 @@ function Mood.start()
 	local function apply(mood)
 		current = mood
 		local values = if mood == "safe" then SAFE else dark
-		TweenService:Create(Lighting, FADE, values.lighting):Play()
-		if grade then
-			TweenService:Create(grade, FADE, values.grade):Play()
+		for name, target in targets do
+			TweenService:Create(target, FADE, values[name]):Play()
 		end
 	end
 

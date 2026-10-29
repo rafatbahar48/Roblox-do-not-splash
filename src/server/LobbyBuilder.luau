@@ -54,8 +54,11 @@ local C = {
 	leaves = Color3.fromRGB(26, 52, 44),
 	skyline = Color3.fromRGB(22, 24, 42),
 	warm = Color3.fromRGB(255, 214, 150),
-	amber = Color3.fromRGB(255, 170, 80),
-	windowLit = Color3.fromRGB(255, 200, 120),
+	-- Neon shows far brighter than its colour, so the glowing bits are set
+	-- dark: these come out as a warm glow instead of solid yellow.
+	globe = Color3.fromRGB(120, 85, 50), -- lamp globes
+	amber = Color3.fromRGB(125, 98, 45), -- lantern glass
+	windowLit = Color3.fromRGB(100, 70, 32),
 	windowDark = Color3.fromRGB(34, 38, 62),
 	aqua = Color3.fromRGB(47, 230, 224),
 	pink = Color3.fromRGB(255, 79, 163),
@@ -183,7 +186,7 @@ end
 -- A globe lamp on a wall bracket. normal points out of the wall.
 local function wallLamp(folder, at, normal)
 	block(folder, "LampBracket", Vector3.new(0.6, 0.6, 1.2), CFrame.lookAt(at, at + normal) * CFrame.new(0, 0, -0.6), C.iron, nil, DECOR)
-	local globe = block(folder, "Lamp", Vector3.one * 1.4, CFrame.new(at + normal * 1.3), C.warm, Enum.Material.Neon, {
+	local globe = block(folder, "Lamp", Vector3.one * 1.2, CFrame.new(at + normal * 1.3), C.globe, Enum.Material.Neon, {
 		Shape = Enum.PartType.Ball,
 		CanCollide = false,
 		CanQuery = false,
@@ -191,8 +194,8 @@ local function wallLamp(folder, at, normal)
 	})
 	local light = Instance.new("PointLight")
 	light.Color = C.warm
-	light.Range = 18
-	light.Brightness = 1.2
+	light.Range = 16
+	light.Brightness = 0.6
 	light.Parent = globe
 end
 
@@ -231,8 +234,8 @@ local function lampPost(folder, x, z)
 	local lantern = block(folder, "Lantern", Vector3.new(0.75, 1.1, 0.75), CFrame.new(x, TILE_TOP + 10.9, z), C.amber, Enum.Material.Neon, NEON)
 	local light = Instance.new("PointLight")
 	light.Color = C.warm
-	light.Range = 24
-	light.Brightness = 1.4
+	light.Range = 20
+	light.Brightness = 0.7
 	light.Parent = lantern
 end
 
@@ -267,7 +270,9 @@ local function stringLights(folder, a, b, sag)
 		if last then
 			block(folder, "Wire", Vector3.new(0.08, 0.08, (at - last).Magnitude), CFrame.lookAt((at + last) / 2, at), C.iron, nil, NEON)
 		end
-		local bulb = block(folder, "Bulb", Vector3.one * 0.5, CFrame.new(at - Vector3.new(0, 0.3, 0)), colors[i % #colors + 1], Enum.Material.Neon, {
+		-- Half as bright, so a line of bulbs twinkles instead of glaring.
+		local color = colors[i % #colors + 1]:Lerp(Color3.new(), 0.5)
+		local bulb = block(folder, "Bulb", Vector3.one * 0.45, CFrame.new(at - Vector3.new(0, 0.3, 0)), color, Enum.Material.Neon, {
 			Shape = Enum.PartType.Ball,
 			CanCollide = false,
 			CanQuery = false,
@@ -277,8 +282,8 @@ local function stringLights(folder, a, b, sag)
 		if i % 6 == 3 then
 			local light = Instance.new("PointLight")
 			light.Color = bulb.Color
-			light.Range = 12
-			light.Brightness = 0.7
+			light.Range = 10
+			light.Brightness = 0.35
 			light.Parent = bulb
 		end
 		last = at
@@ -433,7 +438,7 @@ local function buildFacade(folder)
 	local sign = screen(folder, "GameSign", Vector3.new(36, 7, 0.4), Vector3.new(0, TILE_TOP + 22.8, FACE - 0.3), -Vector3.zAxis, C.pink)
 	bubbleText(sign, 6, { Position = UDim2.fromScale(0.03, 0.06), Size = UDim2.fromScale(0.94, 0.62), Font = Enum.Font.FredokaOne, TextColor3 = C.lemon, Text = string.upper(Config.GameName) })
 	label(sign, { Position = UDim2.fromScale(0.08, 0.72), Size = UDim2.fromScale(0.84, 0.2), Font = Enum.Font.FredokaOne, TextColor3 = C.aqua, Text = Config.Tagline })
-	glow(folder, Vector3.new(0, TILE_TOP + 22, FACE - 6), C.pink, 26, 0.8)
+	glow(folder, Vector3.new(0, TILE_TOP + 22, FACE - 6), C.pink, 22, 0.4)
 
 	-- The archways, one per difficulty, each with a screen and a pad.
 	local doors = {}
@@ -635,12 +640,12 @@ local function buildEastSide(folder)
 	local gui = surface(holder, Enum.NormalId.Left, 30)
 	gui.LightInfluence = 0
 	bubbleText(gui, 5, { Size = UDim2.fromScale(1, 1), Font = Enum.Font.FredokaOne, TextColor3 = C.mint, Text = "RECORDS" })
-	glow(folder, Vector3.new(HALF - 8, TILE_TOP + 10, first + spacing * 1.5), C.lemon, 30, 0.7)
+	glow(folder, Vector3.new(HALF - 8, TILE_TOP + 10, first + spacing * 1.5), C.lemon, 24, 0.35)
 
 	-- The shop.
 	local hutX, hutZ = HALF - 10, FACE - 17
 	prop(folder, "FloatHut", 8, hutX, hutZ, 90)
-	glow(folder, Vector3.new(hutX - 5, TILE_TOP + 6, hutZ), C.warm, 16, 1.4)
+	glow(folder, Vector3.new(hutX - 5, TILE_TOP + 6, hutZ), C.warm, 14, 0.7)
 	local counter = block(folder, "SwimShop", Vector3.new(3, 6, 8), CFrame.new(hutX - 1, TILE_TOP + 3, hutZ), C.lemon, nil, {
 		Transparency = 1,
 		CanCollide = false,
@@ -667,7 +672,7 @@ local function buildSouthSide(folder)
 		local gatepost = math.abs(x) == 0
 		local height = if gatepost then 9 else 7
 		block(folder, "Pillar", Vector3.new(1.8, height, 1.8), CFrame.new(x, TILE_TOP + height / 2, z - 0.5), C.stone, Enum.Material.Concrete)
-		local cap = block(folder, "PillarLamp", Vector3.one * 1.1, CFrame.new(x, TILE_TOP + height + 0.6, z - 0.5), C.warm, Enum.Material.Neon, {
+		local cap = block(folder, "PillarLamp", Vector3.one * 1.1, CFrame.new(x, TILE_TOP + height + 0.6, z - 0.5), C.globe, Enum.Material.Neon, {
 			Shape = Enum.PartType.Ball,
 			CanCollide = false,
 			CanQuery = false,
@@ -676,8 +681,8 @@ local function buildSouthSide(folder)
 		if x % 20 == 0 then
 			local light = Instance.new("PointLight")
 			light.Color = C.warm
-			light.Range = 14
-			light.Brightness = 0.9
+			light.Range = 12
+			light.Brightness = 0.45
 			light.Parent = cap
 		end
 	end

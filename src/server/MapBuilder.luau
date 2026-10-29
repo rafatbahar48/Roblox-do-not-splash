@@ -407,7 +407,9 @@ local function setupLighting()
 	grade.TintColor = Color3.fromRGB(214, 232, 236)
 	grade.Parent = Lighting
 
+	-- Named so client/Mood.luau can soften it in the lobby.
 	local bloom = Instance.new("BloomEffect")
+	bloom.Name = "Glow"
 	bloom.Intensity = 0.7
 	bloom.Size = 28
 	bloom.Threshold = 1.4
