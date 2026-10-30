@@ -60,6 +60,16 @@ Config.Lurker = {
 	Margin = 3, -- keeps it off the edges of the forest's water
 }
 
+-- When it catches you, the static stays up until you choose (client/
+-- DeathScene.luau, server/Progress.luau): Revive puts you back on the last
+-- dry ground you stood on, for pearls; Bleed out sends you to your last
+-- checkpoint, or the lobby. Not choosing bleeds out after ChoiceTime.
+Config.Revive = {
+	Cost = 50, -- pearls
+	ChoiceTime = 30, -- seconds to choose
+	SafeSeconds = 3, -- after a revive, how long you make no noise at all
+}
+
 Config.Pebbles = {
 	PerLife = 3,
 	Cooldown = 1,

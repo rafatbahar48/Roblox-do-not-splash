@@ -19,7 +19,7 @@ local LOOK_INTERVAL = 0.1 -- the most often a player's camera direction is taken
 local Noise = {}
 
 local layout
-local states = {} -- [Player] = { noise, inWater, lastVelocityY, room, root, humanoid, reported, hushedUntil, hushed, cause, causeAmount, causeAt, look, lookAt }
+local states = {} -- [Player] = { noise, inWater, lastVelocityY, room, root, humanoid, reported, hushedUntil, hushed, cause, causeAmount, causeAt, look, lookAt, dry }
 local pointSources = {} -- { position, loudness, room }
 
 local function noiseMultiplier(player)
@@ -43,6 +43,7 @@ function Noise.init(newLayout)
 			causeAt = -math.huge,
 			look = nil, -- which way their camera points, across the ground
 			lookAt = -math.huge,
+			dry = nil, -- where they last stood on dry ground in the stages (a CFrame)
 		}
 	end
 	for _, player in Players:GetPlayers() do
@@ -114,6 +115,13 @@ function Noise.clear(player)
 	end
 end
 
+-- Where a player last stood on dry ground in the stages, if anywhere: where
+-- a revive puts them back.
+function Noise.lastDry(player)
+	local state = states[player]
+	return state and state.dry
+end
+
 -- Silences a player completely for a while (the Hush boost).
 function Noise.hush(player, duration)
 	local state = states[player]
@@ -166,6 +174,9 @@ function Noise.step(dt)
 			if inWater then
 				Noise.add(player, SETTINGS.WadingPerSecond * dt, "wading")
 			else
+				if room and humanoid.FloorMaterial ~= Enum.Material.Air then
+					state.dry = root.CFrame
+				end
 				-- A hard landing: falling fast last frame, stopped this frame.
 				local velocityY = root.AssemblyLinearVelocity.Y
 				if state.lastVelocityY < -SETTINGS.HardLandingSpeed and velocityY > -5 then

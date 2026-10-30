@@ -462,7 +462,9 @@ function Hud.start()
 		if NOTIFY_SOUNDS[kind] then
 			Sounds.play(NOTIFY_SOUNDS[kind], if kind == "win" then 0.7 else 0.6)
 		end
-		if kind == "win" then
+		if kind == "downed" then
+			return -- for the death screen (DeathScene.luau)
+		elseif kind == "win" then
 			winDetails.Text = message
 			winPanel.Visible = true
 		else

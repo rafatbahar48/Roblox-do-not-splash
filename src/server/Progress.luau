@@ -21,6 +21,8 @@
 --   PlayTime           seconds played, as of PlayTimeAt (server time)
 --   Best_<difficulty>  fastest escape on that difficulty, in seconds
 --   Setting_<id>       their settings (Config.Settings)
+--   DownedUntil        server time they bleed out at, while caught and choosing
+--                      to revive or bleed out (Config.Revive)
 --
 -- A run is timed from walking through stage 1's door to escaping. It counts
 -- for the easiest difficulty played along the way, and the best time on each
@@ -37,6 +39,7 @@ local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Stages = require(ReplicatedStorage.Shared.Stages)
 local Cosmetics = require(script.Parent.Cosmetics)
 local Leaderboards = require(script.Parent.Leaderboards)
+local Noise = require(script.Parent.Noise)
 
 local AUTOSAVE_INTERVAL = 120
 local RESTART_COOLDOWN = 2
@@ -311,22 +314,40 @@ local function playerFromHit(hit)
 	return nil, nil
 end
 
-local function spawnPlayer(player)
+-- Gives a player a new character at their checkpoint (the lobby if none), or
+-- at the given spot.
+local function spawnPlayer(player, at)
 	local profile = profiles[player]
 	if not profile or not player.Parent then
 		return
 	end
 	player:LoadCharacter()
 	local character = player.Character
-	if character and profile.checkpoint > 0 then
+	if character and at then
+		character:PivotTo(at)
+	elseif character and profile.checkpoint > 0 then
 		character:PivotTo(layout.rooms[profile.checkpoint].checkpointCFrame)
 	end
+end
+
+-- Waits, after being caught, for the player to choose: revive or bleed out
+-- (DeathChoice). Nobody choosing bleeds out once the time is up.
+local function awaitChoice(player, profile, downed)
+	local seconds = Config.Revive.ChoiceTime
+	player:SetAttribute("DownedUntil", workspace:GetServerTimeNow() + seconds)
+	local deadline = os.clock() + seconds
+	while player.Parent and profile.downed == downed and not downed.choice and os.clock() < deadline do
+		task.wait(0.1)
+	end
+	player:SetAttribute("DownedUntil", nil)
 end
 
 local function onCharacterAdded(player, character)
 	player:SetAttribute("Pebbles", Config.Pebbles.PerLife)
 	local profile = profiles[player]
 	if profile then
+		-- A new body: whatever caught the last one is over with.
+		profile.downed = nil
 		task.spawn(Cosmetics.apply, player, character, profile.equipped)
 	end
 	local humanoid = character:WaitForChild("Humanoid", 10)
@@ -334,9 +355,24 @@ local function onCharacterAdded(player, character)
 		return
 	end
 	humanoid.Died:Connect(function()
-		task.wait(Config.RespawnTime)
+		local current = profiles[player]
+		local downed = current and current.downed
+		if downed then
+			awaitChoice(player, current, downed)
+		else
+			task.wait(Config.RespawnTime)
+		end
 		-- Skip if the player already got a new character (for example by restarting).
-		if player.Character == character then
+		if player.Character ~= character then
+			return
+		end
+		if current and current.downed == downed then
+			current.downed = nil
+		end
+		if downed and downed.choice == "revive" then
+			spawnPlayer(player, downed.spot)
+			Noise.hush(player, Config.Revive.SafeSeconds)
+		else
 			spawnPlayer(player)
 		end
 	end)
@@ -494,11 +530,14 @@ function Progress.startRun(player)
 	end
 end
 
--- Counts a time the creature caught them (Lurker.luau).
-function Progress.recordCaught(player)
+-- Counts a time the creature caught them (Lurker.luau), and holds their
+-- respawn until they choose to revive (back at spot, the last dry ground
+-- they stood on) or bleed out.
+function Progress.recordCaught(player, spot)
 	local profile = profiles[player]
 	if profile then
 		profile.caught += 1
+		profile.downed = { spot = spot, choice = nil }
 		sync(player, profile)
 	end
 end
@@ -549,6 +588,27 @@ function Progress.init(newLayout)
 		player:SetAttribute("Setting_" .. id, clean)
 	end)
 
+	Remotes.DeathChoice.OnServerEvent:Connect(function(player, choice)
+		local profile = profiles[player]
+		local downed = profile and profile.downed
+		if not downed or downed.choice or (choice ~= "revive" and choice ~= "bleed") then
+			return
+		end
+		if choice == "revive" then
+			-- Nowhere dry to put them back on: there is nothing to pay for.
+			if not downed.spot then
+				Remotes.Notify:FireClient(player, "downed", "Nowhere to get back up. Bleed out instead.")
+				return
+			end
+			if profile.pearls < Config.Revive.Cost then
+				Remotes.Notify:FireClient(player, "downed", ("Not enough pearls. Reviving costs %d."):format(Config.Revive.Cost))
+				return
+			end
+			addPearls(player, profile, -Config.Revive.Cost)
+		end
+		downed.choice = choice
+	end)
+
 	Remotes.Restart.OnServerEvent:Connect(function(player)
 		local profile = profiles[player]
 		local now = os.clock()
@@ -559,6 +619,7 @@ function Progress.init(newLayout)
 		profile.checkpoint = 0
 		profile.escaped = false
 		profile.run = nil
+		profile.downed = nil
 		player:SetAttribute("RunStartedAt", nil)
 		sync(player, profile)
 		spawnPlayer(player)

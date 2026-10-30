@@ -183,7 +183,7 @@ function Lurker:lunge(player, state)
 		if player.Parent then
 			local cause, loudness = Noise.causeOf(player)
 			Remotes.Caught:FireClient(player, target, cause, loudness, self.anchor)
-			Progress.recordCaught(player)
+			Progress.recordCaught(player, Noise.lastDry(player))
 		end
 		-- It has them: they can't move, and they turn round to face it. The
 		-- body stays whole, held where it is, for everyone watching.

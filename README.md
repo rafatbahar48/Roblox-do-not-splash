@@ -15,6 +15,7 @@ A Roblox horror obby. Cross a drowned forest at night by jumping from stump to s
 - **Run timer:** starts when you walk through any of stage 1's doors and stops at the exit. A run counts for the easiest difficulty you played during it. Your best time on each difficulty is saved.
 - **Pearls:** earned for each stage cleared, each shell found and each escape. Spend them in the **Shop** (the dock's shop button, the + on your pearls, or B).
 - **The HUD:** pearls and your stage top left, the run timer top middle, difficulty top right. In the lobby a dock along the bottom opens the **Shop**, your **Bag** (what you own, to wear or take off), your **Stats** (escapes, fastest escape, stages cleared, times caught, shells found, runs started, time played), **Settings** (music, night sounds, sound effects, camera shake, field of view) and **Invite** (Roblox's invite-friends prompt). In the stages the dock makes way for the noise meter on the left and round pebble, Updraft and Hush buttons bottom right, which work on touch screens too.
+- **Getting caught:** its face up close, then a dead TV channel with what gave you away. The static stays until you choose: **Revive** (50 pearls) puts you back on the last dry ground you stood on, silent for a moment, with your run still going; **Bleed out** sends you to your last checkpoint, or the lobby if you have none. Not choosing bleeds out after 30 seconds (`Config.Revive`).
 - **Music and sound:** a music box in the lobby, an ominous bed in the forest and chase music while it hunts you, fading into each other; crickets at night; splashes, creaky boards, pebbles, your own feet in the water, the creature's footsteps and growl from where it is, a heartbeat while you are hunted, its roar and the TV static when it gets you, and chimes for stages, shells, escapes and purchases. All from Roblox's licensed libraries (APM Music and ProSoundEffects), set in `Config.Sounds`.
 - **The menus and buttons are SpriteCook art**, from the UI kit "Still Water lobby menus" (see below); the code only places them and writes the words and numbers.
 - **Shop:** 6 skins, 6 accessories, and 2 boosts you carry and use: **Updraft** (Q / L1 / Fly button) lifts you and lets you glide for 2 seconds, and **Hush** (F / Y / Hush button) makes you completely silent for 5 seconds.
@@ -78,7 +79,7 @@ Roblox only shows uploaded images, so the parts are packed into two atlases, `ar
 | Creature behaviour | `src/server/Lurker.luau` |
 | Creature look: posing the Meshy model, how it walks, runs and grabs, the part-built stand-in | `src/client/LurkerVisuals.luau` |
 | Fear effects: vignette, heartbeat, faltering lights, camera shake | `src/client/Fear.luau` |
-| Being caught: turned to face it, the close-up as its mouth opens, the TV static, "what it heard" recap | `src/client/DeathScene.luau` (the cause comes from `src/server/Noise.luau`) |
+| Being caught: turned to face it, the close-up as its mouth opens, the TV static, "what it heard" recap, the Revive and Bleed out buttons | `src/client/DeathScene.luau` (the cause comes from `src/server/Noise.luau`) |
 | Shop items, names, prices and skin colours | `src/shared/Catalog.luau` |
 | Accessory shapes | `src/server/Cosmetics.luau` |
 | Pearls per stage, shell and escape; boost timing | `Config.Pearls`, `Config.Boosts` |
@@ -88,6 +89,7 @@ Roblox only shows uploaded images, so the parts are packed into two atlases, `ar
 | The shop and the bag | `src/client/ShopUi.luau` |
 | Stats window | `src/client/StatsUi.luau` (the numbers are kept in `src/server/Progress.luau`) |
 | Settings: the list and defaults, the window, what each one does | `Config.Settings`, `src/client/SettingsUi.luau`, `src/client/Settings.luau` |
+| Revive cost, how long you have to choose, how long a revive keeps you silent | `Config.Revive` (the waiting and paying are in `src/server/Progress.luau`) |
 | Which music and sound effects play | `Config.Sounds` |
 | When each piece of music plays, and the fades | `src/client/Music.luau` |
 | Sounds only you hear (wading, chimes); the creature's footsteps and growl | `src/client/Sounds.luau`, `src/client/LurkerVisuals.luau` |
@@ -141,7 +143,7 @@ src/
     Boosts.luau          boost input (Q / F / the HUD's buttons) and Updraft flight
     LurkerVisuals.luau   poses the creature model (or a body of parts) as it walks
     Fear.luau            vignette, heartbeat, faltering lights, shake
-    DeathScene.luau      the death scene: its face up close, TV static, "what it heard"
+    DeathScene.luau      the death scene: its face up close, TV static, "what it heard", revive or bleed out
     Mood.luau            warm lobby and exit lighting, cold forest fog, drifting mist
     Throw.luau           throw input (E / R2 / the HUD's pebble button)
     CameraReport.luau    tells the server which way your camera points (for where the creature appears)

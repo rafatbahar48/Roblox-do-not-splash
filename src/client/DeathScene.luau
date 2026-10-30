@@ -10,6 +10,10 @@
 --   1.55s  cut to a dead TV channel: static, rolling bars, NO SIGNAL
 --   3.00s  over the static: what gave you away ("It heard your splash"),
 --          how loud you were, and a tip
+--   3.40s  and your choice, from the UI kit's buttons: Revive (pearls, back
+--          on the last dry ground you stood on) or Bleed out (your last
+--          checkpoint, or the lobby). The static stays until you choose, or
+--          until you bleed out on your own (Config.Revive)
 --   respawn: the static cuts out and you're back
 
 local AssetService = game:GetService("AssetService")
@@ -18,6 +22,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
+local Candy = require(ReplicatedStorage.Shared.Candy)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local LurkerVisuals = require(script.Parent.LurkerVisuals)
@@ -35,6 +40,7 @@ local SNOW_FRAMES = 6 -- drawn once, shown in a random order
 local STATIC_COLUMNS, STATIC_ROWS = 64, 36 -- the coarser snow, if images can't be drawn
 local STATIC_LAYERS = 3
 local CAMERA_STEP = "DeathCamera"
+local CHOICE_SIZE = Vector2.new(500, 150)
 
 -- What gave you away, by the cause the server reports (server/Noise.luau).
 local CAUSES = {
@@ -52,6 +58,7 @@ local token = 0 -- bumps with each scene, so a leftover delay can't touch a newe
 local ui = {}
 local hud -- the HUD, hidden while the scene plays
 local staticConnection
+local chosen = false -- a choice has been sent this time
 
 local function create(className, props, children)
 	local instance = Instance.new(className)
@@ -238,7 +245,7 @@ local function build()
 	ui.recap = create("CanvasGroup", {
 		Name = "Recap",
 		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = UDim2.fromScale(0.5, 0.58),
+		Position = UDim2.fromScale(0.5, 0.5),
 		Size = UDim2.new(0.9, 0, 0, 120),
 		BackgroundTransparency = 1,
 		GroupTransparency = 1,
@@ -290,7 +297,128 @@ local function build()
 		Parent = ui.recap,
 	})
 
+	-- The choice: two of the kit's buttons, what each one does under it,
+	-- and how long until you bleed out anyway.
+	ui.choice = create("Frame", {
+		Name = "Choice",
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.new(0.5, 0, 0.5, 74),
+		Size = UDim2.fromOffset(CHOICE_SIZE.X, CHOICE_SIZE.Y),
+		BackgroundTransparency = 1,
+		Visible = false,
+		ZIndex = 7,
+		Parent = gui,
+	})
+	Candy.fit(ui.choice, CHOICE_SIZE + Vector2.new(10, 10), 24)
+	local buttonWidth = (CHOICE_SIZE.X - 20) / 2
+	ui.revive = Candy.button(ui.choice, { name = "Revive", size = UDim2.fromOffset(buttonWidth, 70), color = Candy.MINT })
+	ui.bleed = Candy.button(ui.choice, {
+		name = "BleedOut",
+		anchor = Vector2.new(1, 0),
+		position = UDim2.fromScale(1, 0),
+		size = UDim2.fromOffset(buttonWidth, 70),
+		color = Candy.PINK,
+		text = "Bleed out",
+	})
+	-- "Revive", a pearl and the cost, in a row in the middle of its button.
+	ui.price = create("Frame", {
+		Name = "Price",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.46),
+		Size = UDim2.new(1, 0, 0, 30),
+		BackgroundTransparency = 1,
+		ZIndex = 3,
+		Parent = ui.revive,
+	}, {
+		create("UIListLayout", {
+			FillDirection = Enum.FillDirection.Horizontal,
+			HorizontalAlignment = Enum.HorizontalAlignment.Center,
+			VerticalAlignment = Enum.VerticalAlignment.Center,
+			Padding = UDim.new(0, 8),
+			SortOrder = Enum.SortOrder.LayoutOrder,
+		}),
+	})
+	Candy.text({ LayoutOrder = 1, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromScale(0, 1), TextSize = 24, Text = "Revive", Parent = ui.price })
+	Candy.pearl(ui.price, 30).LayoutOrder = 2
+	Candy.text({ LayoutOrder = 3, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromScale(0, 1), TextSize = 24, Text = tostring(Config.Revive.Cost), Parent = ui.price })
+
+	local function caption(name, x)
+		return create("TextLabel", {
+			Name = name,
+			AnchorPoint = Vector2.new(0.5, 0),
+			Position = UDim2.new(x, 0, 0, 76),
+			Size = UDim2.fromOffset(buttonWidth, 20),
+			BackgroundTransparency = 1,
+			Font = Enum.Font.GothamBold,
+			Text = "",
+			TextColor3 = WHITE,
+			TextSize = 15,
+			TextStrokeTransparency = 0.4,
+			Parent = ui.choice,
+		})
+	end
+	ui.reviveNote = caption("ReviveNote", buttonWidth / 2 / CHOICE_SIZE.X)
+	ui.bleedNote = caption("BleedNote", 1 - buttonWidth / 2 / CHOICE_SIZE.X)
+	ui.countdown = create("TextLabel", {
+		Name = "Countdown",
+		AnchorPoint = Vector2.new(0.5, 1),
+		Position = UDim2.fromScale(0.5, 1),
+		Size = UDim2.new(1, 0, 0, 24),
+		BackgroundTransparency = 1,
+		Font = Enum.Font.Arcade,
+		Text = "",
+		TextColor3 = RED,
+		TextSize = 22,
+		TextStrokeTransparency = 0.3,
+		Parent = ui.choice,
+	})
+
+	ui.revive.Activated:Connect(function()
+		if chosen then
+			return
+		end
+		if (player:GetAttribute("Pearls") or 0) < Config.Revive.Cost then
+			ui.countdown.Text = "NOT ENOUGH PEARLS"
+			return
+		end
+		chosen = true
+		ui.countdown.Text = "GETTING UP..."
+		Remotes.DeathChoice:FireServer("revive")
+	end)
+	ui.bleed.Activated:Connect(function()
+		if chosen then
+			return
+		end
+		chosen = true
+		ui.countdown.Text = "BLEEDING OUT..."
+		Remotes.DeathChoice:FireServer("bleed")
+	end)
+	-- The server said no (not enough pearls after all): choose again.
+	Remotes.Notify.OnClientEvent:Connect(function(kind, message)
+		if kind == "downed" and playing then
+			chosen = false
+			ui.countdown.Text = string.upper(tostring(message))
+		end
+	end)
+
 	gui.Parent = player:WaitForChild("PlayerGui")
+end
+
+-- Redraws the choice: whether you can pay to revive, where bleeding out
+-- takes you, and the time left.
+local function refreshChoice()
+	local pearls = player:GetAttribute("Pearls") or 0
+	local canPay = pearls >= Config.Revive.Cost
+	Candy.paint(ui.revive, Candy.MINT, nil, not canPay)
+	ui.revive.Label.Text = if canPay then "" else ("Need %d more"):format(Config.Revive.Cost - pearls)
+	ui.price.Visible = canPay
+	ui.reviveNote.Text = ("Get back up · you have %d"):format(pearls)
+	local checkpoint = player:GetAttribute("Checkpoint") or 0
+	ui.bleedNote.Text = if checkpoint > 0 then ("Back to the stage %d checkpoint"):format(checkpoint) else "Back to the lobby"
+	local untilTime = player:GetAttribute("DownedUntil")
+	if not chosen then
+		ui.countdown.Text = if untilTime then ("BLEEDING OUT IN %d"):format(math.max(0, math.ceil(untilTime - workspace:GetServerTimeNow()))) else ""
+	end
 end
 
 -- Snow: a different frame of it every frame, jittered, with the bars rolling
@@ -356,6 +484,7 @@ local function surface()
 	camera.FieldOfView = Settings.get("fov")
 	ui.flash.BackgroundTransparency = 1
 	ui.recap.GroupTransparency = 1
+	ui.choice.Visible = false
 	if hud then
 		hud.Enabled = true
 		hud = nil
@@ -367,6 +496,7 @@ local function play(position, cause, loudness, anchor)
 		return
 	end
 	playing = true
+	chosen = false
 	token += 1
 	local id = token
 	local function later(seconds, fn)
@@ -452,8 +582,20 @@ local function play(position, cause, loudness, anchor)
 		tween(ui.recap, 0.4, { GroupTransparency = 0 })
 	end)
 
+	-- Your choice, under it. The static stays until a new body arrives.
+	later(3.4, function()
+		refreshChoice()
+		ui.choice.Visible = true
+		task.spawn(function()
+			while playing and token == id do
+				refreshChoice()
+				task.wait(0.2)
+			end
+		end)
+	end)
+
 	-- In case no new character arrives (left the game, respawn failed).
-	later(Config.RespawnTime + 6, surface)
+	later(Config.Revive.ChoiceTime + 10, surface)
 end
 
 -- True while the scene is playing, so other effects can stay out of the way.

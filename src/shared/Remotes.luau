@@ -19,6 +19,7 @@ local NAMES = {
 	"PartyStatus", -- server -> client: { count, size, difficulty, leavesAt, owner } for your party, or nil
 	"CameraLook", -- client -> server: which way your camera points, across the ground (unit Vector3)
 	"SaveSetting", -- client -> server: setting id, value (see Config.Settings)
+	"DeathChoice", -- client -> server: "revive" or "bleed", after being caught
 }
 
 local folder
