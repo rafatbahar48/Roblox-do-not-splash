@@ -77,7 +77,7 @@ end
 local function land(pebble, result)
 	if result.Instance.Name == "Water" then
 		Noise.emitAt(result.Position, Config.Noise.PebbleSplash)
-		Effects.splash(result.Position, 3)
+		Effects.splash(result.Position, 3, "PebbleSplash")
 		pebble.part:Destroy()
 	else
 		Noise.emitAt(result.Position, Config.Noise.PebbleClatter)

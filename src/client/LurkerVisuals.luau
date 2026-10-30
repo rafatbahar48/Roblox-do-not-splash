@@ -29,6 +29,7 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local Sounds = require(script.Parent.Sounds)
 
 local ANIMATE_RANGE = 300 -- past the fog
 local SURFACE_Y = Config.Room.SurfaceY
@@ -57,6 +58,10 @@ local TEETH = 7 -- in each row
 local EYE_IDLE = Color3.fromRGB(120, 16, 14)
 local EYE_ALERT = Color3.fromRGB(255, 40, 28)
 local RIPPLE = Color3.fromRGB(150, 170, 180)
+-- Its sounds (Config.Sounds): how loud (Roblox's scale, up to 10), loudest
+-- within near studs, gone past far, and how fast they fade in between.
+local STEPS = { volume = 4, near = 10, far = 230, mode = Enum.RollOffMode.Linear }
+local GROWL = { volume = 3.5, near = 4, far = 120, mode = Enum.RollOffMode.LinearSquare }
 
 local LurkerVisuals = {}
 
@@ -359,6 +364,19 @@ local function setAlert(creature)
 		eye.Color = if burning then EYE_ALERT else EYE_IDLE
 	end
 	creature.glow.Brightness = if creature.lunging then 1.6 elseif burning then 1.1 else 0.4
+	-- Its feet in the water while it runs, and a growl while it hunts. While
+	-- it only watches from the fog it makes no sound at all.
+	local function playIf(sound, on)
+		if sound and on ~= sound.IsPlaying then
+			if on then
+				sound:Play()
+			else
+				sound:Stop()
+			end
+		end
+	end
+	playIf(creature.steps, creature.running and not creature.lunging)
+	playIf(creature.growl, creature.alert and not creature.lunging)
 end
 
 local function ripple(position, size, transparency)
@@ -579,6 +597,18 @@ local function track(anchor)
 	end
 	local creature = build(anchor)
 	creatures[anchor] = creature
+	-- Its sounds play from the anchor, which goes where it goes. The footsteps
+	-- carry a long way, so you hear it coming from out in the fog; the growl
+	-- is faint far off and swells as it closes in.
+	creature.steps = Sounds.loop("CreatureSteps", STEPS.volume, "Effects", anchor)
+	creature.growl = Sounds.loop("CreatureGrowl", GROWL.volume, "Effects", anchor)
+	for sound, falloff in { [creature.steps or false] = STEPS, [creature.growl or false] = GROWL } do
+		if sound then
+			sound.RollOffMode = falloff.mode
+			sound.RollOffMinDistance = falloff.near
+			sound.RollOffMaxDistance = falloff.far
+		end
+	end
 	setAlert(creature)
 	for _, name in { "Alert", "Running", "Lunging" } do
 		anchor:GetAttributeChangedSignal(name):Connect(function()

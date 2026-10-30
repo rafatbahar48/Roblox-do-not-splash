@@ -149,14 +149,47 @@ Config.Party = {
 	SetupTimeout = 45, -- seconds the setup pop-up stays open
 }
 
--- Paste sound ids from the Creator Store, for example "rbxassetid://123456".
--- Empty ids are skipped.
+-- The settings window (client/SettingsUi.luau), saved with each player's
+-- progress. A setting with min and max is a number stepped by step; the rest
+-- are on/off.
+Config.Settings = {
+	{ id = "music", name = "Music", default = true },
+	{ id = "ambience", name = "Night sounds", default = true },
+	{ id = "effects", name = "Sound effects", default = true },
+	{ id = "shake", name = "Camera shake", default = true },
+	{ id = "fov", name = "Field of view", default = 70, min = 60, max = 100, step = 5 },
+}
+
+-- Sound ids, for example "rbxassetid://123456". Empty ids are skipped. These
+-- are from Roblox's licensed libraries on the Creator Store (APM Music and
+-- ProSoundEffects), which any experience may use.
 Config.Sounds = {
-	Ambience = "",
-	Splash = "",
-	Lunge = "",
-	Creak = "",
-	Clatter = "",
+	-- Music, fading from one to the next (client/Music.luau)
+	LobbyMusic = "rbxassetid://139190190976686", -- Halloween Music Box: the lobby and the way out
+	ForestMusic = "rbxassetid://71555461626609", -- The Lurking Dread: scary suspense out in the forest
+	Chase = "rbxassetid://135888560895946", -- Rising Fear: while it hunts you
+	Escape = "rbxassetid://1844016113", -- White Sands (sting): you got out
+
+	-- Heard by everyone, from where they happen (server/Effects.luau)
+	Ambience = "rbxassetid://9112764573", -- crickets at night, everywhere
+	Splash = "rbxassetid://9120585252", -- someone falls in
+	PebbleSplash = "rbxassetid://9125703162", -- a pebble lands in the water
+	Creak = "rbxassetid://9120829478", -- creaky boards
+	Clatter = "rbxassetid://9118624831", -- a pebble hits something hard
+	Lunge = "rbxassetid://9113980319", -- the roar as it grabs someone
+
+	-- The creature, from where it is (client/LurkerVisuals.luau)
+	CreatureSteps = "rbxassetid://9114082550", -- big feet in the water, while it runs
+	CreatureGrowl = "rbxassetid://9113985466", -- a low growl, while it hunts
+
+	-- Just for you (client/Sounds.luau)
+	Wading = "rbxassetid://9120609785", -- your feet in the water
+	Heartbeat = "rbxassetid://9043365727", -- while it hunts you (Fear.luau)
+	Static = "rbxassetid://9126097283", -- the death scene's TV static
+	Checkpoint = "rbxassetid://9116395089", -- a stage cleared
+	Shell = "rbxassetid://9116394545", -- a shell found
+	Click = "rbxassetid://9119717529", -- menu buttons
+	Buy = "rbxassetid://9113728756", -- something bought
 }
 
 return Config

@@ -21,6 +21,8 @@ local TweenService = game:GetService("TweenService")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local LurkerVisuals = require(script.Parent.LurkerVisuals)
+local Settings = require(script.Parent.Settings)
+local Sounds = require(script.Parent.Sounds)
 
 local player = Players.LocalPlayer
 
@@ -47,7 +49,6 @@ local DeathScene = {}
 
 local playing = false
 local token = 0 -- bumps with each scene, so a leftover delay can't touch a newer one
-local baseFov
 local ui = {}
 local hud -- the HUD, hidden while the scene plays
 local staticConnection
@@ -294,7 +295,13 @@ end
 
 -- Snow: a different frame of it every frame, jittered, with the bars rolling
 -- down.
+local staticSound -- the static's hiss, made the first time
+
 local function startStatic()
+	staticSound = staticSound or Sounds.loop("Static", 0.55)
+	if staticSound then
+		staticSound:Play()
+	end
 	ui.static.Visible = true
 	ui.dim.BackgroundTransparency = 1
 	local shown
@@ -324,6 +331,9 @@ local function startStatic()
 end
 
 local function stopStatic()
+	if staticSound then
+		staticSound:Stop()
+	end
 	if staticConnection then
 		staticConnection:Disconnect()
 		staticConnection = nil
@@ -343,7 +353,7 @@ local function surface()
 	stopStatic()
 	local camera = workspace.CurrentCamera
 	camera.CameraType = Enum.CameraType.Custom
-	camera.FieldOfView = baseFov
+	camera.FieldOfView = Settings.get("fov")
 	ui.flash.BackgroundTransparency = 1
 	ui.recap.GroupTransparency = 1
 	if hud then
@@ -417,8 +427,12 @@ local function play(position, cause, loudness, anchor)
 		end
 		-- Glide rather than jump when a branch moves in and out of the way.
 		shot = if shot then shot:Lerp(want, 1 - math.exp(-dt * 14)) else want
+		if not Settings.get("shake") then
+			shake = 0
+		end
 		camera.CFrame = shot * CFrame.Angles((math.random() - 0.5) * shake, (math.random() - 0.5) * shake, 0)
-		camera.FieldOfView = baseFov + (50 - baseFov) * smooth(t / 1) - 10 * math.clamp((t - 1.2) / 0.35, 0, 1)
+		local fov = Settings.get("fov")
+		camera.FieldOfView = fov + (50 - fov) * smooth(t / 1) - 10 * math.clamp((t - 1.2) / 0.35, 0, 1)
 	end)
 
 	-- Cut to a dead channel.
@@ -448,7 +462,6 @@ function DeathScene.playing()
 end
 
 function DeathScene.start()
-	baseFov = workspace.CurrentCamera.FieldOfView
 	build()
 	Remotes.Caught.OnClientEvent:Connect(play)
 	player.CharacterAdded:Connect(surface)

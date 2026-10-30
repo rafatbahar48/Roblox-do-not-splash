@@ -1,15 +1,250 @@
 {
   "assets": [
-    { "asset_id": "b727c35b-14a4-4a87-b24d-46777b0a1ca6", "sha12": "2c408d00c78d", "label": "Splash Park lobby concept", "file": "concepts/splash-park-lobby.png" },
-    { "asset_id": "ec118cb1-1e51-43dd-89cc-eac393ebbbcf", "sha12": "0655b0213284", "label": "HUD buttons sheet", "file": "ui/hud-buttons-sheet.png" },
-    { "asset_id": "daa182b3-304a-4021-b630-751ccea8abac", "sha12": "5a426425ef8e", "label": "Shop button", "file": "ui/button-shop.png" },
-    { "asset_id": "a3170912-e599-455f-9846-d79b4612f74f", "sha12": "8d6e420d3604", "label": "Wear button", "file": "ui/button-wear.png" },
-    { "asset_id": "793e5302-d8e8-4b40-8e84-be3be90dbe4c", "sha12": "bca3a6515688", "label": "Records button", "file": "ui/button-records.png" },
-    { "asset_id": "f3b8974c-203f-4c68-a15e-535dc7a05187", "sha12": "e3120ff94499", "label": "Settings button", "file": "ui/button-settings.png" },
-    { "asset_id": "14583863-a00f-464a-b85d-7ab73f24eb65", "sha12": "25bbc77c440c", "label": "Updraft boost button", "file": "ui/boost-updraft.png" },
-    { "asset_id": "29dce4b1-84cf-48c8-acbc-ede3e7336daf", "sha12": "3c1fff63c8ec", "label": "Hush boost button", "file": "ui/boost-hush.png" },
-    { "asset_id": "252bf8ce-d872-4f38-adb9-976f8f1a4290", "sha12": "4b6374d16d6a", "label": "Pebble button", "file": "ui/button-pebble.png" },
-    { "asset_id": "b69d4d6d-9b42-4ca9-bec9-251988d0874b", "sha12": "c6a1bf35e048", "label": "Pearl currency icon", "file": "ui/icon-pearl.png" },
-    { "asset_id": "9173bcf7-39a0-43b9-ad0c-8820087e99e3", "sha12": "11a8d39f6cf1", "label": "Clean slide reference for Meshy", "file": "meshy-refs/slide-clean.png" }
+    {
+      "asset_id": "b727c35b-14a4-4a87-b24d-46777b0a1ca6",
+      "sha12": "2c408d00c78d",
+      "label": "Splash Park lobby concept",
+      "file": "concepts/splash-park-lobby.png"
+    },
+    {
+      "asset_id": "ec118cb1-1e51-43dd-89cc-eac393ebbbcf",
+      "sha12": "0655b0213284",
+      "label": "HUD buttons sheet",
+      "file": "ui/hud-buttons-sheet.png"
+    },
+    {
+      "asset_id": "daa182b3-304a-4021-b630-751ccea8abac",
+      "sha12": "5a426425ef8e",
+      "label": "Shop button",
+      "file": "ui/button-shop.png"
+    },
+    {
+      "asset_id": "a3170912-e599-455f-9846-d79b4612f74f",
+      "sha12": "8d6e420d3604",
+      "label": "Wear button",
+      "file": "ui/button-wear.png"
+    },
+    {
+      "asset_id": "793e5302-d8e8-4b40-8e84-be3be90dbe4c",
+      "sha12": "bca3a6515688",
+      "label": "Records button",
+      "file": "ui/button-records.png"
+    },
+    {
+      "asset_id": "f3b8974c-203f-4c68-a15e-535dc7a05187",
+      "sha12": "e3120ff94499",
+      "label": "Settings button",
+      "file": "ui/button-settings.png"
+    },
+    {
+      "asset_id": "14583863-a00f-464a-b85d-7ab73f24eb65",
+      "sha12": "25bbc77c440c",
+      "label": "Updraft boost button",
+      "file": "ui/boost-updraft.png"
+    },
+    {
+      "asset_id": "29dce4b1-84cf-48c8-acbc-ede3e7336daf",
+      "sha12": "3c1fff63c8ec",
+      "label": "Hush boost button",
+      "file": "ui/boost-hush.png"
+    },
+    {
+      "asset_id": "252bf8ce-d872-4f38-adb9-976f8f1a4290",
+      "sha12": "4b6374d16d6a",
+      "label": "Pebble button",
+      "file": "ui/button-pebble.png"
+    },
+    {
+      "asset_id": "b69d4d6d-9b42-4ca9-bec9-251988d0874b",
+      "sha12": "c6a1bf35e048",
+      "label": "Pearl currency icon",
+      "file": "ui/icon-pearl.png"
+    },
+    {
+      "asset_id": "9173bcf7-39a0-43b9-ad0c-8820087e99e3",
+      "sha12": "11a8d39f6cf1",
+      "label": "Clean slide reference for Meshy",
+      "file": "meshy-refs/slide-clean.png"
+    },
+    {
+      "asset_id": "25d72e62-2242-4d53-84a6-147330ba9b3a",
+      "sha12": "add79d7d3dc9",
+      "label": "UI kit: window",
+      "file": "ui/kit/parts/window.png"
+    },
+    {
+      "asset_id": "031a3963-a407-4b10-8785-843db5620dc2",
+      "sha12": "611e51e3af77",
+      "label": "UI kit: ribbon",
+      "file": "ui/kit/parts/ribbon.png"
+    },
+    {
+      "asset_id": "96408d6d-fd7b-4bea-9517-622e863794f5",
+      "sha12": "6cb35d6c17c8",
+      "label": "UI kit: close",
+      "file": "ui/kit/parts/close.png"
+    },
+    {
+      "asset_id": "7b924c33-6679-48f3-875f-ab47c45ac8e8",
+      "sha12": "c8a960ba77fb",
+      "label": "UI kit: button_pink",
+      "file": "ui/kit/parts/button_pink.png"
+    },
+    {
+      "asset_id": "ec7b14c3-7abf-4817-bd4a-a3912708b76a",
+      "sha12": "ccf189f89760",
+      "label": "UI kit: button_mint",
+      "file": "ui/kit/parts/button_mint.png"
+    },
+    {
+      "asset_id": "55bc0c67-4dd5-4da1-a52f-75d2e8cf595e",
+      "sha12": "cc70e97a165f",
+      "label": "UI kit: button_lemon",
+      "file": "ui/kit/parts/button_lemon.png"
+    },
+    {
+      "asset_id": "3a5ba55f-5f3b-4b55-8b01-b07035c0e079",
+      "sha12": "0479ee4307dd",
+      "label": "UI kit: button_white",
+      "file": "ui/kit/parts/button_white.png"
+    },
+    {
+      "asset_id": "31d61bae-4029-4a94-a3ee-2a1b57a60429",
+      "sha12": "19fbe6e4bfc9",
+      "label": "UI kit: button_sky",
+      "file": "ui/kit/parts/button_sky.png"
+    },
+    {
+      "asset_id": "62f95f16-8eac-4970-8ff5-c7da4eeb4af1",
+      "sha12": "3399a77df54c",
+      "label": "UI kit: button_grey",
+      "file": "ui/kit/parts/button_grey.png"
+    },
+    {
+      "asset_id": "6a435d1a-f61a-4dd7-9fc6-7c82ee3df0e0",
+      "sha12": "1df5dce010cf",
+      "label": "UI kit: minus",
+      "file": "ui/kit/parts/minus.png"
+    },
+    {
+      "asset_id": "d7ca9384-0994-4790-a122-29fa1f7d5440",
+      "sha12": "0979c61ddef8",
+      "label": "UI kit: plus",
+      "file": "ui/kit/parts/plus.png"
+    },
+    {
+      "asset_id": "7c183e85-4040-4551-ab2d-3be767915d76",
+      "sha12": "226d99a30b9f",
+      "label": "UI kit: toggle_on",
+      "file": "ui/kit/parts/toggle_on.png"
+    },
+    {
+      "asset_id": "d72ca2f1-b37a-4c07-a3bb-bdaf225f8656",
+      "sha12": "14261d377038",
+      "label": "UI kit: toggle_off",
+      "file": "ui/kit/parts/toggle_off.png"
+    },
+    {
+      "asset_id": "e6c44663-ad61-4cea-8559-52cf3155adc4",
+      "sha12": "b227adc962b4",
+      "label": "UI kit: card",
+      "file": "ui/kit/parts/card.png"
+    },
+    {
+      "asset_id": "94a05df3-5171-45d4-bc58-1e40dbf23f8a",
+      "sha12": "07de80224b9c",
+      "label": "UI kit: well",
+      "file": "ui/kit/parts/well.png"
+    },
+    {
+      "asset_id": "7f68fd60-a615-48d8-9d94-bdd3687c84fb",
+      "sha12": "4f258355d0c9",
+      "label": "UI kit: pearl_counter",
+      "file": "ui/kit/parts/pearl_counter.png"
+    },
+    {
+      "asset_id": "19e00e7b-824d-48ee-979c-75fd774b8250",
+      "sha12": "216282a7423a",
+      "label": "UI kit: tile",
+      "file": "ui/kit/parts/tile.png"
+    },
+    {
+      "asset_id": "f43178dd-55c9-4658-a4c3-1d0f8d406df9",
+      "sha12": "b90c027d1b19",
+      "label": "UI kit: pearl",
+      "file": "ui/kit/parts/pearl.png"
+    },
+    {
+      "asset_id": "0305aa17-6464-40ac-aef1-817fc8d6eb16",
+      "sha12": "fc2397cd0045",
+      "label": "UI kit: plus_mint",
+      "file": "ui/kit/parts/plus_mint.png"
+    },
+    {
+      "asset_id": "63d5c386-f350-439e-85d7-d0b42a9e46ab",
+      "sha12": "d96941cb7eca",
+      "label": "UI kit: stat_footprints",
+      "file": "ui/kit/parts/stat_footprints.png"
+    },
+    {
+      "asset_id": "3681c954-1696-4cfc-94a4-288c01e8e8a6",
+      "sha12": "b60210d78c01",
+      "label": "UI kit: stat_shell",
+      "file": "ui/kit/parts/stat_shell.png"
+    },
+    {
+      "asset_id": "8e95090b-3f3f-41f0-9a1b-f67878569678",
+      "sha12": "fa5ff5f21a84",
+      "label": "UI kit: stat_trophy",
+      "file": "ui/kit/parts/stat_trophy.png"
+    },
+    {
+      "asset_id": "60ffc705-7f17-4586-875b-f280328ce8aa",
+      "sha12": "e636f596f1c0",
+      "label": "UI kit: stat_stopwatch",
+      "file": "ui/kit/parts/stat_stopwatch.png"
+    },
+    {
+      "asset_id": "7648c03c-8871-48cc-a594-63f2809de451",
+      "sha12": "3946dfc54b1f",
+      "label": "UI kit: stat_skull",
+      "file": "ui/kit/parts/stat_skull.png"
+    },
+    {
+      "asset_id": "f4b14beb-988a-4c40-bc70-922205aebf9c",
+      "sha12": "cb4a7c4d2073",
+      "label": "UI kit: stat_wave",
+      "file": "ui/kit/parts/stat_wave.png"
+    },
+    {
+      "asset_id": "fdf24795-2195-47bd-9173-79aea325f13b",
+      "sha12": "206b4dd285bf",
+      "label": "UI kit: dock_bag",
+      "file": "ui/kit/parts/dock_bag.png"
+    },
+    {
+      "asset_id": "3b0258e0-0d9f-484b-ae3f-960b7a067597",
+      "sha12": "61cc607ed0c8",
+      "label": "UI kit: dock_stats",
+      "file": "ui/kit/parts/dock_stats.png"
+    },
+    {
+      "asset_id": "57ffec90-272d-45f1-8722-5975ee5cb5d5",
+      "sha12": "ff1d62cfa7b5",
+      "label": "UI kit: dock_settings",
+      "file": "ui/kit/parts/dock_settings.png"
+    },
+    {
+      "asset_id": "762cd83f-855b-4c3a-9119-32844d0b90ab",
+      "sha12": "a94dc4ca6824",
+      "label": "UI kit: dock_invite",
+      "file": "ui/kit/parts/dock_invite.png"
+    },
+    {
+      "asset_id": "7f1a259a-b9de-4e0f-b40a-c28017a34bcd",
+      "sha12": "7b60087e2423",
+      "label": "UI kit: dock_shop",
+      "file": "ui/kit/parts/dock_shop.png"
+    }
   ]
 }

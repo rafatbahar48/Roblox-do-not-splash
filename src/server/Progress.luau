@@ -1,5 +1,5 @@
--- Checkpoints, shells, escapes, difficulty, pearls, shop items, spawning and
--- saving.
+-- Checkpoints, shells, escapes, difficulty, pearls, shop items, stats,
+-- settings, spawning and saving.
 --
 -- Player attributes the client reads:
 --   Checkpoint         number of stages cleared (0 = start in the lobby)
@@ -13,6 +13,14 @@
 --   Boost_<id>         how many of each boost the player carries
 --   RunStartedAt       server time (workspace:GetServerTimeNow) the current
 --                      run began, while one is being timed
+--   Escapes            times escaped, all runs together
+--   StatRuns           runs started (through stage 1's doors)
+--   StatCaught         times it caught them
+--   StatStages         stages cleared, all runs together
+--   StatEarned         pearls earned, all time
+--   PlayTime           seconds played, as of PlayTimeAt (server time)
+--   Best_<difficulty>  fastest escape on that difficulty, in seconds
+--   Setting_<id>       their settings (Config.Settings)
 --
 -- A run is timed from walking through stage 1's door to escaping. It counts
 -- for the easiest difficulty played along the way, and the best time on each
@@ -32,6 +40,7 @@ local Leaderboards = require(script.Parent.Leaderboards)
 
 local AUTOSAVE_INTERVAL = 120
 local RESTART_COOLDOWN = 2
+local SETTING_GAP = 0.1 -- seconds between changes to one of a player's settings
 
 local Progress = {}
 
@@ -39,6 +48,7 @@ local layout
 local profiles = {} -- [Player] = profile
 local pendingSaves = 0 -- saves still in flight, so BindToClose can wait for them
 local lastRestart = {} -- [Player] = time
+local lastSetting = {} -- [Player] = { [setting id] = time }
 
 local store
 do
@@ -63,6 +73,28 @@ local function wholeNumber(value, max)
 		return 0
 	end
 	return math.clamp(math.floor(number), 0, max or math.huge)
+end
+
+-- A setting's value, cleaned up, or nil if it isn't one.
+local function settingValue(setting, value)
+	if setting.min then
+		local number = tonumber(value)
+		if not number or number ~= number then
+			return nil
+		end
+		local stepped = setting.min + math.round((number - setting.min) / setting.step) * setting.step
+		return math.clamp(stepped, setting.min, setting.max)
+	end
+	return if type(value) == "boolean" then value else nil
+end
+
+local function settingById(id)
+	for _, setting in Config.Settings do
+		if setting.id == id then
+			return setting
+		end
+	end
+	return nil
 end
 
 local function load(player)
@@ -128,6 +160,13 @@ local function load(player)
 		end
 	end
 
+	local settings = {}
+	local savedSettings = if type(data.settings) == "table" then data.settings else {}
+	for _, setting in Config.Settings do
+		local value = settingValue(setting, savedSettings[setting.id])
+		settings[setting.id] = if value == nil then setting.default else value
+	end
+
 	-- A run that already escaped starts over, so the exit can't pay twice.
 	local checkpoint = math.clamp(math.floor(tonumber(data.checkpoint) or 0), 0, #Stages)
 	if data.escaped == true then
@@ -145,9 +184,20 @@ local function load(player)
 		equipped = equipped,
 		boosts = boosts,
 		bestTimes = bestTimes, -- [difficulty name] = seconds
+		runs = wholeNumber(data.runs),
+		caught = wholeNumber(data.caught),
+		stages = wholeNumber(data.stages),
+		earned = wholeNumber(data.earned),
+		playTime = wholeNumber(data.playTime), -- seconds, up to joinedAt
+		joinedAt = os.clock(),
+		settings = settings, -- [setting id] = value
 		run = nil, -- { startedAt = os.clock(), easiest = difficulty order } while timing
 		canSave = loaded,
 	}
+end
+
+local function playedSeconds(profile)
+	return profile.playTime + (os.clock() - profile.joinedAt)
 end
 
 local function save(player, profile)
@@ -174,6 +224,12 @@ local function save(player, profile)
 		equipped = { skin = profile.equipped.skin, accessory = profile.equipped.accessory },
 		boosts = profile.boosts,
 		bestTimes = profile.bestTimes,
+		runs = profile.runs,
+		caught = profile.caught,
+		stages = profile.stages,
+		earned = profile.earned,
+		playTime = math.floor(playedSeconds(profile)),
+		settings = profile.settings,
 	}, { player.UserId })
 	pendingSaves -= 1
 	if not ok then
@@ -210,6 +266,19 @@ local function sync(player, profile)
 	player:SetAttribute("EquippedAccessory", profile.equipped.accessory)
 	for id, count in profile.boosts do
 		player:SetAttribute("Boost_" .. id, count)
+	end
+	player:SetAttribute("Escapes", profile.wins)
+	player:SetAttribute("StatRuns", profile.runs)
+	player:SetAttribute("StatCaught", profile.caught)
+	player:SetAttribute("StatStages", profile.stages)
+	player:SetAttribute("StatEarned", profile.earned)
+	player:SetAttribute("PlayTime", math.floor(playedSeconds(profile)))
+	player:SetAttribute("PlayTimeAt", workspace:GetServerTimeNow())
+	for name in Config.Difficulties do
+		player:SetAttribute("Best_" .. name, profile.bestTimes[name])
+	end
+	for id, value in profile.settings do
+		player:SetAttribute("Setting_" .. id, value)
 	end
 
 	local stats = player:FindFirstChild("leaderstats")
@@ -308,7 +377,9 @@ local function startRun(player, profile)
 		return
 	end
 	profile.run = { startedAt = os.clock(), easiest = Config.Difficulties[profile.difficulty].order }
+	profile.runs += 1
 	player:SetAttribute("RunStartedAt", workspace:GetServerTimeNow())
+	sync(player, profile)
 end
 
 local function onRunStart(hit)
@@ -349,6 +420,8 @@ local function onCheckpoint(room, hit)
 		return
 	end
 	profile.checkpoint = room.index
+	profile.stages += 1
+	profile.earned += Config.Pearls.PerStage
 	player:SetAttribute("Pebbles", Config.Pebbles.PerLife)
 	addPearls(player, profile, Config.Pearls.PerStage)
 	local text = if room.index == #Stages then "Every stage cleared. Find the way out." else "Stage " .. room.index .. " cleared"
@@ -361,6 +434,7 @@ local function onShell(room, hit)
 		return
 	end
 	profile.shells[room.index] = true
+	profile.earned += Config.Pearls.PerShell
 	addPearls(player, profile, Config.Pearls.PerShell)
 	Remotes.Notify:FireClient(player, "shell", ("Shell found (%d/%d)   +%d pearls"):format(shellCount(profile), #Stages, Config.Pearls.PerShell))
 end
@@ -373,6 +447,7 @@ local function onExit(hit)
 	profile.escaped = true
 	profile.wins += 1
 	local timeLine = finishRun(player, profile)
+	profile.earned += Config.Pearls.PerEscape
 	addPearls(player, profile, Config.Pearls.PerEscape)
 	Leaderboards.recordEscape(player, profile.wins)
 	Remotes.Notify:FireClient(
@@ -419,6 +494,15 @@ function Progress.startRun(player)
 	end
 end
 
+-- Counts a time the creature caught them (Lurker.luau).
+function Progress.recordCaught(player)
+	local profile = profiles[player]
+	if profile then
+		profile.caught += 1
+		sync(player, profile)
+	end
+end
+
 -- For other systems and testing: gives (or with a negative amount, takes) pearls.
 function Progress.addPearls(player, amount)
 	local profile = profiles[player]
@@ -447,6 +531,24 @@ function Progress.init(newLayout)
 
 	Remotes.SetDifficulty.OnServerEvent:Connect(Progress.setDifficulty)
 
+	Remotes.SaveSetting.OnServerEvent:Connect(function(player, id, value)
+		local profile = profiles[player]
+		local now = os.clock()
+		if not profile or type(id) ~= "string" then
+			return
+		end
+		local setting = settingById(id)
+		local clean = if setting then settingValue(setting, value) else nil
+		local last = lastSetting[player] or {}
+		if clean == nil or (last[id] and now - last[id] < SETTING_GAP) then
+			return
+		end
+		last[id] = now
+		lastSetting[player] = last
+		profile.settings[id] = clean
+		player:SetAttribute("Setting_" .. id, clean)
+	end)
+
 	Remotes.Restart.OnServerEvent:Connect(function(player)
 		local profile = profiles[player]
 		local now = os.clock()
@@ -471,6 +573,7 @@ function Progress.init(newLayout)
 		local profile = profiles[player]
 		profiles[player] = nil
 		lastRestart[player] = nil
+		lastSetting[player] = nil
 		if profile then
 			save(player, profile)
 		end

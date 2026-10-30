@@ -3,7 +3,8 @@
 -- and friends only, then Create. While you are in a party, a banner says how
 -- full it is and when it leaves, with a button to leave it.
 --
--- Everything here only asks; the server decides.
+-- Made of the SpriteCook UI kit's art (shared/Candy.luau). Everything here
+-- only asks; the server decides.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -15,15 +16,17 @@ local Remotes = require(ReplicatedStorage.Shared.Remotes)
 
 local player = Players.LocalPlayer
 
-local INK, WHITE, MUTED = Candy.INK, Candy.WHITE, Candy.MUTED
-local SKY, MINT, LEMON, PINK = Candy.SKY, Candy.MINT, Candy.LEMON, Candy.PINK
+local WHITE, MUTED = Candy.WHITE, Candy.MUTED
+local MINT, LEMON, PINK = Candy.MINT, Candy.LEMON, Candy.PINK
 local DIFFICULTIES = {
 	{ name = "Easy", color = MINT },
 	{ name = "Normal", color = LEMON },
 	{ name = "Hard", color = PINK },
 }
+local WIDTH, HEIGHT = 520, 470
+local TOP, SIDE = Candy.WINDOW_TOP, Candy.WINDOW_SIDE
 
-local create, text, outlined, paint = Candy.create, Candy.text, Candy.outlined, Candy.paint
+local create, text, paint = Candy.create, Candy.text, Candy.paint
 
 local PartyUi = {}
 
@@ -33,57 +36,46 @@ local doorIndex -- the party door the pop-up is for
 local choice = { size = Config.Party.MaxSize, difficulty = Config.DefaultDifficulty, friendsOnly = false }
 local status -- the server's latest word on our party, or nil
 
-local function chunkyButton(parent, size, position, labelText, radius)
-	return Candy.button(parent, { size = size, position = position, text = labelText, radius = radius })
-end
-
 local function close()
 	popup.Visible = false
 	doorIndex = nil
 end
 
-local function buildPopup()
-	popup = create("Frame", {
-		Name = "PartySetup",
-		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = UDim2.fromScale(0.5, 0.5),
-		Size = UDim2.fromOffset(460, 400),
-		BackgroundColor3 = WHITE,
-		Visible = false,
-		Parent = gui,
-	}, {
-		create("UICorner", { CornerRadius = UDim.new(0, 28) }),
-		create("UIStroke", { Color = INK, Thickness = 5 }),
+-- A button that is just a picture from the kit.
+local function pictureButton(parent, art, size, position)
+	local button = create("ImageButton", {
+		Name = art,
+		BackgroundTransparency = 1,
+		AutoButtonColor = false,
+		Position = position,
+		Size = size,
+		ZIndex = 3,
+		Parent = parent,
 	})
-	Candy.fit(popup, Vector2.new(470, 430), 24)
+	Candy.setArt(button, art)
+	button.Activated:Connect(Candy.click)
+	return button
+end
 
-	local header = create("Frame", {
-		Size = UDim2.new(1, 0, 0, 78),
-		BackgroundColor3 = SKY,
-		Parent = popup,
-	}, { create("UICorner", { CornerRadius = UDim.new(0, 26) }) })
-	-- Square off the header's bottom corners.
-	create("Frame", { Position = UDim2.new(0, 0, 1, -26), Size = UDim2.new(1, 0, 0, 26), BackgroundColor3 = SKY, BorderSizePixel = 0, Parent = header })
-	create("Frame", { Position = UDim2.new(0, 0, 1, 0), Size = UDim2.new(1, 0, 0, 4), BackgroundColor3 = INK, BorderSizePixel = 0, Parent = header })
-	outlined({ Position = UDim2.fromOffset(24, 12), Size = UDim2.new(1, -110, 0, 54), Text = "NEW PARTY", TextColor3 = LEMON, TextXAlignment = Enum.TextXAlignment.Left, Parent = header }, 4)
-	local closeButton = chunkyButton(header, UDim2.fromOffset(52, 56), UDim2.new(1, -70, 0, 10), "X", 26)
-	paint(closeButton, PINK)
+local function buildPopup()
+	local window, _, closeButton = Candy.window(gui, { name = "PartySetup", size = UDim2.fromOffset(WIDTH, HEIGHT), title = "NEW PARTY" })
+	popup = window
+	popup.Visible = false
+	Candy.fit(popup, Vector2.new(WIDTH + 10, HEIGHT + 10), 24)
 	closeButton.Activated:Connect(function()
 		Remotes.LeaveParty:FireServer()
 		close()
 	end)
 
 	local function row(y, title)
-		text({ Position = UDim2.fromOffset(28, y + 10), Size = UDim2.fromOffset(120, 30), Text = title, TextXAlignment = Enum.TextXAlignment.Left, Parent = popup })
+		text({ Position = UDim2.fromOffset(SIDE + 4, y + 10), Size = UDim2.fromOffset(150, 30), TextSize = 22, Text = title, TextXAlignment = Enum.TextXAlignment.Left, Parent = popup })
 	end
 
 	-- Party size: - [n] +
-	row(98, "Party size")
-	local minus = chunkyButton(popup, UDim2.fromOffset(52, 54), UDim2.fromOffset(250, 96), "-", 16)
-	local count = text({ Position = UDim2.fromOffset(306, 104), Size = UDim2.fromOffset(60, 40), Text = "", Parent = popup })
-	local plus = chunkyButton(popup, UDim2.fromOffset(52, 54), UDim2.fromOffset(370, 96), "+", 16)
-	paint(minus, SKY)
-	paint(plus, SKY)
+	row(TOP, "Party size")
+	local minus = pictureButton(popup, "minus", UDim2.fromOffset(50, 50), UDim2.fromOffset(282, TOP))
+	local count = text({ Position = UDim2.fromOffset(340, TOP + 6), Size = UDim2.fromOffset(60, 38), Text = "", Parent = popup })
+	local plus = pictureButton(popup, "plus", UDim2.fromOffset(50, 50), UDim2.fromOffset(408, TOP))
 	minus.Activated:Connect(function()
 		choice.size = math.max(1, choice.size - 1)
 		refreshChoices()
@@ -93,11 +85,15 @@ local function buildPopup()
 		refreshChoices()
 	end)
 
-	-- Difficulty: three pills.
-	row(166, "Difficulty")
+	-- Difficulty: three buttons.
+	row(TOP + 68, "Difficulty")
 	local pills = {}
 	for i, difficulty in DIFFICULTIES do
-		local pill = chunkyButton(popup, UDim2.fromOffset(92, 50), UDim2.fromOffset(156 + (i - 1) * 98, 164), difficulty.name, 25)
+		local pill = Candy.button(popup, {
+			size = UDim2.fromOffset(100, 52),
+			position = UDim2.fromOffset(176 + (i - 1) * 104, TOP + 64),
+			text = difficulty.name,
+		})
 		pill.Activated:Connect(function()
 			choice.difficulty = difficulty.name
 			refreshChoices()
@@ -105,31 +101,39 @@ local function buildPopup()
 		pills[difficulty.name] = { face = pill, color = difficulty.color }
 	end
 
-	-- Friends only: an on/off pill.
-	row(232, "Friends only")
-	local toggle = chunkyButton(popup, UDim2.fromOffset(92, 50), UDim2.fromOffset(332, 230), "", 25)
+	-- Friends only: the kit's ON/OFF toggle.
+	row(TOP + 136, "Friends only")
+	local toggle = pictureButton(popup, "toggle_off", UDim2.fromOffset(112, 50), UDim2.fromOffset(WIDTH - SIDE - 112, TOP + 132))
 	toggle.Activated:Connect(function()
 		choice.friendsOnly = not choice.friendsOnly
 		refreshChoices()
 	end)
 
 	text({
-		Position = UDim2.fromOffset(28, 292),
-		Size = UDim2.new(1, -56, 0, 20),
+		Position = UDim2.fromOffset(SIDE, TOP + 196),
+		Size = UDim2.new(1, -2 * SIDE, 0, 20),
 		Font = Enum.Font.GothamMedium,
+		TextSize = 16,
 		TextColor3 = MUTED,
 		Text = "Others join by stepping on the pad.",
 		Parent = popup,
 	})
 
-	local cancel = chunkyButton(popup, UDim2.fromOffset(150, 58), UDim2.fromOffset(28, 324), "Cancel", 29)
-	paint(cancel, WHITE)
+	local cancel = Candy.button(popup, {
+		size = UDim2.fromOffset(160, 62),
+		position = UDim2.new(0, SIDE, 1, -Candy.WINDOW_BOTTOM - 66),
+		text = "Cancel",
+	})
 	cancel.Activated:Connect(function()
 		Remotes.LeaveParty:FireServer()
 		close()
 	end)
-	local createButton = chunkyButton(popup, UDim2.new(1, -214, 0, 58), UDim2.fromOffset(186, 324), "Create party", 29)
-	paint(createButton, LEMON)
+	local createButton = Candy.button(popup, {
+		size = UDim2.new(1, -2 * SIDE - 172, 0, 62),
+		position = UDim2.new(0, SIDE + 172, 1, -Candy.WINDOW_BOTTOM - 66),
+		text = "Create party",
+		color = LEMON,
+	})
 	createButton.Activated:Connect(function()
 		if doorIndex then
 			Remotes.CreateParty:FireServer(doorIndex, choice.size, choice.difficulty, choice.friendsOnly)
@@ -139,8 +143,8 @@ local function buildPopup()
 
 	refreshChoices = function()
 		count.Text = tostring(choice.size)
-		minus.Parent.Visible = choice.size > 1
-		plus.Parent.Visible = choice.size < Config.Party.MaxSize
+		minus.Visible = choice.size > 1
+		plus.Visible = choice.size < Config.Party.MaxSize
 		for name, pill in pills do
 			if name == choice.difficulty then
 				paint(pill.face, pill.color)
@@ -148,28 +152,23 @@ local function buildPopup()
 				paint(pill.face, WHITE, MUTED)
 			end
 		end
-		toggle.Label.Text = if choice.friendsOnly then "On" else "Off"
-		paint(toggle, if choice.friendsOnly then MINT else WHITE, if choice.friendsOnly then INK else MUTED)
+		Candy.setArt(toggle, if choice.friendsOnly then "toggle_on" else "toggle_off")
 	end
 	refreshChoices()
 end
 
 local function buildBanner()
-	banner = create("Frame", {
-		Name = "PartyBanner",
-		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, 132),
-		Size = UDim2.fromOffset(420, 64),
-		BackgroundColor3 = WHITE,
-		Visible = false,
-		Parent = gui,
-	}, {
-		create("UICorner", { CornerRadius = UDim.new(0, 32) }),
-		create("UIStroke", { Color = INK, Thickness = 4 }),
+	local body = Candy.raised(gui, {
+		name = "PartyBanner",
+		anchor = Vector2.new(0.5, 0),
+		position = UDim2.new(0.5, 0, 0, 132),
+		size = UDim2.fromOffset(440, 70),
+		lip = 6,
 	})
-	bannerText = text({ Position = UDim2.fromOffset(22, 14), Size = UDim2.new(1, -150, 0, 36), TextXAlignment = Enum.TextXAlignment.Left, Text = "", Parent = banner })
-	local leave = chunkyButton(banner, UDim2.fromOffset(104, 50), UDim2.new(1, -116, 0, 4), "Leave", 25)
-	paint(leave, PINK)
+	banner = body.Parent
+	banner.Visible = false
+	bannerText = text({ Position = UDim2.fromOffset(22, 14), Size = UDim2.new(1, -150, 0, 36), TextXAlignment = Enum.TextXAlignment.Left, Text = "", Parent = body })
+	local leave = Candy.button(body, { size = UDim2.fromOffset(110, 52), position = UDim2.new(1, -122, 0, 6), text = "Leave", color = PINK })
 	leave.Activated:Connect(function()
 		Remotes.LeaveParty:FireServer()
 	end)

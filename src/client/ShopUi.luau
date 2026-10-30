@@ -1,10 +1,12 @@
--- The shop window: skins, accessories and boosts on three tabs. It shows what
--- the server says (player attributes, see server/Progress.luau) and sends
--- requests; the server decides what actually happens (server/Shop.luau).
+-- The shop window and the bag. The shop sells skins, accessories and boosts
+-- on three tabs; the bag shows only what you own, to wear or take off. It
+-- shows what the server says (player attributes, see server/Progress.luau)
+-- and sends requests; the server decides what actually happens
+-- (server/Shop.luau).
 --
--- It follows the Shop board in the Look Book: a white window under a sky-blue
--- awning, chunky tabs, and a card per item with its picture, what it is and
--- one button.
+-- Made of the SpriteCook UI kit's art (shared/Candy.luau): the kit's window
+-- with its title on the ribbon, the pearl counter, chunky tabs, and a tile
+-- per item with its picture in a round well and one button.
 
 local Players = game:GetService("Players")
 local ProximityPromptService = game:GetService("ProximityPromptService")
@@ -16,30 +18,36 @@ local Catalog = require(ReplicatedStorage.Shared.Catalog)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local ItemIcons = require(script.Parent.ItemIcons)
+local Windows = require(script.Parent.Windows)
 
 local player = Players.LocalPlayer
 
 local INK, WHITE, MUTED = Candy.INK, Candy.WHITE, Candy.MUTED
 local OWNED = Color3.fromRGB(31, 122, 90) -- "Owned" and "Wearing"
-local WORN_CARD = Color3.fromRGB(237, 255, 247)
 
-local WIDTH, HEIGHT, HEADER = 880, 584, 96
-local WINDOW_LIP = 10
-local CARD = Vector2.new(264, 171) -- lip included
+local WIDTH, HEIGHT = 920, 620
+local CARD = Vector2.new(268, 176)
+local TOP = Candy.WINDOW_TOP
 
 local TABS = {
-	{ kind = "skin", title = "Skins", color = Candy.PINK, width = 128 },
-	{ kind = "accessory", title = "Accessories", color = Candy.MINT, width = 184 },
-	{ kind = "boost", title = "Boosts", color = Candy.LEMON, width = 136 },
+	{ kind = "skin", title = "Skins", color = Candy.PINK, width = 140 },
+	{ kind = "accessory", title = "Accessories", color = Candy.MINT, width = 196 },
+	{ kind = "boost", title = "Boosts", color = Candy.LEMON, width = 148 },
+}
+
+local MODES = {
+	shop = { title = "SHOP", footer = "Earn pearls by clearing stages, finding shells and escaping" },
+	bag = { title = "YOUR BAG", footer = "Everything you own. Wear one skin and one accessory at a time." },
 }
 
 local ShopUi = {}
 
-local gui
+local gui, window, titleLabel, footer, emptyLabel
 local pearlsLabel
 local tabButtons = {} -- [kind] = button face
-local cards = {} -- [item id] = { holder, body, status, button, price, priceText, badge }
+local cards = {} -- [item id] = { holder, status, button, price, priceText, badge }
 local currentKind = "skin"
+local mode = "shop"
 
 local create, text = Candy.create, Candy.text
 
@@ -51,7 +59,25 @@ local function ownedSet()
 	return owned
 end
 
+local function boostCount(item)
+	return player:GetAttribute("Boost_" .. item.id) or 0
+end
+
+-- Whether an item belongs in the bag: owned, or a boost you carry.
+local function inBag(item, owned)
+	if item.kind == "boost" then
+		return boostCount(item) > 0
+	end
+	return owned[item.id] == true
+end
+
 local function onCardPressed(item)
+	if item.kind == "boost" and mode == "bag" then
+		-- More of it, from the shop.
+		mode = "shop"
+		ShopUi.render()
+		return
+	end
 	if item.kind == "boost" or not ownedSet()[item.id] then
 		Remotes.BuyItem:FireServer(item.id)
 		return
@@ -62,24 +88,34 @@ local function onCardPressed(item)
 end
 
 local function makeCard(item, order, parent)
-	local body = Candy.raised(parent, { name = item.id, size = UDim2.fromOffset(CARD.X, CARD.Y), radius = 22 })
+	local body = Candy.raised(parent, { name = item.id, size = UDim2.fromOffset(CARD.X, CARD.Y), lip = 8 })
 	local holder = body.Parent
 	holder.LayoutOrder = order
 
-	local well = create("Frame", {
+	local well = Candy.art("well", {
 		Name = "Well",
 		Position = UDim2.fromOffset(12, 12),
-		Size = UDim2.fromOffset(76, 76),
-		BackgroundColor3 = Candy.ICE,
+		Size = UDim2.fromOffset(80, 80),
 		ZIndex = 2,
 		Parent = body,
-	}, { Candy.corner(UDim.new(0.5, 0)), Candy.stroke(3) })
-	ItemIcons.draw(well, item)
+	})
+	if item.kind == "boost" then
+		-- The boost's own button from the HUD.
+		Candy.art("action_" .. item.id, {
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.fromScale(0.5, 0.5),
+			Size = UDim2.fromScale(0.8, 0.8),
+			ZIndex = 3,
+			Parent = well,
+		})
+	else
+		ItemIcons.draw(well, item)
+	end
 
 	text({
 		Name = "ItemName",
-		Position = UDim2.fromOffset(100, 12),
-		Size = UDim2.new(1, -110, 0, 24),
+		Position = UDim2.fromOffset(102, 14),
+		Size = UDim2.new(1, -114, 0, 24),
 		TextSize = 19,
 		TextXAlignment = Enum.TextXAlignment.Left,
 		TextTruncate = Enum.TextTruncate.AtEnd,
@@ -88,8 +124,8 @@ local function makeCard(item, order, parent)
 	})
 	local status = text({
 		Name = "Status",
-		Position = UDim2.fromOffset(100, 37),
-		Size = UDim2.new(1, -110, 0, 16),
+		Position = UDim2.fromOffset(102, 39),
+		Size = UDim2.new(1, -114, 0, 16),
 		Font = Enum.Font.GothamBlack,
 		TextSize = 13,
 		TextXAlignment = Enum.TextXAlignment.Left,
@@ -98,8 +134,8 @@ local function makeCard(item, order, parent)
 	})
 	text({
 		Name = "Blurb",
-		Position = UDim2.fromOffset(100, 55),
-		Size = UDim2.new(1, -110, 0, 50), -- three lines
+		Position = UDim2.fromOffset(102, 57),
+		Size = UDim2.new(1, -114, 0, 50), -- three lines
 		Font = Enum.Font.GothamBold,
 		TextSize = 13,
 		TextColor3 = MUTED,
@@ -111,9 +147,8 @@ local function makeCard(item, order, parent)
 	})
 
 	local button = Candy.button(body, {
-		position = UDim2.new(0, 12, 1, -56),
-		size = UDim2.new(1, -24, 0, 45),
-		radius = 20,
+		position = UDim2.new(0, 12, 1, -60),
+		size = UDim2.new(1, -24, 0, 50),
 	})
 	button.Activated:Connect(function()
 		onCardPressed(item)
@@ -122,8 +157,8 @@ local function makeCard(item, order, parent)
 	local price = create("Frame", {
 		Name = "Price",
 		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = UDim2.fromScale(0.5, 0.5),
-		Size = UDim2.fromScale(1, 1),
+		Position = UDim2.fromScale(0.5, 0.46),
+		Size = UDim2.new(1, 0, 0, 24),
 		BackgroundTransparency = 1,
 		ZIndex = 3,
 		Parent = button,
@@ -137,26 +172,25 @@ local function makeCard(item, order, parent)
 		}),
 	})
 	text({ LayoutOrder = 1, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromScale(0, 1), TextSize = 18, Text = "Buy", Parent = price })
-	Candy.pearl(price, 22).LayoutOrder = 2
+	Candy.pearl(price, 24).LayoutOrder = 2
 	local priceText = text({ LayoutOrder = 3, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromScale(0, 1), TextSize = 18, Text = "", Parent = price })
 
 	-- A "WEARING" tag sitting on the card's top edge.
-	local badge = create("Frame", {
+	local badge = Candy.art("button_mint", {
 		Name = "Wearing",
 		AnchorPoint = Vector2.new(1, 0.5),
-		Position = UDim2.new(1, -16, 0, 0),
-		Size = UDim2.fromOffset(96, 24),
-		BackgroundColor3 = Candy.MINT,
+		Position = UDim2.new(1, -14, 0, 2),
+		Size = UDim2.fromOffset(104, 30),
 		Visible = false,
 		ZIndex = 5,
 		Parent = body,
-	}, { Candy.corner(UDim.new(0.5, 0)), Candy.stroke(3) })
-	text({ Position = UDim2.fromScale(0.1, 0.15), Size = UDim2.fromScale(0.8, 0.7), Text = "WEARING", ZIndex = 6, Parent = badge })
+	}, 30)
+	text({ Position = UDim2.fromScale(0.12, 0.16), Size = UDim2.fromScale(0.76, 0.56), Text = "WEARING", ZIndex = 6, Parent = badge })
 
-	cards[item.id] = { holder = holder, body = body, status = status, button = button, price = price, priceText = priceText, badge = badge }
+	cards[item.id] = { holder = holder, status = status, button = button, price = price, priceText = priceText, badge = badge }
 end
 
-local function render()
+function ShopUi.render()
 	if not gui then
 		return
 	end
@@ -167,6 +201,8 @@ local function render()
 		accessory = player:GetAttribute("EquippedAccessory"),
 	}
 	pearlsLabel.Text = tostring(pearls)
+	titleLabel.Text = MODES[mode].title
+	footer.Text = MODES[mode].footer .. (if UserInputService.KeyboardEnabled and mode == "shop" then "  ·  Press B to close" else "")
 
 	for _, tab in TABS do
 		if tab.kind == currentKind then
@@ -176,9 +212,12 @@ local function render()
 		end
 	end
 
+	local anyShown = false
 	for _, item in Catalog.items do
 		local card = cards[item.id]
-		card.holder.Visible = item.kind == currentKind
+		local shown = item.kind == currentKind and (mode == "shop" or inBag(item, owned))
+		card.holder.Visible = shown
+		anyShown = anyShown or shown
 		-- What the button says and does. A greyed button still sends its
 		-- request, so the server can say why not.
 		local label, color, flat, showPrice = "", Candy.LEMON, false, false
@@ -187,9 +226,11 @@ local function render()
 			label, color, flat = ("Need %d more"):format(item.price - pearls), Candy.CLOUD, true
 		end
 		if item.kind == "boost" then
-			local count = player:GetAttribute("Boost_" .. item.id) or 0
+			local count = boostCount(item)
 			statusText = ("You have %d of %d"):format(count, Config.Boosts.MaxCarried)
-			if count >= Config.Boosts.MaxCarried then
+			if mode == "bag" then
+				label, color = "Get more", Candy.SKY
+			elseif count >= Config.Boosts.MaxCarried then
 				label, color, flat = "Full", Candy.CLOUD, true
 			elseif pearls >= item.price then
 				showPrice = true
@@ -207,91 +248,13 @@ local function render()
 		end
 		card.status.Text = statusText
 		card.status.TextColor3 = statusColor
-		card.body.BackgroundColor3 = if wearing then WORN_CARD else WHITE
 		card.badge.Visible = wearing
-		Candy.paint(card.button, color, if flat then MUTED else INK, flat)
+		Candy.paint(card.button, color, if flat then WHITE else INK, flat)
 		card.button.Label.Text = if showPrice then "" else label
 		card.price.Visible = showPrice
 		card.priceText.Text = tostring(item.price)
 	end
-end
-
--- The sky-blue header with the pearls, the title and the close button, and
--- a scalloped awning edge along its bottom.
-local function buildHeader(window)
-	local header = create("Frame", {
-		Name = "Header",
-		Size = UDim2.new(1, 0, 0, HEADER),
-		BackgroundColor3 = Candy.SKY,
-		Parent = window,
-	}, { Candy.corner(32) })
-	-- Square off its bottom corners.
-	create("Frame", { Position = UDim2.new(0, 0, 1, -32), Size = UDim2.new(1, 0, 0, 32), BackgroundColor3 = Candy.SKY, BorderSizePixel = 0, Parent = header })
-
-	-- Scallops: white circles along the edge, their lower halves covered.
-	local size = 29
-	for x = 0, WIDTH, size do
-		create("Frame", {
-			Name = "Scallop",
-			Position = UDim2.fromOffset(x, HEADER - size / 2),
-			Size = UDim2.fromOffset(size, size),
-			BackgroundColor3 = WHITE,
-			ZIndex = 2,
-			Parent = window,
-		}, { Candy.corner(UDim.new(0.5, 0)), Candy.stroke(3.5) })
-	end
-	create("Frame", {
-		Name = "AwningCover",
-		Position = UDim2.fromOffset(0, HEADER),
-		Size = UDim2.new(1, 0, 0, size / 2 + 4),
-		BackgroundColor3 = WHITE,
-		BorderSizePixel = 0,
-		ZIndex = 3,
-		Parent = window,
-	})
-
-	local pill = Candy.raised(header, { name = "Pearls", position = UDim2.fromOffset(24, 16), size = UDim2.fromOffset(170, 54), radius = 25, lip = 4 })
-	pill.ZIndex = 4
-	Candy.pearl(pill, 36, UDim2.new(0, 7, 0.5, 0), Vector2.new(0, 0.5))
-	pearlsLabel = text({
-		Name = "Count",
-		Position = UDim2.fromOffset(50, 0),
-		Size = UDim2.new(0, 64, 1, 0),
-		TextSize = 24,
-		TextXAlignment = Enum.TextXAlignment.Left,
-		Text = "0",
-		Parent = pill,
-	})
-	text({
-		Position = UDim2.new(1, -60, 0, 0),
-		Size = UDim2.new(0, 50, 1, 0),
-		Font = Enum.Font.GothamBlack,
-		TextSize = 14,
-		TextColor3 = MUTED,
-		TextXAlignment = Enum.TextXAlignment.Right,
-		Text = "pearls",
-		Parent = pill,
-	})
-
-	Candy.title(header, {
-		Name = "Title",
-		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, 12),
-		Size = UDim2.fromOffset(240, 58),
-		TextColor3 = Candy.LEMON,
-		Text = "SHOP",
-	}, 3, 4)
-
-	local close = Candy.button(header, {
-		name = "Close",
-		position = UDim2.new(1, -24, 0, 14),
-		anchor = Vector2.new(1, 0),
-		size = UDim2.fromOffset(54, 59),
-		radius = 27,
-		text = "X",
-		color = Candy.PINK,
-	})
-	close.Activated:Connect(ShopUi.toggle)
+	emptyLabel.Visible = not anyShown
 end
 
 local function build()
@@ -303,7 +266,7 @@ local function build()
 		IgnoreGuiInset = true,
 		ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
 	})
-	-- Dim the world behind; clicking it closes the shop.
+	-- Dim the world behind; clicking it closes the window.
 	local backdrop = create("TextButton", {
 		Name = "Backdrop",
 		Size = UDim2.fromScale(1, 1),
@@ -313,51 +276,73 @@ local function build()
 		Text = "",
 		Parent = gui,
 	})
-	backdrop.Activated:Connect(ShopUi.toggle)
+	backdrop.Activated:Connect(ShopUi.close)
 
-	local window = Candy.raised(gui, {
-		name = "Window",
-		anchor = Vector2.new(0.5, 0.5),
-		position = UDim2.fromScale(0.5, 0.5),
-		size = UDim2.fromOffset(WIDTH, HEIGHT + WINDOW_LIP),
-		radius = 32,
-		lip = WINDOW_LIP,
-		outline = 5,
+	local close
+	window, titleLabel, close = Candy.window(gui, { name = "Window", size = UDim2.fromOffset(WIDTH, HEIGHT) })
+	close.Activated:Connect(ShopUi.close)
+	Candy.fit(window, Vector2.new(WIDTH + 10, HEIGHT + 10), 24)
+
+	-- Pearls, between the ribbon and the close button. Its + opens the shop.
+	local pill = Candy.art("pearl_counter", {
+		Name = "Pearls",
+		AnchorPoint = Vector2.new(1, 0),
+		Position = UDim2.new(1, -110, 0, 22),
+		Size = UDim2.fromOffset(210, 60),
+		ZIndex = 3,
+		Parent = window,
+	}, 60)
+	pearlsLabel = text({
+		Name = "Count",
+		Position = UDim2.fromOffset(62, 5),
+		Size = UDim2.new(1, -116, 1, -14),
+		TextSize = 24,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		Text = "0",
+		ZIndex = 4,
+		Parent = pill,
 	})
-	window.Active = true -- clicks on the window don't reach the backdrop
-	window.ClipsDescendants = true
-	Candy.fit(window.Parent, Vector2.new(WIDTH + 10, HEIGHT + WINDOW_LIP + 10), 24)
-
-	buildHeader(window)
+	local more = create("TextButton", {
+		AnchorPoint = Vector2.new(1, 0),
+		Position = UDim2.fromScale(1, 0),
+		Size = UDim2.new(0, 54, 1, 0),
+		BackgroundTransparency = 1,
+		Text = "",
+		ZIndex = 5,
+		Parent = pill,
+	})
+	more.Activated:Connect(function()
+		mode = "shop"
+		ShopUi.render()
+	end)
 
 	local tabBar = create("Frame", {
 		Name = "Tabs",
-		Position = UDim2.fromOffset(28, HEADER + 16),
-		Size = UDim2.new(1, -56, 0, 57),
+		Position = UDim2.fromOffset(Candy.WINDOW_SIDE, TOP),
+		Size = UDim2.new(1, -2 * Candy.WINDOW_SIDE, 0, 56),
 		BackgroundTransparency = 1,
-		ZIndex = 4, -- over the awning's edge
+		ZIndex = 4,
 		Parent = window,
 	}, {
 		create("UIListLayout", {
 			FillDirection = Enum.FillDirection.Horizontal,
-			Padding = UDim.new(0, 14),
+			Padding = UDim.new(0, 12),
 			SortOrder = Enum.SortOrder.LayoutOrder,
 		}),
 	})
 	for order, tab in TABS do
-		local face = Candy.button(tabBar, { name = tab.kind, order = order, size = UDim2.fromOffset(tab.width, 57), radius = 26, text = tab.title, outline = 4 })
-		face.Label.Size = UDim2.new(1, -28, 0.5, 0)
+		local face = Candy.button(tabBar, { name = tab.kind, order = order, size = UDim2.fromOffset(tab.width, 56), text = tab.title })
 		face.Activated:Connect(function()
 			currentKind = tab.kind
-			render()
+			ShopUi.render()
 		end)
 		tabButtons[tab.kind] = face
 	end
 
 	local list = create("ScrollingFrame", {
 		Name = "Items",
-		Position = UDim2.fromOffset(28, HEADER + 76),
-		Size = UDim2.new(1, -50, 1, -(HEADER + 76) - 40),
+		Position = UDim2.fromOffset(Candy.WINDOW_SIDE - 2, TOP + 66),
+		Size = UDim2.new(1, -2 * Candy.WINDOW_SIDE + 8, 1, -(TOP + 66) - Candy.WINDOW_BOTTOM - 30),
 		BackgroundTransparency = 1,
 		BorderSizePixel = 0,
 		CanvasSize = UDim2.new(),
@@ -368,10 +353,10 @@ local function build()
 		Parent = window,
 	}, {
 		-- Room above the first row for the WEARING tags.
-		create("UIPadding", { PaddingTop = UDim.new(0, 14), PaddingLeft = UDim.new(0, 2) }),
+		create("UIPadding", { PaddingTop = UDim.new(0, 16), PaddingLeft = UDim.new(0, 4) }),
 		create("UIGridLayout", {
 			CellSize = UDim2.fromOffset(CARD.X, CARD.Y),
-			CellPadding = UDim2.fromOffset(16, 16),
+			CellPadding = UDim2.fromOffset(16, 18),
 			SortOrder = Enum.SortOrder.LayoutOrder,
 		}),
 	})
@@ -379,29 +364,59 @@ local function build()
 		makeCard(item, order, list)
 	end
 
-	local closeHint = if UserInputService.KeyboardEnabled then "  ·  Press B to close" else ""
-	text({
+	emptyLabel = text({
+		Name = "Empty",
+		Position = UDim2.fromOffset(Candy.WINDOW_SIDE, TOP + 110),
+		Size = UDim2.new(1, -2 * Candy.WINDOW_SIDE, 0, 30),
+		TextSize = 22,
+		TextColor3 = MUTED,
+		Text = "Nothing here yet. Find something in the shop.",
+		Visible = false,
+		Parent = window,
+	})
+
+	footer = text({
 		Name = "Footer",
-		Position = UDim2.new(0, 28, 1, -34),
-		Size = UDim2.new(1, -56, 0, 20),
+		Position = UDim2.new(0, Candy.WINDOW_SIDE, 1, -Candy.WINDOW_BOTTOM - 24),
+		Size = UDim2.new(1, -2 * Candy.WINDOW_SIDE, 0, 20),
 		Font = Enum.Font.GothamBold,
 		TextSize = 14,
 		TextColor3 = MUTED,
-		Text = "Earn pearls by clearing stages, finding shells and escaping" .. closeHint,
+		Text = "",
 		Parent = window,
 	})
 
 	gui.Parent = player:WaitForChild("PlayerGui")
 end
 
-function ShopUi.toggle()
+local closeOthers = Windows.add(function()
+	ShopUi.close()
+end)
+
+-- Opens the shop ("shop") or your bag ("bag"). Pressing the same one again
+-- closes it.
+function ShopUi.open(newMode)
 	if not gui then
 		build()
 	end
-	gui.Enabled = not gui.Enabled
-	if gui.Enabled then
-		render()
+	if gui.Enabled and mode == newMode then
+		ShopUi.close()
+		return
 	end
+	closeOthers()
+	mode = newMode
+	gui.Enabled = true
+	ShopUi.render()
+end
+
+function ShopUi.close()
+	if gui then
+		gui.Enabled = false
+	end
+end
+
+function ShopUi.toggle()
+	ShopUi.open("shop")
 end
 
 function ShopUi.start()
@@ -412,7 +427,7 @@ function ShopUi.start()
 		end
 	end
 	for _, name in watched do
-		player:GetAttributeChangedSignal(name):Connect(render)
+		player:GetAttributeChangedSignal(name):Connect(ShopUi.render)
 	end
 
 	UserInputService.InputBegan:Connect(function(input, processed)
@@ -423,8 +438,8 @@ function ShopUi.start()
 
 	-- The shop hut in the lobby (LobbyBuilder.luau) opens it too.
 	ProximityPromptService.PromptTriggered:Connect(function(prompt)
-		if prompt.Name == "OpenShop" and not (gui and gui.Enabled) then
-			ShopUi.toggle()
+		if prompt.Name == "OpenShop" and not (gui and gui.Enabled and mode == "shop") then
+			ShopUi.open("shop")
 		end
 	end)
 end

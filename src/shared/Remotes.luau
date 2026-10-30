@@ -18,6 +18,7 @@ local NAMES = {
 	"LeaveParty", -- client -> server: leave your party, or cancel setting one up
 	"PartyStatus", -- server -> client: { count, size, difficulty, leavesAt, owner } for your party, or nil
 	"CameraLook", -- client -> server: which way your camera points, across the ground (unit Vector3)
+	"SaveSetting", -- client -> server: setting id, value (see Config.Settings)
 }
 
 local folder

@@ -13,10 +13,12 @@ A Roblox horror obby. Cross a drowned forest at night by jumping from stump to s
 - **Three doors into stage 1**, one per difficulty (Easy, Normal, Hard). Stepping on a door's pad picks that difficulty; its screen shows how many people are in the water on it.
 - **Party doors:** step on a party door's pad and a pop-up sets up a party: size (1 to 4), difficulty, friends only. Others join by stepping on the pad. When the countdown ends the party leaves together for a private server of its own (in Studio, which can't teleport, it goes straight into stage 1 instead).
 - **Run timer:** starts when you walk through any of stage 1's doors and stops at the exit. A run counts for the easiest difficulty you played during it. Your best time on each difficulty is saved.
-- **Pearls:** earned for each stage cleared, each shell found and each escape. Spend them in the **Shop** (the button at the bottom of the screen, or B).
-- **The HUD** is in the same candy style as the menus: pearls and your stage top left, the run timer top middle, difficulty top right, the shop button at the bottom. In the stages it adds the noise meter on the left and round pebble, Updraft and Hush buttons bottom right, which work on touch screens too.
+- **Pearls:** earned for each stage cleared, each shell found and each escape. Spend them in the **Shop** (the dock's shop button, the + on your pearls, or B).
+- **The HUD:** pearls and your stage top left, the run timer top middle, difficulty top right. In the lobby a dock along the bottom opens the **Shop**, your **Bag** (what you own, to wear or take off), your **Stats** (escapes, fastest escape, stages cleared, times caught, shells found, runs started, time played), **Settings** (music, night sounds, sound effects, camera shake, field of view) and **Invite** (Roblox's invite-friends prompt). In the stages the dock makes way for the noise meter on the left and round pebble, Updraft and Hush buttons bottom right, which work on touch screens too.
+- **Music and sound:** a music box in the lobby, an ominous bed in the forest and chase music while it hunts you, fading into each other; crickets at night; splashes, creaky boards, pebbles, your own feet in the water, the creature's footsteps and growl from where it is, a heartbeat while you are hunted, its roar and the TV static when it gets you, and chimes for stages, shells, escapes and purchases. All from Roblox's licensed libraries (APM Music and ProSoundEffects), set in `Config.Sounds`.
+- **The menus and buttons are SpriteCook art**, from the UI kit "Still Water lobby menus" (see below); the code only places them and writes the words and numbers.
 - **Shop:** 6 skins, 6 accessories, and 2 boosts you carry and use: **Updraft** (Q / L1 / Fly button) lifts you and lets you glide for 2 seconds, and **Hush** (F / Y / Hush button) makes you completely silent for 5 seconds.
-- Your progress, shells, escapes, difficulty, pearls and items are saved.
+- Your progress, shells, escapes, difficulty, pearls, items, stats and settings are saved.
 
 The whole map is built by script when the server starts, so almost everything lives in the Luau files under `src/`. The exceptions are the 3D models made in Meshy (`art/models/`), which are imported into the place:
 
@@ -40,11 +42,21 @@ You need [Roblox Studio](https://create.roblox.com/) and [Rojo](https://rojo.spa
 
 Or skip the live sync: run `rojo build -o StillWater.rbxl` and open the file in Studio.
 
+### The menu art
+
+The panels, buttons, toggles, tiles and icons come from a SpriteCook UI kit. Each part is a PNG in `art/ui/kit/parts/` (logged with its SpriteCook asset id in `art/spritecook-assets.json`); `concept-a.png` and `sheet-1.png` are the concept and the sheet they were cut from.
+
+Roblox only shows uploaded images, so the parts are packed into two atlases, `art/ui/kit/atlas-panels.png` and `atlas-icons.png` (each at most 1024x1024), and `src/shared/UiArtParts.luau` says where each part sits and how it stretches. To change a part:
+
+1. Replace its PNG in `art/ui/kit/parts/`.
+2. Run `powershell -ExecutionPolicy Bypass -File tools/pack-ui.ps1` to repack both atlases and rewrite `UiArtParts.luau`.
+3. Upload both atlases in Studio (pick the file in an ImageLabel's **Image** property, or use the Asset Manager) and paste their new ids into `src/shared/UiArt.luau`.
+
 ### Before publishing
 
 1. **File → Publish to Roblox.** Give it your own name, description and thumbnail.
 2. **Game Settings → Security → Enable Studio Access to API Services.** Turn this on to test saving in Studio. Published games can always save.
-3. **Sounds (optional):** paste sound ids from the Creator Store into `Config.Sounds` in `src/shared/Config.luau`. Slots without an id are skipped.
+3. **Sounds:** every sound's id is in `Config.Sounds` in `src/shared/Config.luau`. Swap any of them for another from the Creator Store; an empty id is skipped.
 
 ## Changing the game
 
@@ -70,8 +82,15 @@ Or skip the live sync: run `rojo build -o StillWater.rbxl` and open the file in 
 | Shop items, names, prices and skin colours | `src/shared/Catalog.luau` |
 | Accessory shapes | `src/server/Cosmetics.luau` |
 | Pearls per stage, shell and escape; boost timing | `Config.Pearls`, `Config.Boosts` |
-| HUD | `src/client/Hud.luau` |
-| The candy look shared by the HUD, menus and record boards: colours, raised panels, chunky buttons, lettering | `src/shared/Candy.luau` |
+| HUD and its dock | `src/client/Hud.luau` |
+| The menus' and HUD's building blocks: the kit's window, panels, buttons, badges and pearls, and the lettering on them | `src/shared/Candy.luau` |
+| Which picture each part is, and the atlas ids | `src/shared/UiArt.luau`, `src/shared/UiArtParts.luau` (generated), `art/ui/kit/` |
+| The shop and the bag | `src/client/ShopUi.luau` |
+| Stats window | `src/client/StatsUi.luau` (the numbers are kept in `src/server/Progress.luau`) |
+| Settings: the list and defaults, the window, what each one does | `Config.Settings`, `src/client/SettingsUi.luau`, `src/client/Settings.luau` |
+| Which music and sound effects play | `Config.Sounds` |
+| When each piece of music plays, and the fades | `src/client/Music.luau` |
+| Sounds only you hear (wading, chimes); the creature's footsteps and growl | `src/client/Sounds.luau`, `src/client/LurkerVisuals.luau` |
 | Shop item pictures | `src/client/ItemIcons.luau` |
 
 Each stage's layout comes from a fixed random seed, so a stage looks the same every time. Change a stage's numbers to get a new layout.
@@ -85,7 +104,9 @@ src/
     Stages.luau          stage list
     Catalog.luau         shop items
     Format.luau          time formatting
-    Candy.luau           the shared candy UI look (colours, panels, buttons)
+    Candy.luau           the menus' building blocks (kit windows, panels, buttons, lettering)
+    UiArt.luau           which part of which uploaded atlas each picture is
+    UiArtParts.luau      where each part sits in its atlas (made by tools/pack-ui.ps1)
     Remotes.luau         RemoteEvents
   server/              ServerScriptService.Server
     Main.server.luau     starts everything
@@ -104,11 +125,17 @@ src/
     Progress.luau        checkpoints, shells, escapes, run timer, pearls, items, saving, spawning
     Shop.luau            buying, wearing and using items (all checks on the server)
     Cosmetics.luau       puts skins and accessories on characters
-    Effects.luau         splash rings and sounds
+    Effects.luau         splash rings and sounds (in sound groups the settings turn off)
   client/              StarterPlayerScripts.Client
     Main.client.luau
-    Hud.luau             pearls, stage, timer, difficulty, noise meter, shop and action buttons
-    ShopUi.luau          the shop window
+    Hud.luau             pearls, stage, timer, difficulty, noise meter, the dock, action buttons
+    ShopUi.luau          the shop window and the bag
+    StatsUi.luau         the stats window
+    SettingsUi.luau      the settings window
+    Settings.luau        applies and saves settings (sound, shake, field of view)
+    Windows.luau         keeps one menu window open at a time
+    Music.luau           lobby, forest and chase music, faded into each other
+    Sounds.luau          sounds only you hear, and your wading
     ItemIcons.luau       pictures of the shop's items
     PartyUi.luau         the party pop-up and banner
     Boosts.luau          boost input (Q / F / the HUD's buttons) and Updraft flight
@@ -118,4 +145,6 @@ src/
     Mood.luau            warm lobby and exit lighting, cold forest fog, drifting mist
     Throw.luau           throw input (E / R2 / the HUD's pebble button)
     CameraReport.luau    tells the server which way your camera points (for where the creature appears)
+tools/
+  pack-ui.ps1          packs the UI kit's parts into atlases
 ```

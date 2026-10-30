@@ -1,7 +1,8 @@
 -- Tracks how much noise each player is making, and short-lived noises at
 -- points in the world (pebbles). The lurkers listen to both.
 --
--- Each player's noise is published as the "Noise" attribute for the HUD, and
+-- Each player's noise is published as the "Noise" attribute for the HUD
+-- (and whether they are in the water as "InWater", for their wading sound), and
 -- "Hushed" is true while a Hush boost keeps them silent.
 
 local Players = game:GetService("Players")
@@ -144,6 +145,9 @@ function Noise.step(dt)
 
 		if not root or not humanoid or humanoid.Health <= 0 then
 			state.noise = 0
+			if state.inWater then
+				player:SetAttribute("InWater", false)
+			end
 			state.inWater = false
 			state.room = nil
 			state.root = nil
@@ -171,6 +175,9 @@ function Noise.step(dt)
 			end
 
 			state.lastVelocityY = root.AssemblyLinearVelocity.Y
+			if inWater ~= state.inWater then
+				player:SetAttribute("InWater", inWater)
+			end
 			state.inWater = inWater
 			state.room = room
 			state.root = root

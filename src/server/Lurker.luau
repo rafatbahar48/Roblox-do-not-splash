@@ -25,6 +25,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Effects = require(script.Parent.Effects)
 local Noise = require(script.Parent.Noise)
+local Progress = require(script.Parent.Progress)
 
 local SETTINGS = Config.Lurker
 local TRAIL_HALF = Config.Room.Width / 2 -- where the stepping stones are
@@ -182,6 +183,7 @@ function Lurker:lunge(player, state)
 		if player.Parent then
 			local cause, loudness = Noise.causeOf(player)
 			Remotes.Caught:FireClient(player, target, cause, loudness, self.anchor)
+			Progress.recordCaught(player)
 		end
 		-- It has them: they can't move, and they turn round to face it. The
 		-- body stays whole, held where it is, for everyone watching.
@@ -192,7 +194,7 @@ function Lurker:lunge(player, state)
 		end
 		self.anchor:SetAttribute("Lunging", true)
 		Effects.splash(Vector3.new(target.X, self.area.surfaceY, target.Z), 6)
-		Effects.sound("Lunge", target)
+		Effects.sound("Lunge", target, 1)
 		moveAnchor(self.anchor, rest, strike, 0.3)
 		self.position, self.heading = feet, toward
 		Noise.clear(player)

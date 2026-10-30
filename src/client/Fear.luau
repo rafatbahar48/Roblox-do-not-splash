@@ -7,6 +7,8 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 
 local DeathScene = require(script.Parent.DeathScene)
+local Settings = require(script.Parent.Settings)
+local Sounds = require(script.Parent.Sounds)
 
 local player = Players.LocalPlayer
 
@@ -20,9 +22,9 @@ local FALTER_INTERVAL = 0.07
 local Fear = {}
 
 local edges = {}
-local baseFov
 local fovTouched = false
 local huntLevel = 0
+local heartbeat -- the heartbeat you hear while hunted, if there is one
 local beatClock = 0
 local shake = 0
 local anchors = {} -- [anchor part] = true
@@ -117,6 +119,17 @@ local function step(dt)
 
 	-- A heartbeat: two quick pulses, faster the louder you are.
 	local noise = player:GetAttribute("Noise") or 0
+	if heartbeat then
+		-- Louder the more it hunts you, faster the more noise you make.
+		heartbeat.Volume = huntLevel * 0.9
+		heartbeat.PlaybackSpeed = 1 + math.clamp(noise / 100, 0, 1) * 0.3
+		if huntLevel > 0.02 and not heartbeat.IsPlaying then
+			heartbeat:Play()
+		elseif huntLevel <= 0.02 and heartbeat.IsPlaying then
+			heartbeat:Stop()
+		end
+	end
+
 	local interval = 0.85 - math.clamp(noise / 100, 0, 1) * 0.35
 	beatClock = (beatClock + dt) % interval
 	local pulse = huntLevel * (math.exp(-(beatClock ^ 2) / 0.003) + 0.6 * math.exp(-((beatClock - 0.2) ^ 2) / 0.003))
@@ -133,10 +146,10 @@ local function step(dt)
 	else
 		local camera = workspace.CurrentCamera
 		if huntLevel > 0.001 then
-			camera.FieldOfView = baseFov - 5 * huntLevel - pulse * 1.5
+			camera.FieldOfView = Settings.get("fov") - 5 * huntLevel - pulse * 1.5
 			fovTouched = true
 		elseif fovTouched then
-			camera.FieldOfView = baseFov
+			camera.FieldOfView = Settings.get("fov")
 			fovTouched = false
 		end
 	end
@@ -149,7 +162,7 @@ local function step(dt)
 end
 
 function Fear.start()
-	baseFov = workspace.CurrentCamera.FieldOfView
+	heartbeat = Sounds.loop("Heartbeat", 0)
 
 	local gui = Instance.new("ScreenGui")
 	gui.Name = "Fear"
@@ -175,7 +188,7 @@ function Fear.start()
 
 	RunService.RenderStepped:Connect(step)
 	RunService:BindToRenderStep("FearShake", Enum.RenderPriority.Camera.Value + 1, function(dt)
-		if shake <= 0 or DeathScene.playing() then
+		if shake <= 0 or DeathScene.playing() or not Settings.get("shake") then
 			shake = 0
 			return
 		end

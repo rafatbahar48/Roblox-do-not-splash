@@ -28,8 +28,9 @@ local function allowRequest(player)
 	return true
 end
 
-local function tell(player, text)
-	Remotes.Notify:FireClient(player, "shop", text)
+-- kind is "bought" for a purchase (the client plays a till sound), else "shop".
+local function tell(player, text, kind)
+	Remotes.Notify:FireClient(player, kind or "shop", text)
 end
 
 local function isAlive(player)
@@ -65,7 +66,7 @@ function Shop.buy(player, itemId)
 		profile.owned[item.id] = true
 	end
 	Progress.sync(player)
-	tell(player, "Bought " .. item.name)
+	tell(player, "Bought " .. item.name, "bought")
 	return true
 end
 
