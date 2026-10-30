@@ -8,15 +8,17 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Effects = require(script.Parent.Effects)
 
 local SETTINGS = Config.Noise
 local CAUSE_MEMORY = 3 -- seconds a loud noise stays "what gave you away"
+local LOOK_INTERVAL = 0.1 -- the most often a player's camera direction is taken
 
 local Noise = {}
 
 local layout
-local states = {} -- [Player] = { noise, inWater, lastVelocityY, room, root, humanoid, reported, hushedUntil, hushed, cause, causeAmount, causeAt }
+local states = {} -- [Player] = { noise, inWater, lastVelocityY, room, root, humanoid, reported, hushedUntil, hushed, cause, causeAmount, causeAt, look, lookAt }
 local pointSources = {} -- { position, loudness, room }
 
 local function noiseMultiplier(player)
@@ -38,6 +40,8 @@ function Noise.init(newLayout)
 			cause = nil,
 			causeAmount = 0,
 			causeAt = -math.huge,
+			look = nil, -- which way their camera points, across the ground
+			lookAt = -math.huge,
 		}
 	end
 	for _, player in Players:GetPlayers() do
@@ -46,6 +50,26 @@ function Noise.init(newLayout)
 	Players.PlayerAdded:Connect(track)
 	Players.PlayerRemoving:Connect(function(player)
 		states[player] = nil
+	end)
+
+	-- Where each player's camera points (client/CameraReport.luau), so the
+	-- creature can come at them from where they are looking.
+	Remotes.CameraLook.OnServerEvent:Connect(function(player, direction)
+		local state = states[player]
+		if not state or typeof(direction) ~= "Vector3" then
+			return
+		end
+		local now = os.clock()
+		if now - state.lookAt < LOOK_INTERVAL then
+			return
+		end
+		local flat = Vector3.new(direction.X, 0, direction.Z)
+		local length = flat.Magnitude
+		if length ~= length or length < 0.1 or length > 2 then
+			return
+		end
+		state.lookAt = now
+		state.look = flat / length
 	end)
 end
 

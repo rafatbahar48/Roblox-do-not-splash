@@ -398,9 +398,12 @@ local function buildFacade(folder)
 	strip(folder, Vector3.new(left, TILE_TOP, FACE - 0.15), Vector3.new(STAGE_HALF, TILE_TOP + 0.3, FACE), C.aqua)
 
 	-- The wings either side are solid, and the roof edge runs along the top.
-	box(folder, "FacadeWing", Vector3.new(-HALF - WALL, BASE_Y, FACE), Vector3.new(-STAGE_HALF, FACADE_TOP, 10), C.brick, BRICK)
-	box(folder, "FacadeWing", Vector3.new(STAGE_HALF, BASE_Y, FACE), Vector3.new(HALF + WALL, FACADE_TOP, 10), C.brick, BRICK)
-	box(folder, "Cornice", Vector3.new(-HALF - WALL - 0.6, FACADE_TOP, FACE - 0.8), Vector3.new(HALF + WALL + 0.6, FACADE_TOP + 1.2, 10), C.stone, Enum.Material.Concrete)
+	-- They carry on far past the courtyard, so nothing behind the building
+	-- (the forest, and what lives there) can be seen from the lobby.
+	local wingEnd = Config.Forest.SceneryHalfWidth + 20
+	box(folder, "FacadeWing", Vector3.new(-wingEnd, BASE_Y, FACE), Vector3.new(-STAGE_HALF, FACADE_TOP, 10), C.brick, BRICK)
+	box(folder, "FacadeWing", Vector3.new(STAGE_HALF, BASE_Y, FACE), Vector3.new(wingEnd, FACADE_TOP, 10), C.brick, BRICK)
+	box(folder, "Cornice", Vector3.new(-wingEnd - 0.6, FACADE_TOP, FACE - 0.8), Vector3.new(wingEnd + 0.6, FACADE_TOP + 1.2, 10), C.stone, Enum.Material.Concrete)
 	strip(folder, Vector3.new(-HALF - WALL, FACADE_TOP - 0.3, FACE - 0.15), Vector3.new(HALF + WALL, FACADE_TOP, FACE), C.pink)
 	for _, side in { -1, 1 } do
 		strip(folder, Vector3.new(side * STAGE_HALF, TILE_TOP, FACE - 0.15), Vector3.new(side * HALF, TILE_TOP + 0.3, FACE), C.aqua)

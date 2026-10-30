@@ -1,41 +1,41 @@
--- Builds the whole map from Config and Stages when the server starts:
--- a lobby (LobbyBuilder.luau), one flooded room per stage, and an exit room,
--- in a line along +Z. Returns a layout table the other server modules use to
--- find rooms.
+-- Builds the whole map from Config and Stages when the server starts: the
+-- lobby (LobbyBuilder.luau), then behind its building a drowned forest at
+-- night: black still water, dead trees and fog, with one stretch per stage
+-- along +Z and the way out at the end. Each stretch runs from an island,
+-- across a trail of stepping stones, to an island with its checkpoint.
+-- Returns a layout table the other server modules use to find stages.
 
 local Lighting = game:GetService("Lighting")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Stages = require(ReplicatedStorage.Shared.Stages)
+local Forest = require(script.Parent.Forest)
 local LobbyBuilder = require(script.Parent.LobbyBuilder)
 local Parts = require(script.Parent.Parts)
 
 local block, box = Parts.block, Parts.box
 
 local ROOM = Config.Room
-local HALF_WIDTH = ROOM.Width / 2
+local FOREST = Config.Forest
+local HALF_WIDTH = ROOM.Width / 2 -- the band the stepping stones are laid in
 local SURFACE_Y = ROOM.SurfaceY
-local FLOOR_Y = SURFACE_Y - ROOM.PoolDepth -- top of the pool floor
-local TILE_TOP = SURFACE_Y + ROOM.TileHeight -- top of landings and ordinary tiles
+local FLOOR_Y = SURFACE_Y - ROOM.PoolDepth -- the bottom of the water
+local TILE_TOP = SURFACE_Y + ROOM.TileHeight -- top of islands and ordinary stepping stones
 local BASE_Y = FLOOR_Y - 1 -- underside of everything
-local WALL = 2
 
 local COLORS = {
-	wall = Color3.fromRGB(196, 206, 202),
-	floor = Color3.fromRGB(164, 184, 184),
-	tile = Color3.fromRGB(214, 222, 220),
-	creaky = Color3.fromRGB(222, 210, 170),
-	sinking = Color3.fromRGB(170, 198, 222),
-	raft = Color3.fromRGB(226, 170, 96),
-	water = Color3.fromRGB(26, 70, 80),
-	light = Color3.fromRGB(236, 238, 214),
-	deadLight = Color3.fromRGB(84, 88, 86),
-	checkpoint = Color3.fromRGB(120, 230, 170),
+	wall = Color3.fromRGB(70, 62, 74), -- the back of the lobby's building
+	veil = Color3.fromRGB(3, 3, 5),
+	floor = Color3.fromRGB(30, 28, 26),
+	water = Color3.fromRGB(14, 20, 26),
+	checkpoint = Color3.fromRGB(70, 150, 112),
 	shell = Color3.fromRGB(255, 186, 200),
+	stone = Color3.fromRGB(96, 98, 104),
 	exit = Color3.fromRGB(255, 238, 196),
-	text = Color3.fromRGB(40, 70, 80),
+	text = Color3.fromRGB(232, 224, 204),
 }
+local BARRIER = { Transparency = 1, CanQuery = false, CastShadow = false }
 
 local MapBuilder = {}
 
@@ -65,74 +65,29 @@ local function addSign(part, face, title, subtitle)
 	gui.Parent = part
 end
 
--- Side walls, ceiling and ceiling lights for the stretch z0..z1. With an rng,
--- some of the panels have died: they stay dark and are left out of lights.
-local function buildShell(folder, z0, z1, lights, rng)
-	local wallMaterial = Enum.Material.CeramicTiles
-	box(folder, "LeftWall", Vector3.new(-HALF_WIDTH - WALL, BASE_Y, z0), Vector3.new(-HALF_WIDTH, SURFACE_Y + ROOM.Height, z1), COLORS.wall, wallMaterial)
-	box(folder, "RightWall", Vector3.new(HALF_WIDTH, BASE_Y, z0), Vector3.new(HALF_WIDTH + WALL, SURFACE_Y + ROOM.Height, z1), COLORS.wall, wallMaterial)
-	box(
-		folder,
-		"Ceiling",
-		Vector3.new(-HALF_WIDTH - WALL, SURFACE_Y + ROOM.Height, z0),
-		Vector3.new(HALF_WIDTH + WALL, SURFACE_Y + ROOM.Height + 1, z1),
-		COLORS.wall,
-		wallMaterial
-	)
-
-	local count = math.max(1, math.floor((z1 - z0) / ROOM.LightSpacing))
-	for i = 1, count do
-		local z = z0 + (i - 0.5) * (z1 - z0) / count
-		local dead = rng ~= nil and rng:NextNumber() < 0.22
-		local panel = block(
-			folder,
-			if dead then "DeadPanel" else "LightPanel",
-			Vector3.new(6, 0.3, 2),
-			CFrame.new(0, SURFACE_Y + ROOM.Height - 0.15, z),
-			if dead then COLORS.deadLight else COLORS.light,
-			if dead then Enum.Material.SmoothPlastic else Enum.Material.Neon,
-			{ CanCollide = false, CanQuery = false, CastShadow = false }
-		)
-		if not dead then
-			local light = Instance.new("PointLight")
-			light.Range = 24
-			light.Brightness = 1.1
-			light.Color = COLORS.light
-			light.Shadows = true
-			light.Parent = panel
-			table.insert(lights, panel)
-		end
-	end
-end
-
--- The wall across the corridor at z, with a doorway centred on each x in
--- doorXs, or solid without them. Returns the piece above the door nearest the
--- middle (or the whole wall) for signs.
-local function buildCrossWall(folder, z, doorXs)
+-- The back wall of the lobby's building at z, with a doorway centred on each
+-- x in doorXs: stage 1 starts on the other side.
+local function buildDoorWall(folder, z, doorXs)
 	local min, max = z - 0.5, z + 0.5
 	local top = SURFACE_Y + ROOM.Height
-	if not doorXs then
-		return box(folder, "EndWall", Vector3.new(-HALF_WIDTH, TILE_TOP, min), Vector3.new(HALF_WIDTH, top, max), COLORS.wall, Enum.Material.CeramicTiles)
-	end
 	local half = ROOM.DoorWidth / 2
 	local xs = table.clone(doorXs)
 	table.sort(xs)
-	local left = -HALF_WIDTH
-	local middle, middleX
+	local left = -HALF_WIDTH - 2
 	for _, x in xs do
-		box(folder, "DoorWall", Vector3.new(left, TILE_TOP, min), Vector3.new(x - half, top, max), COLORS.wall, Enum.Material.CeramicTiles)
-		local lintel = box(folder, "Lintel", Vector3.new(x - half, TILE_TOP + ROOM.DoorHeight, min), Vector3.new(x + half, top, max), COLORS.wall, Enum.Material.CeramicTiles)
-		if not middle or math.abs(x) < math.abs(middleX) then
-			middle, middleX = lintel, x
-		end
+		box(folder, "DoorWall", Vector3.new(left, BASE_Y, min), Vector3.new(x - half, top, max), COLORS.wall, Enum.Material.Brick)
+		box(folder, "Lintel", Vector3.new(x - half, TILE_TOP + ROOM.DoorHeight, min), Vector3.new(x + half, top, max), COLORS.wall, Enum.Material.Brick)
+		-- Pitch black, so nobody in the lobby can see what is through there.
+		-- You walk straight through it.
+		box(folder, "Veil", Vector3.new(x - half, TILE_TOP, z - 0.1), Vector3.new(x + half, TILE_TOP + ROOM.DoorHeight, z + 0.1), COLORS.veil, Enum.Material.SmoothPlastic, {
+			CanCollide = false,
+			CanQuery = false,
+			CanTouch = false,
+			CastShadow = false,
+		})
 		left = x + half
 	end
-	box(folder, "DoorWall", Vector3.new(left, TILE_TOP, min), Vector3.new(HALF_WIDTH, top, max), COLORS.wall, Enum.Material.CeramicTiles)
-	return middle
-end
-
-local function landing(folder, name, z0, z1)
-	return box(folder, name, Vector3.new(-HALF_WIDTH, BASE_Y, z0), Vector3.new(HALF_WIDTH, TILE_TOP, z1), COLORS.floor, Enum.Material.CeramicTiles)
+	box(folder, "DoorWall", Vector3.new(left, BASE_Y, min), Vector3.new(HALF_WIDTH + 2, top, max), COLORS.wall, Enum.Material.Brick)
 end
 
 local function pickKind(rng, mix)
@@ -150,11 +105,13 @@ local function pickKind(rng, mix)
 	return "normal"
 end
 
--- Lays a path of tiles across the pool. Every jump stays within Config.MaxJump.
+-- Lays a trail of stepping stones across the water. Every jump stays within
+-- Config.MaxJump. Jumps are measured as if every stone were round (edge to
+-- edge along the line between centres); square ones are never further apart.
 local function generateTiles(rng, stage, poolStart, poolEnd)
 	local specs = {}
 	local z = poolStart
-	local prevX, prevSize, prevRaise = 0, ROOM.Width, 0
+	local prev -- the last spec, or nil for the start island
 
 	while poolEnd - z > stage.gap[2] do
 		local kind = pickKind(rng, stage.mix)
@@ -164,7 +121,7 @@ local function generateTiles(rng, stage, poolStart, poolEnd)
 			size = math.min(size, 4)
 		end
 
-		-- Don't let the last tile crowd the end landing.
+		-- Don't let the last stone crowd the end island.
 		local remaining = poolEnd - z
 		if remaining - gap - size < 1.5 then
 			if kind == "raft" then
@@ -177,6 +134,7 @@ local function generateTiles(rng, stage, poolStart, poolEnd)
 			end
 		end
 
+		local prevRaise = if prev then prev.raise else 0
 		local raise = if kind == "pillar" then rng:NextNumber(0.5, 2.5) else 0
 		local reach = Config.MaxJump - math.max(0, raise - prevRaise)
 		gap = math.min(gap, reach)
@@ -185,19 +143,22 @@ local function generateTiles(rng, stage, poolStart, poolEnd)
 		if kind == "raft" then
 			limit -= Config.Raft.Range
 		end
+		local prevX = if prev then prev.x else 0
 		local x = math.clamp(prevX + rng:NextNumber(-stage.shift, stage.shift), -limit, limit)
+		local centerZ = z + gap + size / 2
 
-		-- Pull the tile back in line if the diagonal jump would be too long.
-		local sideways = math.sqrt(math.max(0, reach * reach - gap * gap))
-		local edgeGap = math.abs(x - prevX) - (size + prevSize) / 2
-		if edgeGap > sideways then
-			x = prevX + math.sign(x - prevX) * ((size + prevSize) / 2 + sideways)
-			x = math.clamp(x, -limit, limit)
+		-- Pull it back in line if the jump from the last stone would be too long.
+		if prev then
+			local dz = centerZ - prev.z
+			local maxDx = math.sqrt(math.max(0, (reach + (size + prev.size) / 2) ^ 2 - dz * dz))
+			if math.abs(x - prevX) > maxDx then
+				x = math.clamp(prevX + math.sign(x - prevX) * maxDx, -limit, limit)
+			end
 		end
 
-		table.insert(specs, { kind = kind, size = size, x = x, z = z + gap + size / 2, raise = raise })
+		prev = { kind = kind, size = size, x = x, z = centerZ, raise = raise }
+		table.insert(specs, prev)
 		z += gap + size
-		prevX, prevSize, prevRaise = x, size, raise
 	end
 
 	return specs
@@ -235,18 +196,10 @@ local function placeShell(rng, specs)
 end
 
 local function buildTile(folder, spec, stage, rng)
-	local top = TILE_TOP + spec.raise
-	local half = spec.size / 2
-	local part
-
+	local part = Forest.steppingStone(folder, spec, rng)
 	if spec.kind == "sinking" then
-		part = block(folder, "SinkingTile", Vector3.new(spec.size, 1, spec.size), CFrame.new(spec.x, top - 0.5, spec.z), COLORS.sinking, Enum.Material.CeramicTiles)
 		part:SetAttribute("SinkDelay", stage.sinkDelay or Config.SinkingTile.DefaultDelay)
 	elseif spec.kind == "raft" then
-		part = block(folder, "Raft", Vector3.new(spec.size, 1, spec.size), CFrame.new(spec.x, top - 0.5, spec.z), COLORS.raft, Enum.Material.Plastic, {
-			Anchored = false,
-			CustomPhysicalProperties = PhysicalProperties.new(2, 1, 0, 1, 1),
-		})
 		local attachment = Instance.new("Attachment")
 		attachment.Parent = part
 
@@ -270,21 +223,102 @@ local function buildTile(folder, spec, stage, rng)
 		part:SetAttribute("Range", Config.Raft.Range)
 		part:SetAttribute("Period", rng:NextNumber(Config.Raft.MinPeriod, Config.Raft.MaxPeriod))
 		part:SetAttribute("Phase", rng:NextNumber(0, math.pi * 2))
-	else
-		local color = if spec.kind == "creaky" then COLORS.creaky else COLORS.tile
-		local name = if spec.kind == "creaky" then "CreakyTile" elseif spec.kind == "pillar" then "Pillar" else "Tile"
-		part = box(
-			folder,
-			name,
-			Vector3.new(spec.x - half, FLOOR_Y, spec.z - half),
-			Vector3.new(spec.x + half, top, spec.z + half),
-			color,
-			Enum.Material.CeramicTiles
-		)
 	end
-
 	part:SetAttribute("TileKind", spec.kind)
 	return part
+end
+
+-- Distance from point p to the segment a-b, on the ground plane.
+local function distanceToSegment(px, pz, ax, az, bx, bz)
+	local dx, dz = bx - ax, bz - az
+	local lengthSquared = dx * dx + dz * dz
+	local t = if lengthSquared > 0 then math.clamp(((px - ax) * dx + (pz - az) * dz) / lengthSquared, 0, 1) else 0
+	local cx, cz = ax + dx * t - px, az + dz * t - pz
+	return math.sqrt(cx * cx + cz * cz)
+end
+
+-- True if a tree at (x, z) would stand on or between the stepping stones.
+local function inTheWay(specs, x, z)
+	for i, spec in specs do
+		local dx, dz = x - spec.x, z - spec.z
+		if math.sqrt(dx * dx + dz * dz) < spec.size / 2 + (if spec.kind == "raft" then Config.Raft.Range + 3 else 3) then
+			return true
+		end
+		local nextSpec = specs[i + 1]
+		if nextSpec and distanceToSegment(x, z, spec.x, spec.z, nextSpec.x, nextSpec.z) < 3.5 then
+			return true
+		end
+	end
+	return false
+end
+
+-- Dead trees across the stretch z0..z1: thick near the trail, thinning out
+-- into the fog, never on the islands or in the way of a jump.
+local function plantTrees(folder, specs, z0, z1, islands, rng)
+	local height = FOREST.TreeHeight
+	local function plant(x, z, far)
+		for _, island in islands do
+			if math.abs(x) < island.halfX + 4 and z > island.z0 - 4 and z < island.z1 + 4 then
+				return
+			end
+		end
+		if math.abs(x) < HALF_WIDTH + 4 and inTheWay(specs, x, z) then
+			return
+		end
+		Forest.deadTree(folder, x, z, rng:NextNumber(height[1], height[2]), rng, far)
+	end
+	local spacing = FOREST.TreeSpacing
+	for z = z0 + spacing / 2, z1, spacing do
+		for x = -FOREST.CreatureHalfWidth, FOREST.CreatureHalfWidth, spacing do
+			if rng:NextNumber() < 0.7 then
+				plant(x + rng:NextNumber(-spacing, spacing) * 0.45, z + rng:NextNumber(-spacing, spacing) * 0.45, false)
+			end
+		end
+	end
+	local farSpacing = spacing * 1.8
+	for z = z0 + farSpacing / 2, z1, farSpacing do
+		for _, side in { -1, 1 } do
+			for x = FOREST.CreatureHalfWidth + farSpacing / 2, FOREST.SceneryHalfWidth, farSpacing do
+				plant(side * (x + rng:NextNumber(-4, 4)), z + rng:NextNumber(-5, 5), true)
+			end
+		end
+	end
+end
+
+-- A few fallen logs and clumps of reeds off to the sides of the trail.
+local function scatterDebris(folder, specs, z0, z1, rng)
+	for _ = 1, math.floor((z1 - z0) / 25) do
+		local side = if rng:NextNumber() < 0.5 then -1 else 1
+		local x, z = side * rng:NextNumber(HALF_WIDTH + 6, FOREST.HalfWidth - 4), rng:NextNumber(z0 + 8, z1 - 8)
+		local angle = rng:NextNumber(0, math.pi)
+		local half = Vector3.new(math.cos(angle), 0, math.sin(angle)) * rng:NextNumber(4, 7)
+		local center = Vector3.new(x, SURFACE_Y, z)
+		Forest.fallenLog(folder, center - half, center + half, rng)
+	end
+	for _ = 1, math.floor((z1 - z0) / 8) do
+		local x, z = rng:NextNumber(-FOREST.HalfWidth, FOREST.HalfWidth), rng:NextNumber(z0, z1)
+		if not inTheWay(specs, x, z) then
+			Forest.reeds(folder, x, z, rng)
+		end
+	end
+end
+
+-- Lanterns on posts beside the trail, every so often, swapping sides.
+local function hangLanterns(folder, specs, z0, z1, lights, rng)
+	local side = 1
+	for z = z0 + FOREST.LanternSpacing / 2, z1, FOREST.LanternSpacing do
+		local nearest
+		for _, spec in specs do
+			if not nearest or math.abs(spec.z - z) < math.abs(nearest.z - z) then
+				nearest = spec
+			end
+		end
+		if nearest and nearest.kind ~= "raft" then
+			local x = nearest.x + side * (nearest.size / 2 + 2.5)
+			table.insert(lights, Forest.lantern(folder, x, nearest.z, rng, Vector3.new(-side, 0, 0)))
+			side = -side
+		end
+	end
 end
 
 local function buildRoom(map, index, stage, z0)
@@ -296,35 +330,30 @@ local function buildRoom(map, index, stage, z0)
 	local poolStart = z0 + ROOM.StartLanding
 	local poolEnd = z1 - ROOM.EndLanding
 	local lights = {}
+	local rng = Random.new(index * 7919)
+	local scenery = Random.new(index * 3571) -- its own seed, so trees don't change the trail
 
-	-- Its own seed, so dead lights don't change the tile layout.
-	buildShell(folder, z0, z1, lights, Random.new(index * 3571))
-	-- Stage 1 opens onto the lobby through one doorway per difficulty.
-	local doorXs = { 0 }
+	-- Stage 1 starts behind the lobby's building, through one doorway per
+	-- difficulty, onto an island as wide as the passage.
 	if index == 1 then
-		doorXs = {}
+		local doorXs = {}
 		for _, x in ROOM.EntranceDoors do
 			table.insert(doorXs, x)
 		end
+		buildDoorWall(folder, z0, doorXs)
 	end
-	local lintel = buildCrossWall(folder, z0, doorXs)
-	addSign(lintel, Enum.NormalId.Back, "STAGE " .. index, stage.name)
+	local startHalf = if index == 1 then HALF_WIDTH else FOREST.IslandHalfWidth
+	local islands = {
+		{ halfX = startHalf, z0 = z0, z1 = poolStart },
+		{ halfX = FOREST.IslandHalfWidth, z0 = poolEnd, z1 = z1 },
+	}
+	Forest.island(folder, "StartLanding", z0, poolStart, startHalf, scenery)
+	Forest.island(folder, "EndLanding", poolEnd, z1, FOREST.IslandHalfWidth, scenery)
+	Forest.signpost(folder, startHalf - 4, poolStart - 2.5, Vector3.new(0, 0, -1), "STAGE " .. index, stage.name)
 
-	landing(folder, "StartLanding", z0, poolStart)
-	landing(folder, "EndLanding", poolEnd, z1)
-	box(folder, "PoolFloor", Vector3.new(-HALF_WIDTH, BASE_Y, poolStart), Vector3.new(HALF_WIDTH, FLOOR_Y, poolEnd), COLORS.floor, Enum.Material.CeramicTiles)
-	box(folder, "Water", Vector3.new(-HALF_WIDTH, FLOOR_Y, poolStart), Vector3.new(HALF_WIDTH, SURFACE_Y, poolEnd), COLORS.water, Enum.Material.Glass, {
-		-- Murky enough that what lives in it is mostly a shape and a pair of eyes.
-		Transparency = 0.22,
-		Reflectance = 0.08,
-		CanCollide = false,
-		CanTouch = false,
-		CastShadow = false,
-	})
-
-	local rng = Random.new(index * 7919)
 	local specs = generateTiles(rng, stage, poolStart, poolEnd)
 	local shellSpec, shellPosition = placeShell(rng, specs)
+	local trail = table.clone(specs)
 	if shellSpec then
 		table.insert(specs, shellSpec)
 	end
@@ -356,21 +385,33 @@ local function buildRoom(map, index, stage, z0)
 	local checkpointPad = block(folder, "Checkpoint", Vector3.new(8, 0.2, 4), CFrame.new(0, TILE_TOP + 0.1, padZ), COLORS.checkpoint, Enum.Material.Neon, {
 		CanCollide = false,
 		CanQuery = false,
+		Transparency = 0.35,
 	})
 	checkpointPad:SetAttribute("Checkpoint", index)
+
+	hangLanterns(folder, trail, poolStart, poolEnd, lights, scenery)
+	plantTrees(folder, specs, z0, z1, islands, scenery)
+	scatterDebris(folder, specs, poolStart, poolEnd, scenery)
+
+	-- Players can wade out so far and no further.
+	for _, side in { -1, 1 } do
+		local x = side * FOREST.HalfWidth
+		box(folder, "Edge", Vector3.new(math.min(x, x + side), BASE_Y, z0), Vector3.new(math.max(x, x + side), SURFACE_Y + 40, z1), COLORS.floor, nil, BARRIER)
+	end
 
 	local standAt = Vector3.new(0, TILE_TOP + 3, padZ)
 	return {
 		index = index,
 		stage = stage,
 		folder = folder,
-		lintel = lintel,
 		zStart = z0,
 		zEnd = z1,
 		poolStart = poolStart,
 		poolEnd = poolEnd,
 		surfaceY = SURFACE_Y,
-		halfWidth = HALF_WIDTH,
+		floorY = FLOOR_Y,
+		halfWidth = FOREST.HalfWidth, -- how far players can wade
+		roamHalfWidth = FOREST.CreatureHalfWidth, -- how far the creature can go
 		tiles = tiles,
 		lights = lights,
 		shell = shell,
@@ -379,23 +420,75 @@ local function buildRoom(map, index, stage, z0)
 	}
 end
 
+-- The way out: an island past the last stage with an old stone gateway, and
+-- light through it.
+local function buildExit(map, z0, z1)
+	local folder = Instance.new("Folder")
+	folder.Name = "Exit"
+	folder.Parent = map
+	local rng = Random.new(4421)
+	Forest.island(folder, "Floor", z0, z1, FOREST.IslandHalfWidth, rng)
+
+	local half = ROOM.DoorWidth / 2
+	local doorTop = TILE_TOP + ROOM.DoorHeight
+	local back = z1 - 2
+	for _, side in { -1, 1 } do
+		box(folder, "GatePillar", Vector3.new(math.min(side * half, side * (half + 2.5)), TILE_TOP, back - 1.5), Vector3.new(math.max(side * half, side * (half + 2.5)), doorTop + 1, back + 1.5), COLORS.stone, Enum.Material.Slate)
+	end
+	local lintel = box(folder, "GateLintel", Vector3.new(-half - 3, doorTop + 1, back - 1.7), Vector3.new(half + 3, doorTop + 4, back + 1.7), COLORS.stone, Enum.Material.Slate)
+	addSign(lintel, Enum.NormalId.Front, "THE WAY OUT", "Walk into the light")
+	local door = block(folder, "ExitDoor", Vector3.new(ROOM.DoorWidth, ROOM.DoorHeight, 0.5), CFrame.new(0, TILE_TOP + ROOM.DoorHeight / 2, back), COLORS.exit, Enum.Material.Neon)
+	local glow = Instance.new("PointLight")
+	glow.Color = COLORS.exit
+	glow.Range = 30
+	glow.Brightness = 1.4
+	glow.Parent = door
+	-- Nobody wanders off past it.
+	box(folder, "Edge", Vector3.new(-FOREST.HalfWidth, BASE_Y, z1 + 4), Vector3.new(FOREST.HalfWidth, SURFACE_Y + 40, z1 + 5), COLORS.floor, nil, BARRIER)
+
+	plantTrees(folder, {}, z1 + 6, z1 + 80, {}, rng)
+	return door
+end
+
+-- The black water and the mud under it, under the whole forest.
+local function buildLake(map, zEnd)
+	local folder = Instance.new("Folder")
+	folder.Name = "Lake"
+	folder.Parent = map
+	local reach = FOREST.SceneryHalfWidth + 20
+	box(folder, "LakeFloor", Vector3.new(-reach, BASE_Y, 0), Vector3.new(reach, FLOOR_Y, zEnd), COLORS.floor, Enum.Material.Mud)
+	box(folder, "Water", Vector3.new(-reach, FLOOR_Y, 0), Vector3.new(reach, SURFACE_Y, zEnd), COLORS.water, Enum.Material.Glass, {
+		-- Black and still: what wades in it is mostly legs and a pair of eyes.
+		Transparency = 0.06,
+		Reflectance = 0.2,
+		CanCollide = false,
+		CanTouch = false,
+		CastShadow = false,
+	})
+end
+
 local function setupLighting()
 	for _, child in Lighting:GetChildren() do
-		-- An Atmosphere overrides fog, and the fog is most of the mood. Template
-		-- post effects are replaced by ours below.
+		-- An Atmosphere overrides fog (and at night only fades things to
+		-- black), and the fog is most of the mood. Template post effects are
+		-- replaced by ours below.
 		if child:IsA("Atmosphere") or child:IsA("PostEffect") then
 			child:Destroy()
 		end
 	end
+	-- A cold moonlit night in thick blue-grey fog: you see the trees round
+	-- you and the lanterns' glow, and everything further off is gone, so
+	-- whatever is out there is only a shape when it is already close.
+	-- client/Mood.luau adds mist drifting over the water round you.
 	Lighting.ClockTime = 0
-	Lighting.Brightness = 0.6
-	Lighting.Ambient = Color3.fromRGB(34, 42, 46)
-	Lighting.OutdoorAmbient = Color3.fromRGB(28, 34, 38)
-	Lighting.EnvironmentDiffuseScale = 0.15
-	Lighting.EnvironmentSpecularScale = 0.6 -- wet tiles catch the light
-	Lighting.FogColor = Color3.fromRGB(22, 38, 42)
-	Lighting.FogStart = 8
-	Lighting.FogEnd = 100
+	Lighting.Brightness = 1.6
+	Lighting.Ambient = Color3.fromRGB(46, 54, 70)
+	Lighting.OutdoorAmbient = Color3.fromRGB(84, 98, 126)
+	Lighting.EnvironmentDiffuseScale = 0.3
+	Lighting.EnvironmentSpecularScale = 0.7 -- the water and wet wood catch the moon
+	Lighting.FogColor = Color3.fromRGB(34, 42, 56)
+	Lighting.FogStart = 5
+	Lighting.FogEnd = 70
 	Lighting.GlobalShadows = true
 
 	-- Cold, washed-out colours, and a soft glow around anything neon.
@@ -404,7 +497,7 @@ local function setupLighting()
 	grade.Name = "Grade"
 	grade.Saturation = -0.25
 	grade.Contrast = 0.12
-	grade.TintColor = Color3.fromRGB(214, 232, 236)
+	grade.TintColor = Color3.fromRGB(206, 220, 240)
 	grade.Parent = Lighting
 
 	-- Named so client/Mood.luau can soften it in the lobby.
@@ -450,24 +543,9 @@ function MapBuilder.build()
 		z = room.zEnd
 	end
 
-	-- Exit
-	local exit = Instance.new("Folder")
-	exit.Name = "Exit"
-	exit.Parent = map
 	local exitEnd = z + ROOM.ExitLength
-	buildShell(exit, z, exitEnd, {})
-	landing(exit, "Floor", z, exitEnd)
-	local exitLintel = buildCrossWall(exit, z, { 0 })
-	addSign(exitLintel, Enum.NormalId.Back, "THE WAY OUT", "Walk into the light")
-	buildCrossWall(exit, exitEnd)
-	layout.exitDoor = block(
-		exit,
-		"ExitDoor",
-		Vector3.new(ROOM.DoorWidth, ROOM.DoorHeight, 0.5),
-		CFrame.new(0, TILE_TOP + ROOM.DoorHeight / 2, exitEnd - 0.75),
-		COLORS.exit,
-		Enum.Material.Neon
-	)
+	layout.exitDoor = buildExit(map, z, exitEnd)
+	buildLake(map, exitEnd + 90)
 
 	map.Parent = workspace
 
@@ -480,8 +558,10 @@ function MapBuilder.build()
 		return nil
 	end
 
+	-- Anywhere in a stage's stretch of water (standing on a stone or an
+	-- island keeps you above it; Noise.luau checks the height).
 	function layout.inPool(room, position)
-		return math.abs(position.X) < room.halfWidth and position.Z > room.poolStart and position.Z < room.poolEnd
+		return math.abs(position.X) < room.halfWidth and position.Z > room.zStart and position.Z < room.zEnd
 	end
 
 	return layout

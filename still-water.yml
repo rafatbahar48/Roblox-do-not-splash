@@ -1,0 +1,7 @@
+# Roblox globals newer than Selene's cached Roblox library.
+base: roblox
+name: still-water
+globals:
+  Content.fromObject:
+    args:
+      - type: any

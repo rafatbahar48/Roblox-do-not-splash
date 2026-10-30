@@ -6,8 +6,11 @@ Config.GameName = "Still Water"
 Config.Tagline = "Stay out of the water. It is listening."
 
 Config.DataStoreName = "StillWater_v1"
-Config.RespawnTime = 4 -- long enough to read what gave you away
+Config.RespawnTime = 6 -- long enough for the death scene and to read what gave you away
 Config.WalkSpeed = 16
+-- How far the camera can pull back from your character: close enough that
+-- nobody can rise above the mist and look out over the forest.
+Config.CameraMaxZoom = 14
 
 -- Longest gap (in studs, edge to edge) the level generator will ever ask a
 -- player to jump. A default Roblox character clears about 8.
@@ -34,18 +37,27 @@ Config.Noise = {
 	PointDecayPerSecond = 30, -- how fast a pebble's noise fades
 }
 
+-- The creature: one big thing that wades through the whole forest's water.
+-- While nobody is in the water it watches from out in the fog, barely
+-- visible. Touch the water and it comes out of the fog ahead of you, where
+-- your camera points, runs straight at you, round you, and grabs you.
 Config.Lurker = {
-	IdleSpeed = 5,
-	HuntSpeed = 15,
-	HearingThreshold = 15, -- how loud something must sound, after distance, to be noticed
+	StalkSpeed = 8, -- moving round in the fog to keep watching you
+	HuntSpeed = 26, -- running at you (you wade at 9)
+	WatchDistance = { 58, 74 }, -- how far from the nearest player it keeps while nobody is in the water
+	HearingThreshold = 15, -- how loud you must sound, after distance, for it to come
 	DistanceFalloff = 0.6, -- loudness lost per stud of distance
 	Stickiness = 10, -- bonus that keeps it on the player it is already chasing
-	GrabRange = 4, -- reach for players standing in the water
-	LungeRange = 7, -- reach for loud players standing on a tile
-	LungeNoise = 55, -- players on tiles must be at least this loud to be grabbed
-	SearchTime = 3, -- seconds it circles a spot after reaching a noise
-	Depth = 1.4, -- how far under the surface it swims
-	Margin = 1.5, -- keeps it off the pool walls
+	GrabRange = 6, -- reach for players standing in the water
+	LungeRange = 10, -- reach for players still loud on a stone, fresh out of the water
+	LungeNoise = 55, -- how loud they must still be to be grabbed off a stone
+	AppearDistance = 66, -- how far ahead of you it comes out of the fog when you touch the water
+	CircleRadius = 30, -- this close, it starts circling instead of coming straight in
+	CircleMinRadius = 9, -- the tightest it circles
+	CloseIn = 6, -- studs per second the circle tightens
+	MinCircleTime = 2, -- seconds it runs round you, at least, before it grabs
+	MaxCircleTime = 5, -- seconds of circling before it grabs, however far round it got
+	Margin = 3, -- keeps it off the edges of the forest's water
 }
 
 Config.Pebbles = {
@@ -98,8 +110,8 @@ Config.SinkingTile = {
 
 Config.Room = {
 	SurfaceY = 100, -- height of the water surface; keeps the map clear of any baseplate
-	Width = 40,
-	Height = 18,
+	Width = 40, -- the band the stepping stones are laid in
+	Height = 18, -- how tall stage 1's doorway wall is behind the lobby
 	PoolDepth = 4,
 	TileHeight = 1.5, -- how far tiles and landings stand above the water
 	StartLanding = 10,
@@ -115,6 +127,18 @@ Config.Room = {
 	-- Stage 1's front wall has a doorway per difficulty, at these x positions.
 	-- Walking through one picks that difficulty (server/LobbyDoors.luau).
 	EntranceDoors = { Easy = 13, Normal = 0, Hard = -13 },
+}
+
+-- The stages are stretches of a drowned forest at night, behind the lobby's
+-- building (MapBuilder.luau, Forest.luau).
+Config.Forest = {
+	HalfWidth = 48, -- how far players can wade out either side of the path
+	CreatureHalfWidth = 72, -- the creature roams further out, among the trees
+	SceneryHalfWidth = 150, -- water and trees carry on this far, into the fog
+	IslandHalfWidth = 18, -- the islands at each end of a stage
+	TreeSpacing = 13, -- near the path; further out they thin out (the Meshy trees are detailed)
+	TreeHeight = { 15, 30 }, -- short enough to stay hidden behind the lobby's building
+	LanternSpacing = 22,
 }
 
 -- Party doors in the lobby (server/Parties.luau, client/PartyUi.luau).

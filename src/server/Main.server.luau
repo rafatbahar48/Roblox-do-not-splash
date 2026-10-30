@@ -1,5 +1,8 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local StarterPlayer = game:GetService("StarterPlayer")
 
+local Config = require(ReplicatedStorage.Shared.Config)
 local Effects = require(script.Parent.Effects)
 local Hazards = require(script.Parent.Hazards)
 local Leaderboards = require(script.Parent.Leaderboards)
@@ -11,6 +14,8 @@ local Parties = require(script.Parent.Parties)
 local Pebbles = require(script.Parent.Pebbles)
 local Progress = require(script.Parent.Progress)
 local Shop = require(script.Parent.Shop)
+
+StarterPlayer.CameraMaxZoomDistance = Config.CameraMaxZoom
 
 local layout = MapBuilder.build()
 

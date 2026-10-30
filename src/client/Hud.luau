@@ -466,7 +466,8 @@ function Hud.start()
 		local hunted = player:GetAttribute("Hunted") == true
 		local info = TweenInfo.new(if hunted then 0.2 else 0.8)
 		TweenService:Create(warning, info, { GroupTransparency = if hunted then 0 else 1 }):Play()
-		TweenService:Create(danger, info, { BackgroundTransparency = if hunted then 0.82 else 1 }):Play()
+		-- Light enough that you can still see it coming.
+		TweenService:Create(danger, info, { BackgroundTransparency = if hunted then 0.9 else 1 }):Play()
 	end
 
 	-- Hide shells this player has already collected (only on their screen).

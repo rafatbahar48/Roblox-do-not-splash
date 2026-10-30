@@ -1,6 +1,6 @@
 -- Fear effects on this client: a dark vignette that closes in and beats like
--- a heart while something hunts you, ceiling lights that falter in any room
--- where something is hunting, and a camera shake when it strikes nearby.
+-- a heart while something hunts you, lanterns that falter in any stage where
+-- something is hunting, and a camera shake when it strikes nearby.
 -- Being caught is DeathScene.luau; these effects stand aside while it plays.
 
 local Players = game:GetService("Players")
@@ -66,7 +66,7 @@ local function lightsFor(index)
 	return list
 end
 
--- Lights in rooms with a hunting creature stutter; others go back to normal.
+-- Lanterns in stages with a hunting creature stutter; others go back to normal.
 local function falterLights()
 	local hunting = {}
 	for anchor in anchors do
