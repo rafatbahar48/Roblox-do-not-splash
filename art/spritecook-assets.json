@@ -269,6 +269,24 @@
       "sha12": "b0f12e425fc1",
       "label": "Gold coin with a wave",
       "file": "ui/kit/parts/coin.png"
+    },
+    {
+      "asset_id": "b136ce26-7305-49da-880a-388ea80c69b3",
+      "sha12": "58430db7cac6",
+      "label": "Snowball button (edited from the pebble button)",
+      "file": "ui/kit/parts/action_snowball.png"
+    },
+    {
+      "asset_id": "0f2eb91b-e9b0-4fe6-8b9e-c2c73ba07cc4",
+      "sha12": "871d5b9f277b",
+      "label": "Christmas cottage shop concept (Meshy reference for the lobby shop)",
+      "file": "meshy-refs/lobby-cottage-shop.png"
+    },
+    {
+      "asset_id": "75470e80-6cd0-4f41-a8d5-04e06f3898af",
+      "sha12": "839949dc793b",
+      "label": "SHOP sign for the cottage shop",
+      "file": "ui/kit/parts/shop_sign.png"
     }
   ]
 }

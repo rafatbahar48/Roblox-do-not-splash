@@ -6,7 +6,8 @@
 --   left          the noise meter (only out in the forest)
 --   bottom        the dock: shop, bag, stats, settings, invite (not out in
 --                 the forest: in the lobby, the cave and the way out)
---   bottom right  pebble, Updraft and Hush buttons (only out in the forest)
+--   bottom right  pebble, Updraft and Hush buttons (only out in the forest);
+--                 in the Christmas lobby, the snowball button
 --
 -- plus short notifications and the escape screen.
 
@@ -290,23 +291,36 @@ function Hud.start()
 	})
 	-- A round picture button with its key on the top left and how many you
 	-- have on the top right. Returns the face and its count badge.
-	local function actionButton(art, name, key, size, position)
-		local face = pictureButton(actions, art, name, size, { AnchorPoint = Vector2.new(1, 1), Position = position })
+	local function actionButton(parent, art, name, key, size, position)
+		local face = pictureButton(parent, art, name, size, { AnchorPoint = Vector2.new(1, 1), Position = position })
 		if UserInputService.KeyboardEnabled then
 			Candy.badge(face, key, 30, UDim2.fromOffset(-4, -4))
 		end
 		local count = Candy.badge(face, "", 30, UDim2.new(1, 4, 0, -4), Vector2.new(1, 0), Candy.LEMON)
 		return face, count
 	end
-	local pebbleButton, pebbleCount = actionButton("action_pebble", "Pebble", "E", 112, UDim2.fromScale(1, 1))
+	local pebbleButton, pebbleCount = actionButton(actions, "action_pebble", "Pebble", "E", 112, UDim2.fromScale(1, 1))
 	pebbleButton.Activated:Connect(Throw.fromButton)
+
+	-- In the Christmas lobby, the snowball button sits where the pebble's is.
+	local snowActions = create("Frame", {
+		Name = "SnowActions",
+		AnchorPoint = Vector2.new(1, 1),
+		Position = UDim2.new(1, -24, 1, -24 - actionsLift),
+		Size = UDim2.fromOffset(112, 112),
+		BackgroundTransparency = 1,
+		Visible = false,
+		Parent = gui,
+	})
+	local snowButton, snowCount = actionButton(snowActions, "action_snowball", "Snowball", "E", 112, UDim2.fromScale(1, 1))
+	snowButton.Activated:Connect(Throw.fromButton)
 
 	local boostButtons = {}
 	for _, boost in {
 		{ id = "updraft", art = "action_updraft", name = "Updraft", key = "Q", position = UDim2.new(1, -130, 1, -6) },
 		{ id = "hush", art = "action_hush", name = "Hush", key = "F", position = UDim2.new(1, -12, 1, -130) },
 	} do
-		local face, count = actionButton(boost.art, boost.name, boost.key, 88, boost.position)
+		local face, count = actionButton(actions, boost.art, boost.name, boost.key, 88, boost.position)
 		face.Activated:Connect(function()
 			Boosts.use(boost.id)
 		end)
@@ -377,6 +391,12 @@ function Hud.start()
 			stageLabel.Text = ("Stage %d of %d"):format(index, #Stages)
 			stageName.Text = Stages[index].name
 		end
+	end
+
+	local function updateSnowballs()
+		local count = player:GetAttribute("Snowballs") or 0
+		snowCount.Label.Text = tostring(count)
+		snowButton.ImageColor3 = if count > 0 then WHITE else GREYED
 	end
 
 	local function updatePebbles()
@@ -476,6 +496,7 @@ function Hud.start()
 
 	player:GetAttributeChangedSignal("Checkpoint"):Connect(updateStage)
 	player:GetAttributeChangedSignal("Pebbles"):Connect(updatePebbles)
+	player:GetAttributeChangedSignal("Snowballs"):Connect(updateSnowballs)
 	player:GetAttributeChangedSignal("Difficulty"):Connect(updateDifficulty)
 	player:GetAttributeChangedSignal("Hunted"):Connect(updateHunted)
 	player:GetAttributeChangedSignal("ShellsFound"):Connect(hideFoundShells)
@@ -485,6 +506,7 @@ function Hud.start()
 	player:GetAttributeChangedSignal("Hushed"):Connect(updateHushed)
 	updateStage()
 	updatePebbles()
+	updateSnowballs()
 	updateDifficulty()
 	updateCoins()
 	updateBoosts()
@@ -498,10 +520,12 @@ function Hud.start()
 	local shown = 0
 	RunService.RenderStepped:Connect(function(dt)
 		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-		local inStages = root ~= nil and Zones.at(root.Position) == "forest"
+		local zone = if root then Zones.at(root.Position) else "lobby"
+		local inStages = zone == "forest"
 		noisePanel.Parent.Visible = inStages
 		actions.Visible = inStages
 		dock.Visible = not inStages
+		snowActions.Visible = Config.Christmas and zone == "lobby"
 
 		local target = (player:GetAttribute("Noise") or 0) / Config.Noise.Max
 		shown += (target - shown) * math.min(1, dt * 10)

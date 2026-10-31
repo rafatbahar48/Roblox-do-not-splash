@@ -97,6 +97,7 @@ $specs = @(
     @("coin", "panels", 0.085, $null),
     @("tile", "panels", 0.45, @(70, 70, 70, 70)),
     @("well", "panels", 0.35, $null),
+    @("shop_sign", "panels", 0.24, $null, $true), # the cottage shop's sign, drawn at 2048 px
     @("dock_shop", "icons", 0.6, $null),
     @("dock_bag", "icons", 0.6, $null),
     @("dock_stats", "icons", 0.6, $null),
@@ -111,6 +112,7 @@ $specs = @(
     @("action_pebble", "icons", 0.8, $null),
     @("action_updraft", "icons", 0.8, $null),
     @("action_hush", "icons", 0.8, $null),
+    @("action_snowball", "icons", 0.19, $null), # drawn at 1024 px; the others at 242
     @("robux_coins_small", "icons", 0.6, $null, $true),
     @("robux_coins_jar", "icons", 0.6, $null, $true),
     @("robux_coins_chest", "icons", 0.6, $null, $true),

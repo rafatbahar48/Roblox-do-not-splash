@@ -1,5 +1,5 @@
 -- The music, fading from one track to the next: a music box in the lobby
--- and at the way out, scary suspense out in the forest, and the chase
+-- and at the way out (haunted sleigh bells while it is Christmas), scary suspense out in the forest, and the chase
 -- while something hunts you. Silent in the cave, where you hear the drips
 -- and the wind (Cave.luau), and while it has you (DeathScene.luau).
 -- Ids are in Config.Sounds; the Music setting turns the Music sound group
@@ -9,6 +9,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
+local Config = require(ReplicatedStorage.Shared.Config)
 local Zones = require(ReplicatedStorage.Shared.Zones)
 local DeathScene = require(script.Parent.DeathScene)
 local Sounds = require(script.Parent.Sounds)
@@ -16,7 +17,7 @@ local Sounds = require(script.Parent.Sounds)
 local player = Players.LocalPlayer
 
 local TRACKS = {
-	lobby = { sound = "LobbyMusic", volume = 0.35 },
+	lobby = { sound = if Config.Christmas then "ChristmasMusic" else "LobbyMusic", volume = 0.35 },
 	forest = { sound = "ForestMusic", volume = 0.5 },
 	chase = { sound = "Chase", volume = 0.45, fromStart = true },
 }

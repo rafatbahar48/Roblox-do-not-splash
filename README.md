@@ -9,7 +9,8 @@ A Roblox horror obby. Cross a drowned forest at night by jumping from stump to s
 - **Stepping stones to watch for:** creaky boards (pale old planks on posts), floating moss (pale green mats that go under a second after you step on them), drifting rafts and narrow broken trunks.
 - **7 stages**, each a stretch of the forest from one island to the next, with a checkpoint on the far island. Each one has a hidden shell to collect. After the last stage, walk through the exit to escape.
 - **Easy, Normal and Hard:** harder modes make you louder and the creature faster.
-- **The lobby** is a big open courtyard at night, under the stars, in front of the old brick building the stages are in: lit windows, the game's sign in neon, lamp posts, string lights, grass beds with palms and benches. It is colourful on purpose, so the forest feels darker after it. Nothing in the lobby shows what waits inside: the building hides the forest, and its doors stay shut. The east wall has the record boards (most escapes and the fastest escape on each difficulty) and the shop hut (G).
+- **The lobby** is a big open courtyard at night, under the stars, in front of the old brick building the stages are in: lit windows, the game's sign in neon, lamp posts, string lights, grass beds with palms and benches. It is colourful on purpose, so the forest feels darker after it. Nothing in the lobby shows what waits inside: the building hides the forest, and its doors stay shut. The east wall has the record boards (most escapes and the fastest escape on each difficulty) and the shop (G): a snowy log cottage with Christmas lights, a striped awning over its counter, a wreath and a snowman, made in Meshy, with a SHOP sign from SpriteCook.
+- **Christmas in the lobby** (`Config.Christmas`, on for now): snow over the courtyard with a path shovelled to the doors, snow on every roof, wall, bench and lamp, falling snow, decorated Christmas trees in the beds (a big one with presents under it), wreaths on the doors, frozen puddles, and "Haunted Sleigh Bells" instead of the music box. **Snowball fights:** grab snowballs from a pile (G, up to 10) and throw them (E, R2 or the snowball button). A hit splats snow in their face and tells you both; it never moves anyone, so nobody gets knocked off a party pad. Snowballs only work in the lobby. Set `Config.Christmas = false` after the holidays to bring the palms back.
 - **Five doors, and nobody walks through them.** You stand on a door's pad and either start a party there (you are the host) or join the one waiting. The three stone archways in the middle are party doors, so three parties can get going at once; their host picks Normal or Hard. The door on the far left makes Easy parties, and the one on the far right is for **practice**: no creature, and no coins, shells, stats or records (none of a practice run is saved). The pop-up sets the size (1 to 4) and friends only; others join by stepping on the pad. When the countdown ends the party leaves together for a private server of its own (in Studio, which can't teleport, it goes straight into the cave here instead).
 - **The cave:** every party starts in a cave behind the building, with room to walk about and a supply stall (G) for last-minute shopping. It is gloomy but never too dark, lit by torches, lanterns and glowing crystals, with water dripping and wind blowing in through its wide mouth onto the forest. A few seconds after you arrive, something out there steps on a stick, growls two seconds later, and a note says it is your last chance to grab supplies (with a button to the shop). Practice runs skip that.
 - **Run timer:** starts when you walk out of the cave's mouth and stops at the exit. A run counts for the easiest difficulty played during it. Your best time on each difficulty is saved.
@@ -24,7 +25,7 @@ A Roblox horror obby. Cross a drowned forest at night by jumping from stump to s
 
 The whole map is built by script when the server starts, so almost everything lives in the Luau files under `src/`. The exceptions are the 3D models made in Meshy (`art/models/`), which are imported into the place:
 
-- **The lobby's props** live in `ServerStorage.LobbyProps`. The lobby uses `FloatHut` (the shop), `PottedPalm` and `Planter`, places each one it finds and skips any that are missing.
+- **The lobby's props** live in `ServerStorage.LobbyProps`. The lobby uses `CottageShop` (the shop, from `art/models/lobby/cottage_shop.glb`), `PottedPalm` and `Planter` (`FloatHut` isn't used any more), places each one it finds and skips any that are missing.
 - **The forest's trees** near the trail are the models in `ServerStorage.ForestProps` (`GnarledTree` and `BrokenTrunk`, from `art/models/dead-tree3.glb` and `dead-tree2.glb`, each standing on its own pivot at the bottom of its roots). Each is planted at a random size and turn, with an invisible post round its trunk. Far off in the fog, or without the models, trees are built from parts.
 - **The shop's 3D models** live in `ReplicatedStorage.ShopModels`, one per thing sold that isn't worn (coin packs, Night Kit, Self-Revive, passes, Updraft and Hush), named like its icon art (`robux_coins_chest`, `action_hush`, ...). They were made in Meshy from three-quarter drawings of the shop's SpriteCook icons (`art/meshy-refs/shop-3q-*.png`; the models in `art/models/shop/`, previews beside them; `art/models/import/shop/` has copies for Import 3D). `robux_coins_jar` is put together in Studio, because Meshy can't make clear glass: the Meshy coin heap (`coins_heap.glb`) inside see-through glass parts with a lilac lid, its coins as the model's primary part. Without a model, its card shows its icon bobbing instead.
 - **The creature** is the model in `ReplicatedStorage.Creatures` (now `Creature`, from `art/models/flesh-creature-rigged.glb`: remeshed to about 10,000 triangles and rigged in Meshy, scaled to 18 studs, facing -Z). Each client poses its bones as it walks, so any model with Meshy's humanoid skeleton works. Attributes on the model say whether it has its own mouth (`OwnMouth`), whether to add glowing eyes (`Eyes`), and how the death scene frames its mouth (`CloseUpDistance`, `CloseUpHeight`, `CloseUpAim`). Without a model, a body built from parts stands in. The earlier stilt wader is still in `art/models/stilt-wader-rigged.glb`.
@@ -73,6 +74,11 @@ Roblox only shows uploaded images, so the parts are packed into two atlases, `ar
 | How each stretch is laid out, lighting, fog and colour grading | `src/server/MapBuilder.luau` |
 | What trees, stumps, islands, lanterns and signposts look like | `src/server/Forest.luau` |
 | Lobby: size (`Config.Room.LobbyWidth`, `LobbyLength`), the building, doors and party doors, signs, record wall, lamps and string lights, where each prop stands, spawn | `src/server/LobbyBuilder.luau` |
+| Christmas on or off; how many snowballs a pile gives, how many you carry, how far and fast they fly | `Config.Christmas`, `Config.Snowballs` |
+| What the Christmas trees, presents, wreaths and snowball piles look like | `src/server/Christmas.luau` (where they go: `src/server/LobbyBuilder.luau`) |
+| The shop's cottage: where it stands, how big, where its sign, counter and light glows go | `SHOP` in `src/server/LobbyBuilder.luau` (the model is `art/models/lobby/cottage_shop.glb`, the sign `shop_sign` in the UI kit) |
+| Throwing snowballs, hits | `src/server/Snowballs.luau`, `src/client/Throw.luau` |
+| Falling snow, snow in your face when you're hit | `src/client/Snow.luau` |
 | Which door does what (Easy, party, practice) and where; party size and countdowns | `Config.Doors`, `Config.Room.EntranceDoors` (the archways), `Config.Party` |
 | Parties: the doors' pads and screens, joining, leaving, countdown, sending a party to its own server or into the cave | `src/server/Parties.luau` |
 | Practice runs (nothing earned or saved) | `src/server/Progress.luau`; the creature ignores practice players in `src/server/Lurker.luau` and isn't drawn for them in `src/client/LurkerVisuals.luau` |
@@ -130,6 +136,7 @@ src/
     Main.server.luau     starts everything
     MapBuilder.luau      builds the forest stages and the way out; lighting
     CaveBuilder.luau     the cave a party arrives in, at the start of stage 1
+    Christmas.luau       Christmas trees, presents, wreaths, snow and snowball piles for the lobby
     Forest.luau          trees, stumps, islands, lanterns, signposts
     LobbyBuilder.luau    builds the night courtyard lobby
     Parts.luau           part-building helpers both builders use
@@ -140,6 +147,7 @@ src/
     Lurkers.luau         spawns and updates all creatures
     Hazards.luau         creaky boards, sinking moss, rafts, flickering lanterns
     Pebbles.luau         thrown pebbles
+    Snowballs.luau       snowball fights in the Christmas lobby
     Progress.luau        checkpoints, shells, escapes, run timer, coins, items, saving, spawning
     Shop.luau            buying, wearing and using items (all checks on the server)
     Purchases.luau       Robux purchases (each granted once) and who owns which pass
@@ -159,12 +167,13 @@ src/
     ShopPreview.luau     the 3D on shop cards: you wearing it, or its model
     PartyUi.luau         the party pop-up and banner
     Cave.luau            the cave's drips, wind and torches; the scare and note when you arrive
+    Snow.luau            falling snow in the Christmas lobby, and snow in your face when hit
     Boosts.luau          boost input (Q / F / the HUD's buttons) and Updraft flight
     LurkerVisuals.luau   poses the creature model (or a body of parts) as it walks
     Fear.luau            vignette, heartbeat, faltering lights, shake
     DeathScene.luau      the death scene: its face up close, TV static, "what it heard", revive or bleed out
     Mood.luau            warm lobby and exit lighting, the cave's gloom, cold forest fog, drifting mist
-    Throw.luau           throw input (E / R2 / the HUD's pebble button)
+    Throw.luau           throw input (E / R2 / the HUD's pebble or snowball button)
     CameraReport.luau    tells the server which way your camera points (for where the creature appears)
 tools/
   pack-ui.ps1          packs the UI kit's parts into atlases

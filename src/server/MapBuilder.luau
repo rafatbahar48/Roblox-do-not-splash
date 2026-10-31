@@ -535,6 +535,7 @@ function MapBuilder.build()
 		rooms = {},
 		boards = lobby.boards,
 		partyDoors = lobby.partyDoors,
+		snowPiles = lobby.snowPiles, -- the Christmas lobby's (Snowballs.luau)
 	}
 	local z = 0
 	for index, stage in Stages do

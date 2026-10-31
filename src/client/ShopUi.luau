@@ -770,7 +770,7 @@ function ShopUi.start()
 		end
 	end)
 
-	-- The shop hut in the lobby (LobbyBuilder.luau) opens it too.
+	-- The shop's cottage in the lobby (LobbyBuilder.luau) and the cave's stall open it too.
 	ProximityPromptService.PromptTriggered:Connect(function(prompt)
 		if prompt.Name == "OpenShop" and not (gui and gui.Enabled and mode == "shop") then
 			ShopUi.open("shop")

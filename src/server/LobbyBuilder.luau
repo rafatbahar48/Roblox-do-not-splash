@@ -8,14 +8,19 @@
 --                  in the middle for parties, an Easy door on the left wing
 --                  and a practice door on the right
 --   west wing      more of the building: brick, rows of mostly dark windows
---   east wall      the record boards (Leaderboards.luau), and the float hut,
---                  which is the shop
+--   east wall      the record boards (Leaderboards.luau), and the shop: a
+--                  snowy log cottage with Christmas lights
 --   courtyard      paving, a lit path to the doors, grass beds with palms,
 --                  benches, puddles, and wet footprints leading inside
 --   beyond         an iron fence, trees and a dark skyline
 --
--- Everything is built from parts here except the props made in Meshy (hut,
--- palms, planters), which are imported into the place and kept in
+-- While Config.Christmas is on it is winter: snow on the ground and on
+-- every ledge (a path shovelled to the doors), Christmas trees in the beds
+-- instead of palms, presents, wreaths on the doors, and piles of snowballs
+-- (Christmas.luau, Snowballs.luau).
+--
+-- Everything is built from parts here except the props made in Meshy (the
+-- shop's cottage, palms, planters), which are imported into the place and kept in
 -- ServerStorage.LobbyProps; a missing one is skipped. Returns the pieces other
 -- modules need.
 
@@ -23,7 +28,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local Christmas = require(script.Parent.Christmas)
 local Parts = require(script.Parent.Parts)
+local UiArt = require(ReplicatedStorage.Shared.UiArt)
 
 local block, box = Parts.block, Parts.box
 
@@ -39,6 +46,8 @@ local WING_TOP = TILE_TOP + 24
 local FACE = -1.2 -- the courtyard side of the building's front
 local WALL = 2
 local Z0 = -ROOM.LobbyLength
+local XMAS = Config.Christmas
+local CLEARED = -16 -- in winter, the snow stops this far from the building, clear of every pad
 
 local C = {
 	brick = Color3.fromRGB(86, 60, 92),
@@ -71,6 +80,8 @@ local C = {
 	door = Color3.fromRGB(70, 76, 110),
 	oak = Color3.fromRGB(78, 56, 44), -- the archways' doors
 	puddle = Color3.fromRGB(110, 140, 200),
+	ice = Color3.fromRGB(190, 220, 245),
+	snowGround = Color3.fromRGB(214, 224, 242),
 }
 
 -- Each kind of door's colour and what its screen says (Config.Doors). The
@@ -80,6 +91,22 @@ local DOOR_LOOKS = {
 	party = { title = "PARTY", color = C.lemon, blurb = "Normal or Hard, up to " .. Config.Party.MaxSize .. " together." },
 	practice = { title = "PRACTICE", color = C.sky, blurb = "Nothing out there. No coins or records." },
 }
+
+-- The shop's cottage, a Meshy model (CottageShop): where its middle stands,
+-- how tall it is (chimney included), how far it turns so its front faces the
+-- courtyard, and, measured from its middle on the ground, where the board
+-- above its awning is (the SHOP sign goes there), where its counter window
+-- is, and where its painted Christmas lights run along the front.
+-- It fits between the Easy door's pad and the string lights' pole behind it.
+local SHOP = {
+	at = Vector3.new(HALF - 6.8, TILE_TOP, FACE - 15.8),
+	height = 15,
+	yaw = 90, -- the model's front faces -Z; this turns it to -X
+	sign = { at = Vector3.new(-5.6, 9, -3.75), width = 7.5 },
+	counter = Vector3.new(-5.4, 4.2, -4.2),
+	lights = { Vector3.new(-5.7, 9.6, 5.8), Vector3.new(-5.7, 9.6, 2.1), Vector3.new(-5.7, 9.6, -1.7), Vector3.new(-5.7, 9.6, -5.4) },
+}
+local LIGHT_COLORS = { Color3.fromRGB(255, 80, 80), Color3.fromRGB(110, 255, 140), Color3.fromRGB(255, 210, 90), Color3.fromRGB(120, 160, 255) }
 
 local BRICK = Enum.Material.Brick
 local DECOR = { CanCollide = false, CanQuery = false, CastShadow = false }
@@ -203,7 +230,7 @@ end
 
 -- A flat puddle on the paving.
 local function puddle(folder, x, z, size)
-	block(folder, "Puddle", Vector3.new(0.06, size, size), CFrame.new(x, TILE_TOP + 0.03, z) * CFrame.Angles(0, 0, math.pi / 2), C.puddle, Enum.Material.Glass, {
+	block(folder, "Puddle", Vector3.new(0.06, size, size), CFrame.new(x, TILE_TOP + 0.03, z) * CFrame.Angles(0, 0, math.pi / 2), if XMAS then C.ice else C.puddle, if XMAS then Enum.Material.Ice else Enum.Material.Glass, {
 		Shape = Enum.PartType.Cylinder,
 		Transparency = 0.45,
 		Reflectance = 0.45,
@@ -224,6 +251,9 @@ local function lampPost(folder, x, z)
 	light.Range = 20
 	light.Brightness = 0.7
 	light.Parent = lantern
+	if XMAS then
+		Christmas.snow(folder, Vector3.new(x - 0.6, TILE_TOP + 11.75, z - 0.6), Vector3.new(x + 0.6, TILE_TOP + 12, z + 0.6))
+	end
 end
 
 -- A park bench, its seat centred on cframe and running along its X; whoever
@@ -236,6 +266,10 @@ local function bench(folder, cframe)
 	for _, side in { -1, 1 } do
 		block(folder, "BenchLeg", Vector3.new(0.3, 1.6, 2), cframe * CFrame.new(side * 2.1, -0.75, 0.1), C.iron, Enum.Material.Metal)
 	end
+	if XMAS then
+		Christmas.snowSlab(folder, Vector3.new(4.8, 0.16, 1.6), cframe * CFrame.new(0, 0.16, 0))
+		Christmas.snowSlab(folder, Vector3.new(4.8, 0.14, 0.3), cframe * CFrame.new(0, 1.45, 0.98) * CFrame.Angles(math.rad(-10), 0, 0))
+	end
 end
 
 -- A dark tree, for the edges of the world.
@@ -244,6 +278,10 @@ local function tree(folder, x, z, scale)
 	block(folder, "Trunk", Vector3.new(1, 7 * scale, 1), CFrame.new(x, y + 3.5 * scale, z), C.trunk, Enum.Material.Wood, DECOR)
 	block(folder, "Canopy", Vector3.one * 8 * scale, CFrame.new(x, y + 9 * scale, z), C.leaves, Enum.Material.LeafyGrass, { Shape = Enum.PartType.Ball, CanCollide = false, CanQuery = false })
 	block(folder, "Canopy", Vector3.one * 6 * scale, CFrame.new(x + 2 * scale, y + 11.5 * scale, z - scale), C.leaves, Enum.Material.LeafyGrass, { Shape = Enum.PartType.Ball, CanCollide = false, CanQuery = false })
+	if XMAS then
+		Christmas.snowBall(folder, Vector3.new(x, y + 10.4 * scale, z), 6.4 * scale)
+		Christmas.snowBall(folder, Vector3.new(x + 2 * scale, y + 12.6 * scale, z - scale), 4.6 * scale)
+	end
 end
 
 -- A line of coloured bulbs on a sagging wire from a to b.
@@ -323,11 +361,33 @@ local function buildGround(folder)
 
 	local y0, y1 = TILE_TOP - 1.3, TILE_TOP - 0.3
 	local grass = { Reflectance = 0 }
-	box(folder, "Ground", Vector3.new(-400, y0, -500), Vector3.new(400, y1, Z0), C.ground, Enum.Material.LeafyGrass, grass)
-	box(folder, "Ground", Vector3.new(-400, y0, Z0), Vector3.new(-HALF - 20, y1, 0), C.ground, Enum.Material.LeafyGrass, grass)
-	box(folder, "Ground", Vector3.new(HALF, y0, Z0), Vector3.new(400, y1, 0), C.ground, Enum.Material.LeafyGrass, grass)
+	-- Around the courtyard: grass, or in winter snow.
+	local outside = if XMAS then C.snowGround else C.ground
+	local outsideMaterial = if XMAS then Enum.Material.Snow else Enum.Material.LeafyGrass
+	box(folder, "Ground", Vector3.new(-400, y0, -500), Vector3.new(400, y1, Z0), outside, outsideMaterial, grass)
+	box(folder, "Ground", Vector3.new(-400, y0, Z0), Vector3.new(-HALF - 20, y1, 0), outside, outsideMaterial, grass)
+	box(folder, "Ground", Vector3.new(HALF, y0, Z0), Vector3.new(400, y1, 0), outside, outsideMaterial, grass)
 	box(folder, "Ground", Vector3.new(-400, y0, 0), Vector3.new(-STAGE_HALF - 2, y1, 400), C.ground, Enum.Material.LeafyGrass, grass)
 	box(folder, "Ground", Vector3.new(STAGE_HALF + 2, y0, 0), Vector3.new(400, y1, 400), C.ground, Enum.Material.LeafyGrass, grass)
+
+	if XMAS then
+		-- Snow over the courtyard, either side of the path, stopping short
+		-- of the building so every door's pad stays clear; drifts along the
+		-- walls and fence.
+		local top = TILE_TOP + 0.25
+		Christmas.snow(folder, Vector3.new(-HALF, TILE_TOP, Z0), Vector3.new(-6, top, CLEARED), true)
+		Christmas.snow(folder, Vector3.new(6, TILE_TOP, Z0), Vector3.new(HALF, top, CLEARED), true)
+		local rng = Random.new(1225)
+		for z = Z0 + 4, -30, 9 do -- short of the shop's cottage
+			Christmas.mound(folder, -HALF + rng:NextNumber(1.5, 3), z + rng:NextNumber(-2, 2), rng:NextNumber(2, 3.4), top)
+			Christmas.mound(folder, HALF - rng:NextNumber(1.5, 3), z + rng:NextNumber(-2, 2), rng:NextNumber(2, 3.4), top)
+		end
+		for x = -HALF + 6, HALF - 6, 9 do
+			if math.abs(x) > 9 then
+				Christmas.mound(folder, x + rng:NextNumber(-2, 2), Z0 + rng:NextNumber(1.5, 3), rng:NextNumber(2, 3.4), top)
+			end
+		end
+	end
 end
 
 -- A stone archway round a doorway centred on x: a smooth band of blocks cut
@@ -372,6 +432,16 @@ local function buildArch(folder, face, x, color)
 	for i = 1, blocks - 1 do
 		joint(CFrame.new(0, straight, 0) * CFrame.Angles(0, 0, i * math.pi / blocks - math.pi / 2))
 	end
+	if XMAS then
+		-- Snow lying along the top of the arch, where it is flat enough to stay.
+		for i = 0, segments - 1 do
+			local a = (i + 0.5) * math.pi / segments
+			if a > math.rad(30) and a < math.rad(150) then
+				local at = CFrame.new(mid * math.cos(a), straight + mid * math.sin(a), 0) * CFrame.Angles(0, 0, a - math.pi / 2)
+				Christmas.snowSlab(folder, Vector3.new(2 * mid * math.sin(math.pi / segments / 2) + 0.12, 0.3, depth + 0.1), origin * at * CFrame.new(0, thickness / 2 + 0.12, 0))
+			end
+		end
+	end
 	return face - depth
 end
 
@@ -392,6 +462,9 @@ local function shutDoors(folder, x)
 			CanQuery = false,
 		})
 	end
+	if XMAS then
+		Christmas.wreath(folder, Vector3.new(x, TILE_TOP + 7.2, z - 0.45), -Vector3.zAxis, 1.1)
+	end
 end
 
 -- A door on a wing at x: shut metal doors in a frame lined with neon.
@@ -407,6 +480,9 @@ local function wingDoor(folder, x, color)
 	for _, side in { -1, 1 } do
 		local edge = x + side * (width / 2 + 0.8)
 		strip(folder, Vector3.new(edge - 0.125, TILE_TOP, FACE - 0.6), Vector3.new(edge + 0.125, TILE_TOP + height + 0.8, FACE - 0.5), color)
+	end
+	if XMAS then
+		Christmas.wreath(folder, Vector3.new(x, TILE_TOP + 7.2, FACE - 0.95), -Vector3.zAxis, 1.1)
 	end
 end
 
@@ -441,6 +517,9 @@ local function buildFacade(folder)
 	box(folder, "FacadeWing", Vector3.new(-wingEnd, BASE_Y, FACE), Vector3.new(-STAGE_HALF, FACADE_TOP, 10), C.brick, BRICK)
 	box(folder, "FacadeWing", Vector3.new(STAGE_HALF, BASE_Y, FACE), Vector3.new(wingEnd, FACADE_TOP, 10), C.brick, BRICK)
 	box(folder, "Cornice", Vector3.new(-wingEnd - 0.6, FACADE_TOP, FACE - 0.8), Vector3.new(wingEnd + 0.6, FACADE_TOP + 1.2, 10), C.stone, Enum.Material.Concrete)
+	if XMAS then
+		Christmas.snow(folder, Vector3.new(-wingEnd - 0.6, FACADE_TOP + 1.2, FACE - 1), Vector3.new(wingEnd + 0.6, FACADE_TOP + 1.8, 10))
+	end
 	strip(folder, Vector3.new(-HALF - WALL, FACADE_TOP - 0.3, FACE - 0.15), Vector3.new(HALF + WALL, FACADE_TOP, FACE), C.pink)
 	for _, side in { -1, 1 } do
 		strip(folder, Vector3.new(side * STAGE_HALF, TILE_TOP, FACE - 0.15), Vector3.new(side * HALF, TILE_TOP + 0.3, FACE), C.aqua)
@@ -510,8 +589,15 @@ local function buildFacade(folder)
 		table.insert(doors, { mode = spec.mode, x = x, pad = pad, title = title, status = status })
 	end
 
-	prop(folder, "Planter", 2, -24.5, FACE - 2, 0)
-	prop(folder, "Planter", 2, 24.5, FACE - 2, 0)
+	if XMAS then
+		local treeRng = Random.new(2512)
+		for _, x in { -24.5, 24.5 } do
+			Christmas.tree(folder, x, FACE - 3, 7, treeRng)
+		end
+	else
+		prop(folder, "Planter", 2, -24.5, FACE - 2, 0)
+		prop(folder, "Planter", 2, 24.5, FACE - 2, 0)
+	end
 	return doors, front
 end
 
@@ -521,6 +607,9 @@ local function buildWestWing(folder)
 	local wx0, wx1 = -HALF - WALL, -HALF
 	box(folder, "WestWing", Vector3.new(wx0, BASE_Y, Z0), Vector3.new(wx1, WING_TOP, FACE), C.brick, BRICK)
 	box(folder, "WingCornice", Vector3.new(wx0 - 0.5, WING_TOP, Z0), Vector3.new(wx1 + 0.8, WING_TOP + 1, FACE), C.stone, Enum.Material.Concrete)
+	if XMAS then
+		Christmas.snow(folder, Vector3.new(wx0 - 0.5, WING_TOP + 1, Z0), Vector3.new(wx1 + 1, WING_TOP + 1.5, FACE))
+	end
 	strip(folder, Vector3.new(wx1, WING_TOP - 0.3, Z0), Vector3.new(wx1 + 0.15, WING_TOP, FACE), C.pink)
 	strip(folder, Vector3.new(wx1, TILE_TOP, Z0), Vector3.new(wx1 + 0.15, TILE_TOP + 0.3, FACE), C.aqua)
 
@@ -534,12 +623,76 @@ local function buildWestWing(folder)
 	end
 end
 
+-- The shop (SHOP): the cottage, its SHOP sign (SpriteCook art) on the board
+-- above its awning, light glowing from its window and its painted Christmas
+-- lights, and the shop's prompt at its counter, which works even without the
+-- model.
+local function buildShop(folder)
+	prop(folder, "CottageShop", SHOP.height, SHOP.at.X, SHOP.at.Z, SHOP.yaw)
+	local function spot(offset)
+		return SHOP.at + offset
+	end
+	local function lightAt(at, color, range, brightness)
+		local holder = block(folder, "ShopLight", Vector3.one * 0.2, CFrame.new(at), color, nil, {
+			Transparency = 1,
+			CanCollide = false,
+			CanQuery = false,
+			CanTouch = false,
+		})
+		local light = Instance.new("PointLight")
+		light.Color = color
+		light.Range = range
+		light.Brightness = brightness
+		light.Parent = holder
+	end
+
+	-- The sign, flat on the board, facing the courtyard (-X).
+	local art = UiArt.size("shop_sign")
+	local width = SHOP.sign.width
+	local board = block(folder, "ShopSign", Vector3.new(0.1, width * art.Y / art.X, width), CFrame.new(spot(SHOP.sign.at)), C.white, nil, {
+		Transparency = 1,
+		CanCollide = false,
+		CanQuery = false,
+		CanTouch = false,
+	})
+	local gui = surface(board, Enum.NormalId.Left, 40)
+	gui.LightInfluence = 0.25
+	local image = Instance.new("ImageLabel")
+	image.BackgroundTransparency = 1
+	image.Size = UDim2.fromScale(1, 1)
+	UiArt.apply(image, "shop_sign")
+	image.Parent = gui
+
+	lightAt(spot(SHOP.counter) + Vector3.new(1.5, 1.5, 0), C.warm, 14, 1)
+	lightAt(spot(SHOP.counter) - Vector3.new(5, -4, 0), C.warm, 20, 0.5)
+	for i, offset in SHOP.lights do
+		lightAt(spot(offset), LIGHT_COLORS[(i - 1) % #LIGHT_COLORS + 1], 9, 0.6)
+	end
+
+	local counter = block(folder, "ShopCounter", Vector3.new(3, 6, 7), CFrame.new(spot(SHOP.counter) - Vector3.new(1.5, 0, 0)), C.lemon, nil, {
+		Transparency = 1,
+		CanCollide = false,
+		CanQuery = false,
+	})
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.Name = "OpenShop"
+	prompt.ActionText = "Open shop"
+	prompt.ObjectText = "Shop"
+	prompt.KeyboardKeyCode = Enum.KeyCode.G -- E throws
+	prompt.GamepadKeyCode = Enum.KeyCode.ButtonX
+	prompt.MaxActivationDistance = 12
+	prompt.RequiresLineOfSight = false
+	prompt.Parent = counter
+end
+
 -- The east side: a low wall with railings, the record boards on a tall
--- stretch of it under the RECORDS sign, and the float hut, which is the shop.
--- The shop's prompt sits on its own part, so it still works without the hut.
+-- stretch of it under the RECORDS sign, and the shop (buildShop).
 local function buildEastSide(folder)
 	box(folder, "EastWall", Vector3.new(HALF, BASE_Y, Z0), Vector3.new(HALF + WALL, TILE_TOP + 3, FACE), C.brick, BRICK)
 	box(folder, "EastCap", Vector3.new(HALF - 0.3, TILE_TOP + 3, Z0), Vector3.new(HALF + WALL + 0.3, TILE_TOP + 3.5, FACE), C.stone, Enum.Material.Concrete)
+	if XMAS then
+		Christmas.snow(folder, Vector3.new(HALF - 0.4, TILE_TOP + 3.5, Z0), Vector3.new(HALF + WALL + 0.4, TILE_TOP + 3.85, FACE))
+	end
 	for z = Z0 + 1, FACE - 1, 2 do
 		block(folder, "Railing", Vector3.new(0.18, 3, 0.18), CFrame.new(HALF + 1, TILE_TOP + 5, z), C.iron, Enum.Material.Metal, DECOR)
 	end
@@ -552,6 +705,9 @@ local function buildEastSide(folder)
 	local z0, z1 = first - 7, first + spacing * 3 + 7
 	box(folder, "RecordsWall", Vector3.new(HALF - 0.5, BASE_Y, z0), Vector3.new(HALF + WALL, TILE_TOP + 18, z1), C.brick, BRICK)
 	box(folder, "RecordsCornice", Vector3.new(HALF - 1, TILE_TOP + 18, z0 - 0.5), Vector3.new(HALF + WALL + 0.5, TILE_TOP + 19, z1 + 0.5), C.stone, Enum.Material.Concrete)
+	if XMAS then
+		Christmas.snow(folder, Vector3.new(HALF - 1.1, TILE_TOP + 19, z0 - 0.5), Vector3.new(HALF + WALL + 0.5, TILE_TOP + 19.5, z1 + 0.5))
+	end
 	strip(folder, Vector3.new(HALF - 0.65, TILE_TOP + 17.6, z0), Vector3.new(HALF - 0.5, TILE_TOP + 17.9, z1), C.pink)
 	-- Each board glows softly in its header's colour (Leaderboards.luau).
 	local glows = { Escapes = C.sky, Easy = C.mint, Normal = C.lemon, Hard = C.candy }
@@ -572,24 +728,7 @@ local function buildEastSide(folder)
 	bubbleText(gui, 5, { Size = UDim2.fromScale(1, 1), Font = Enum.Font.FredokaOne, TextColor3 = C.mint, Text = "RECORDS" })
 	glow(folder, Vector3.new(HALF - 8, TILE_TOP + 10, first + spacing * 1.5), C.lemon, 24, 0.35)
 
-	-- The shop.
-	local hutX, hutZ = HALF - 10, FACE - 17
-	prop(folder, "FloatHut", 8, hutX, hutZ, 90)
-	glow(folder, Vector3.new(hutX - 5, TILE_TOP + 6, hutZ), C.warm, 14, 0.7)
-	local counter = block(folder, "SwimShop", Vector3.new(3, 6, 8), CFrame.new(hutX - 1, TILE_TOP + 3, hutZ), C.lemon, nil, {
-		Transparency = 1,
-		CanCollide = false,
-		CanQuery = false,
-	})
-	local prompt = Instance.new("ProximityPrompt")
-	prompt.Name = "OpenShop"
-	prompt.ActionText = "Open shop"
-	prompt.ObjectText = "Shop"
-	prompt.KeyboardKeyCode = Enum.KeyCode.G -- E throws a pebble
-	prompt.GamepadKeyCode = Enum.KeyCode.ButtonX
-	prompt.MaxActivationDistance = 12
-	prompt.RequiresLineOfSight = false
-	prompt.Parent = counter
+	buildShop(folder)
 	return boards
 end
 
@@ -598,10 +737,16 @@ end
 local function buildSouthSide(folder)
 	local z = Z0
 	box(folder, "FenceBase", Vector3.new(-HALF - WALL, BASE_Y, z - 1), Vector3.new(HALF + WALL, TILE_TOP + 1.2, z), C.stone, Enum.Material.Concrete)
+	if XMAS then
+		Christmas.snow(folder, Vector3.new(-HALF - WALL, TILE_TOP + 1.2, z - 1.05), Vector3.new(HALF + WALL, TILE_TOP + 1.5, z + 0.05))
+	end
 	for x = -HALF, HALF, 10 do
 		local gatepost = math.abs(x) == 0
 		local height = if gatepost then 9 else 7
 		block(folder, "Pillar", Vector3.new(1.8, height, 1.8), CFrame.new(x, TILE_TOP + height / 2, z - 0.5), C.stone, Enum.Material.Concrete)
+		if XMAS then
+			Christmas.snow(folder, Vector3.new(x - 0.95, TILE_TOP + height, z - 1.45), Vector3.new(x + 0.95, TILE_TOP + height + 0.3, z + 0.45))
+		end
 		local cap = block(folder, "PillarLamp", Vector3.one * 1.1, CFrame.new(x, TILE_TOP + height + 0.6, z - 0.5), C.globe, Enum.Material.Neon, {
 			Shape = Enum.PartType.Ball,
 			CanCollide = false,
@@ -627,8 +772,9 @@ local function buildSouthSide(folder)
 	box(folder, "SouthBarrier", Vector3.new(-HALF, TILE_TOP, z - 1), Vector3.new(HALF, TILE_TOP + 40, z), C.stone, nil, BARRIER)
 end
 
--- The courtyard: grass beds with palms, the lit path, benches, string lights,
--- puddles and the wet footprints.
+-- The courtyard: grass beds with palms (Christmas trees in winter), the lit
+-- path, benches, string lights, puddles and the wet footprints, and in
+-- winter piles of snowballs. Returns the piles' prompts.
 local function buildCourtyard(folder, doorFront)
 	local beds = {
 		{ -40, -14, Z0 + 12, Z0 + 40 },
@@ -636,13 +782,28 @@ local function buildCourtyard(folder, doorFront)
 		{ -40, -14, Z0 + 52, Z0 + 80 },
 		{ 14, 34, Z0 + 52, Z0 + 76 },
 	}
-	for _, bed in beds do
+	local rng = Random.new(2412)
+	for i, bed in beds do
 		local x0, x1, z0, z1 = bed[1], bed[2], bed[3], bed[4]
 		box(folder, "Curb", Vector3.new(x0, TILE_TOP, z0), Vector3.new(x1, TILE_TOP + 0.6, z1), C.stone, Enum.Material.Concrete)
 		box(folder, "Grass", Vector3.new(x0 + 0.5, TILE_TOP + 0.6, z0 + 0.5), Vector3.new(x1 - 0.5, TILE_TOP + 0.65, z1 - 0.5), C.grass, Enum.Material.LeafyGrass)
 		local cx, cz = (x0 + x1) / 2, (z0 + z1) / 2
-		prop(folder, "PottedPalm", 8, cx - (x1 - x0) / 4, cz, 0)
-		prop(folder, "PottedPalm", 7, cx + (x1 - x0) / 4, cz + 4, 40)
+		if not XMAS then
+			prop(folder, "PottedPalm", 8, cx - (x1 - x0) / 4, cz, 0)
+			prop(folder, "PottedPalm", 7, cx + (x1 - x0) / 4, cz + 4, 40)
+		else
+			local bedTop = TILE_TOP + 0.65
+			Christmas.snow(folder, Vector3.new(x0, TILE_TOP + 0.6, z0), Vector3.new(x1, bedTop + 0.25, z1), true)
+			if i == 3 then
+				-- The big one, nearest the doors, with presents under it.
+				Christmas.tree(folder, cx, cz, 20, rng, bedTop + 0.25)
+				Christmas.presents(folder, cx, cz, 6.5, 9, rng, bedTop + 0.25)
+			else
+				Christmas.tree(folder, cx - (x1 - x0) / 4, cz, 11, rng, bedTop + 0.25)
+				Christmas.tree(folder, cx + (x1 - x0) / 4, cz + 4, 9, rng, bedTop + 0.25)
+				Christmas.presents(folder, cx + (x1 - x0) / 4, cz + 4, 3.2, 3, rng, bedTop + 0.25)
+			end
+		end
 	end
 
 	-- Stopping short of the building, so no lamp hides a door's screen.
@@ -678,6 +839,15 @@ local function buildCourtyard(folder, doorFront)
 	for _, spot in { { -3, Z0 + 46, 5 }, { 12, Z0 + 20, 4 }, { -24, -18, 6 }, { 28, Z0 + 46, 4 }, { 2, -20, 3.5 } } do
 		puddle(folder, spot[1], spot[2], spot[3])
 	end
+
+	-- Piles of snowballs to grab from: near the spawn, by the benches and
+	-- near the doors, all in the snow.
+	local piles = {}
+	if XMAS then
+		for _, spot in { { 11, Z0 + 6 }, { -11, -58 }, { -30, -22 } } do
+			table.insert(piles, Christmas.snowballPile(folder, spot[1], spot[2]))
+		end
+	end
 	local steps = 26
 	local fromZ, toZ = Z0 + 26, doorFront - 8
 	for i = 0, steps - 1 do
@@ -692,6 +862,7 @@ local function buildCourtyard(folder, doorFront)
 			CastShadow = false,
 		})
 	end
+	return piles
 end
 
 -- Beyond the fence and walls: trees, and a dark skyline with a few lit windows.
@@ -708,6 +879,9 @@ local function buildSurroundings(folder)
 		local width, height = rng:NextNumber(22, 40), rng:NextNumber(30, 75)
 		local z = Z0 - 120 - rng:NextNumber(0, 60)
 		box(folder, "Skyline", Vector3.new(x - width / 2, TILE_TOP - 1, z - 20), Vector3.new(x + width / 2, TILE_TOP + height, z), C.skyline, Enum.Material.Concrete, DECOR)
+		if XMAS then
+			Christmas.snow(folder, Vector3.new(x - width / 2 - 0.3, TILE_TOP + height, z - 20.3), Vector3.new(x + width / 2 + 0.3, TILE_TOP + height + 0.8, z + 0.3))
+		end
 		for _ = 1, 10 do
 			if rng:NextNumber() < 0.6 then
 				local at = Vector3.new(x + rng:NextNumber(-width / 2 + 2, width / 2 - 2), TILE_TOP + rng:NextNumber(6, height - 4), z + 0.1)
@@ -727,7 +901,7 @@ function LobbyBuilder.build(map)
 	buildWestWing(folder)
 	local boards = buildEastSide(folder)
 	buildSouthSide(folder)
-	buildCourtyard(folder, doorFront)
+	local snowPiles = buildCourtyard(folder, doorFront)
 	buildSurroundings(folder)
 
 	local spawn = Instance.new("SpawnLocation")
@@ -742,7 +916,7 @@ function LobbyBuilder.build(map)
 	spawn.TopSurface = Enum.SurfaceType.Smooth
 	spawn.Parent = folder
 
-	return { boards = boards, partyDoors = doors }
+	return { boards = boards, partyDoors = doors, snowPiles = snowPiles }
 end
 
 return LobbyBuilder

@@ -20,6 +20,8 @@ local NAMES = {
 	"CameraLook", -- client -> server: which way your camera points, across the ground (unit Vector3)
 	"SaveSetting", -- client -> server: setting id, value (see Config.Settings)
 	"DeathChoice", -- client -> server: "revive", "bleed", "lobby", or "buying" (a Robux revive is on its way), after being caught
+	"ThrowSnowball", -- client -> server: Vector3 aim point, in the Christmas lobby
+	"SnowballHit", -- server -> client: a snowball hit you
 }
 
 local folder

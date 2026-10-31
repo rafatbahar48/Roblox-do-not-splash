@@ -195,6 +195,24 @@ Config.Cave = {
 	GrowlDelay = 2, -- and then it growls
 }
 
+-- Christmas in the lobby: snow, decorated trees, presents, wreaths, falling
+-- snow, a spookier Christmas tune and snowball fights (server/Christmas.luau,
+-- server/Snowballs.luau, client/Snow.luau). Set to false after the holidays.
+Config.Christmas = true
+
+-- Snowballs, in the Christmas lobby: grab some from a pile (G), throw them
+-- (E, R2 or the HUD's snowball button). A hit only splats snow in their
+-- face; it never pushes anyone off a party pad.
+Config.Snowballs = {
+	PerGrab = 5, -- how many a pile gives, up to Max
+	Max = 10,
+	Cooldown = 0.4, -- seconds between throws
+	MaxRange = 70,
+	MinFlightTime = 0.3,
+	MaxFlightTime = 0.8,
+	Lifetime = 4,
+}
+
 -- The stages are stretches of a drowned forest at night, behind the lobby's
 -- building (MapBuilder.luau, Forest.luau).
 Config.Forest = {
@@ -232,6 +250,7 @@ Config.Settings = {
 Config.Sounds = {
 	-- Music, fading from one to the next (client/Music.luau)
 	LobbyMusic = "rbxassetid://139190190976686", -- Halloween Music Box: the lobby and the way out
+	ChristmasMusic = "rbxassetid://1836275417", -- Haunted Sleigh Bells: instead, while Config.Christmas is on
 	ForestMusic = "rbxassetid://71555461626609", -- The Lurking Dread: scary suspense out in the forest
 	Chase = "rbxassetid://135888560895946", -- Rising Fear: while it hunts you
 	Escape = "rbxassetid://1844016113", -- White Sands (sting): you got out
@@ -253,6 +272,12 @@ Config.Sounds = {
 	CaveWind = "rbxassetid://9113732233", -- wind through its mouth, louder nearer it
 	StickSnap = "rbxassetid://9113582284", -- something steps on a stick out there, just after you arrive
 	CaveGrowl = "rbxassetid://9116292585", -- and growls, two seconds later
+
+	-- Snowball fights in the Christmas lobby (server/Snowballs.luau)
+	SnowGrab = "rbxassetid://9119316414", -- scooping up snowballs from a pile
+	SnowballThrow = "rbxassetid://9120742716", -- a quick whoosh
+	SnowballHit = "rbxassetid://9119312087", -- it hits someone
+	SnowballLand = "rbxassetid://9119310905", -- it lands in the snow
 
 	-- Just for you (client/Sounds.luau)
 	Wading = "rbxassetid://9120609785", -- your feet in the water

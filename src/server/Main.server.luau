@@ -14,6 +14,7 @@ local Pebbles = require(script.Parent.Pebbles)
 local Progress = require(script.Parent.Progress)
 local Purchases = require(script.Parent.Purchases)
 local Shop = require(script.Parent.Shop)
+local Snowballs = require(script.Parent.Snowballs)
 
 StarterPlayer.CameraMaxZoomDistance = Config.CameraMaxZoom
 
@@ -27,6 +28,7 @@ Leaderboards.init(layout)
 Progress.init(layout)
 Parties.init(layout)
 Shop.init()
+Snowballs.init(layout)
 Purchases.init()
 Effects.startAmbience()
 
