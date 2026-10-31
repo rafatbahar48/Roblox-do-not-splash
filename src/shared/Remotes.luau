@@ -22,6 +22,7 @@ local NAMES = {
 	"DeathChoice", -- client -> server: "revive", "bleed", "lobby", or "buying" (a Robux revive is on its way), after being caught
 	"ThrowSnowball", -- client -> server: Vector3 aim point, in the Christmas lobby
 	"SnowballHit", -- server -> client: a snowball hit you
+	"ClaimCommunity", -- client -> server: may have just joined the community; check and pay its reward
 }
 
 local folder

@@ -94,6 +94,14 @@ Config.Passes = {
 	DoubleCoins = 2061271796,
 	DeepPockets = 2058219044,
 }
+-- The game's Roblox community (made on roblox.com). Being in it pays Reward
+-- coins, once per player: through the HUD's Join button, or on their next
+-- visit if they joined on the website (server/Community.luau). 0 turns it off.
+Config.Community = {
+	GroupId = 642612714,
+	Reward = 100, -- coins
+}
+
 -- What the passes do (shared/Perks.luau).
 Config.PassPerks = {
 	DoubleCoins = { multiplier = 2 }, -- coins from stages, shells and escapes

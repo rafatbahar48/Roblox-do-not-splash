@@ -103,6 +103,7 @@ $specs = @(
     @("dock_stats", "icons", 0.6, $null),
     @("dock_settings", "icons", 0.6, $null),
     @("dock_invite", "icons", 0.6, $null),
+    @("dock_community", "icons", 0.2, $null), # drawn at 1024 px
     @("stat_trophy", "icons", 0.55, $null),
     @("stat_stopwatch", "icons", 0.55, $null),
     @("stat_footprints", "icons", 0.55, $null),

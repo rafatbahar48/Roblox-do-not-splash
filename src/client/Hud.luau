@@ -7,14 +7,16 @@
 --   top right     the difficulty buttons
 --   left          big Shop and Bag buttons, or out in the forest the noise
 --                 meter
---   right         the Christmas Bundle (LIMITED, with how long is left) and
---                 2x Coins, and Stats, Settings and Invite (not out in the
+--   right         the Christmas Bundle (LIMITED, with how long is left),
+--                 2x Coins and Join (the game's community, until its reward
+--                 is paid), and Stats, Settings and Invite (not out in the
 --                 forest: in the lobby, the cave and the way out)
 --   bottom right  pebble, Updraft and Hush buttons (only out in the forest);
 --                 in the Christmas lobby, the snowball button
 --
 -- plus short notifications and the escape screen.
 
+local GroupService = game:GetService("GroupService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -98,6 +100,17 @@ local function inviteFriends()
 	if ok and canInvite then
 		pcall(SocialService.PromptGameInvite, SocialService, player)
 	end
+end
+
+-- Asks Roblox to show the prompt to join the game's community, then asks
+-- the server to check with Roblox and pay the reward (server/Community.luau).
+local function joinCommunity()
+	local ok, err = pcall(GroupService.PromptJoinAsync, GroupService, Config.Community.GroupId)
+	if not ok then
+		warn("[Hud] Could not show the community prompt:", err)
+		return
+	end
+	Remotes.ClaimCommunity:FireServer()
 end
 
 function Hud.start()
@@ -278,7 +291,7 @@ function Hud.start()
 		ShopUi.open("bag")
 	end)
 
-	-- Right: the Christmas Bundle and 2x Coins, then Stats, Settings, Invite -----
+	-- Right: the Christmas Bundle, 2x Coins and Join, then Stats, Settings, Invite
 
 	local step = GRID_BUTTON + GRID_GAP
 	local rightDock = create("Frame", {
@@ -301,6 +314,15 @@ function Hud.start()
 	local doubleButton = gridButton("button_double_coins", "2x Coins", 0, 1, function()
 		ShopUi.open("shop", "pass")
 	end)
+	-- The coins it pays, on a lemon tag across its corner.
+	local joinButton = gridButton("dock_community", "Join", 0, 2, joinCommunity)
+	local rewardTag = Candy.badge(joinButton, "+" .. Config.Community.Reward, 30, UDim2.new(1, 8, 0, -6), Vector2.new(1, 0), Candy.LEMON)
+	rewardTag.Size = UDim2.fromOffset(58, 30)
+	local function updateJoin()
+		joinButton.Visible = Config.Community.GroupId ~= 0 and not player:GetAttribute("CommunityRewarded")
+	end
+	updateJoin()
+	player:GetAttributeChangedSignal("CommunityRewarded"):Connect(updateJoin)
 	-- LIMITED across its corner, and how long is left under it.
 	local limited = Candy.art("ribbon_red", {
 		Name = "Limited",
@@ -324,8 +346,11 @@ function Hud.start()
 	local function updateChristmas()
 		local onSale = ChristmasBundle.onSale()
 		christmasButton.Visible = onSale
-		-- 2x Coins sits under the time left, or in its place once it's gone.
-		doubleButton.Position = UDim2.fromOffset(0, if onSale then step + 30 else 0)
+		-- 2x Coins sits under the time left, or in its place once it's gone,
+		-- and Join under 2x Coins.
+		local doubleY = if onSale then step + 30 else 0
+		doubleButton.Position = UDim2.fromOffset(0, doubleY)
+		joinButton.Position = UDim2.fromOffset(0, doubleY + step)
 		local left = ChristmasBundle.timeLeft()
 		timeLeftText.Text = if left then ChristmasBundle.shortTime(left) else ""
 	end
@@ -538,7 +563,7 @@ function Hud.start()
 	end
 
 	-- Chimes for good news.
-	local NOTIFY_SOUNDS = { checkpoint = "Checkpoint", shell = "Shell", win = "Escape", bought = "Buy" }
+	local NOTIFY_SOUNDS = { checkpoint = "Checkpoint", shell = "Shell", win = "Escape", bought = "Buy", reward = "Buy" }
 
 	Remotes.Notify.OnClientEvent:Connect(function(kind, message)
 		if NOTIFY_SOUNDS[kind] then

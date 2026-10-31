@@ -29,6 +29,8 @@
 --                      shells, stats or records
 --   CaveArrival        server time their party last arrived in the cave
 --                      (client/Cave.luau plays what happens next)
+--   CommunityRewarded  true once they have had the reward for joining the
+--                      game's community (Community.luau)
 --
 -- A run starts in the cave behind the lobby, where a party arrives
 -- (Parties.luau), and is timed from walking out of its mouth to escaping.
@@ -202,6 +204,7 @@ local function load(player)
 		boosts = boosts,
 		bestTimes = bestTimes, -- [difficulty name] = seconds
 		selfRevives = wholeNumber(data.selfRevives),
+		communityRewarded = data.communityRewarded == true,
 		runs = wholeNumber(data.runs),
 		caught = wholeNumber(data.caught),
 		stages = wholeNumber(data.stages),
@@ -247,6 +250,7 @@ local function save(player, profile)
 		boosts = profile.boosts,
 		bestTimes = profile.bestTimes,
 		selfRevives = profile.selfRevives,
+		communityRewarded = profile.communityRewarded,
 		runs = profile.runs,
 		caught = profile.caught,
 		stages = profile.stages,
@@ -291,6 +295,7 @@ local function sync(player, profile)
 		player:SetAttribute("Boost_" .. id, count)
 	end
 	player:SetAttribute("SelfRevives", profile.selfRevives)
+	player:SetAttribute("CommunityRewarded", if profile.communityRewarded then true else nil)
 	player:SetAttribute("Practice", if profile.practice then true else nil)
 	player:SetAttribute("Escapes", profile.wins)
 	player:SetAttribute("StatRuns", profile.runs)
@@ -679,6 +684,20 @@ function Progress.grant(player, gives)
 	end
 	profile.selfRevives += revives
 	profile.coins += coins
+	sync(player, profile)
+	task.spawn(save, player, profile)
+	return true
+end
+
+-- Pays the reward for joining the game's community, once ever (Community.luau
+-- has checked they are in it). Saves straight away. True if it was paid now.
+function Progress.rewardCommunity(player)
+	local profile = profiles[player]
+	if not profile or profile.communityRewarded then
+		return false
+	end
+	profile.communityRewarded = true
+	profile.coins += Config.Community.Reward
 	sync(player, profile)
 	task.spawn(save, player, profile)
 	return true

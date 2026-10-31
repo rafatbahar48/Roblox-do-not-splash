@@ -323,6 +323,12 @@
       "sha12": "505b91a94b93",
       "label": "Red LIMITED ribbon (blank)",
       "file": "ui/kit/parts/ribbon_red.png"
+    },
+    {
+      "asset_id": "75eab11f-03c9-47a0-aaeb-ff3d7a3671fa",
+      "sha12": "90fcc3826af8",
+      "label": "UI kit: dock_community (Join button, edited from dock_invite)",
+      "file": "ui/kit/parts/dock_community.png"
     }
   ]
 }
