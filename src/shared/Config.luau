@@ -79,20 +79,20 @@ Config.Revive = {
 -- What each one is and gives: shared/RobuxCatalog.luau. Prices are set on
 -- the dashboard.
 Config.Products = {
-	CoinsSmall = 0,
-	CoinsJar = 0,
-	CoinsChest = 0,
-	CoinsHoard = 0,
-	NightKit = 0,
-	SelfRevive1 = 0, -- also what the death screen sells when you are short of coins
-	SelfRevive3 = 0,
-	Updraft5 = 0,
-	Hush5 = 0,
-	ChristmasBundle = 0, -- the limited bundle (RobuxCatalog.bundles), until New Year
+	CoinsSmall = 3725019585,
+	CoinsJar = 3725020628,
+	CoinsChest = 3725020759,
+	CoinsHoard = 3725021036,
+	NightKit = 3725025405,
+	SelfRevive1 = 3725025739, -- also what the death screen sells when you are short of coins
+	SelfRevive3 = 3725026035,
+	Updraft5 = 3725026100,
+	Hush5 = 3725026348,
+	ChristmasBundle = 3725026453, -- the limited bundle (RobuxCatalog.bundles), until New Year
 }
 Config.Passes = {
-	DoubleCoins = 0,
-	DeepPockets = 0,
+	DoubleCoins = 2061271796,
+	DeepPockets = 2058219044,
 }
 -- What the passes do (shared/Perks.luau).
 Config.PassPerks = {
