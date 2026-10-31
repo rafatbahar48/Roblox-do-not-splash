@@ -329,6 +329,48 @@
       "sha12": "90fcc3826af8",
       "label": "UI kit: dock_community (Join button, edited from dock_invite)",
       "file": "ui/kit/parts/dock_community.png"
+    },
+    {
+      "asset_id": "4f824340-7ae4-4992-9104-de23b135c7e9",
+      "sha12": "9b63254d269f",
+      "label": "Drowned forest concept (reference for key art)",
+      "file": "concepts/drowned-forest/forest/image_0.png"
+    },
+    {
+      "asset_id": "48f92d42-68ec-4b30-b531-34ec2fd18703",
+      "sha12": "51e34741cb61",
+      "label": "Drowned forest chase concept (reference for key art)",
+      "file": "concepts/drowned-forest/chase/image_0.png"
+    },
+    {
+      "asset_id": "f9d3360f-a87b-4f5b-8fac-5dfd55233088",
+      "sha12": "714b3aa85e1e",
+      "label": "Creature model preview (reference for key art)",
+      "file": "models/flesh-creature-preview.png"
+    },
+    {
+      "asset_id": "2832fd1e-d029-4cd9-a1fc-0acdd456c63a",
+      "sha12": "19ad77bd1ca4",
+      "label": "Game page thumbnail A (1376x768 source, saved at 1920x1080)",
+      "file": "marketing/thumbnail-a.png"
+    },
+    {
+      "asset_id": "fd1e77ee-2346-47f6-9f2e-86535971ab16",
+      "sha12": "f81b2abc736d",
+      "label": "Game page thumbnail B (1376x768 source, saved at 1920x1080)",
+      "file": "marketing/thumbnail-b.png"
+    },
+    {
+      "asset_id": "032b43b8-0d47-4356-8b29-c72facb7ed06",
+      "sha12": "ebfd795a51a1",
+      "label": "Game icon A, hooded avatar (saved at 512x512)",
+      "file": "marketing/icon-a.png"
+    },
+    {
+      "asset_id": "dd625044-1c9d-4697-bec8-daf3b5c88469",
+      "sha12": "7e1af9bc9462",
+      "label": "Game icon B, bold title (saved at 512x512)",
+      "file": "marketing/icon-b.png"
     }
   ]
 }
