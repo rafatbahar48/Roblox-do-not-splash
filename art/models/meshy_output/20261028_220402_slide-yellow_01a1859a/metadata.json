@@ -1,0 +1,54 @@
+{
+  "schema_version": 2,
+  "project_name": "slide-yellow",
+  "folder": "20261028_220402_slide-yellow_01a1859a",
+  "root_task_id": "01a1859a-f11c-712f-96ef-e62803381795",
+  "created_at": "2026-10-29T03:04:02.852Z",
+  "updated_at": "2026-10-29T03:04:21.575Z",
+  "tasks": [
+    {
+      "task_id": "01a1859a-f11c-712f-96ef-e62803381795",
+      "task_type": "retexture",
+      "resource": "retexture",
+      "endpoint": "/openapi/v1/retexture",
+      "stage": "retexture",
+      "parent_task_id": null,
+      "status": "SUCCEEDED",
+      "files": [],
+      "task_json": "task_01a1859a-f11c-712f-96ef-e62803381795.json",
+      "operation_id": null,
+      "created_at": "2026-10-29T03:04:05.810Z",
+      "updated_at": "2026-10-29T03:04:05.810Z"
+    },
+    {
+      "task_id": "01a1859a-f11c-712f-96ef-e62803381795",
+      "task_type": "retexture",
+      "resource": "retexture",
+      "endpoint": "/openapi/v1/retexture",
+      "stage": "preview",
+      "parent_task_id": null,
+      "status": "SUCCEEDED",
+      "files": [
+        "preview.png"
+      ],
+      "task_json": null,
+      "operation_id": null,
+      "created_at": "2026-10-29T03:04:12.108Z",
+      "updated_at": "2026-10-29T03:04:12.108Z"
+    },
+    {
+      "task_id": "01a1859a-f11c-712f-96ef-e62803381795",
+      "task_type": "retexture",
+      "resource": "retexture",
+      "endpoint": "/openapi/v1/retexture",
+      "stage": "delivered",
+      "parent_task_id": null,
+      "status": "SUCCEEDED",
+      "files": [],
+      "task_json": null,
+      "operation_id": null,
+      "created_at": "2026-10-29T03:04:15.412Z",
+      "updated_at": "2026-10-29T03:04:21.575Z"
+    }
+  ]
+}

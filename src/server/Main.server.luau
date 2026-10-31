@@ -1,12 +1,23 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local StarterPlayer = game:GetService("StarterPlayer")
 
+local Config = require(ReplicatedStorage.Shared.Config)
+local Community = require(script.Parent.Community)
 local Effects = require(script.Parent.Effects)
 local Hazards = require(script.Parent.Hazards)
+local Leaderboards = require(script.Parent.Leaderboards)
 local Lurkers = require(script.Parent.Lurkers)
 local MapBuilder = require(script.Parent.MapBuilder)
 local Noise = require(script.Parent.Noise)
+local Parties = require(script.Parent.Parties)
 local Pebbles = require(script.Parent.Pebbles)
 local Progress = require(script.Parent.Progress)
+local Purchases = require(script.Parent.Purchases)
+local Shop = require(script.Parent.Shop)
+local Snowballs = require(script.Parent.Snowballs)
+
+StarterPlayer.CameraMaxZoomDistance = Config.CameraMaxZoom
 
 local layout = MapBuilder.build()
 
@@ -14,7 +25,13 @@ Noise.init(layout)
 Hazards.init(layout)
 Lurkers.init(layout)
 Pebbles.init()
+Leaderboards.init(layout)
 Progress.init(layout)
+Parties.init(layout)
+Shop.init()
+Snowballs.init(layout)
+Purchases.init()
+Community.init()
 Effects.startAmbience()
 
 RunService.Heartbeat:Connect(function(dt)

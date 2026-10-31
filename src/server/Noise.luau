@@ -1,20 +1,25 @@
 -- Tracks how much noise each player is making, and short-lived noises at
 -- points in the world (pebbles). The lurkers listen to both.
 --
--- Each player's noise is published as the "Noise" attribute for the HUD.
+-- Each player's noise is published as the "Noise" attribute for the HUD
+-- (and whether they are in the water as "InWater", for their wading sound), and
+-- "Hushed" is true while a Hush boost keeps them silent.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Effects = require(script.Parent.Effects)
 
 local SETTINGS = Config.Noise
+local CAUSE_MEMORY = 3 -- seconds a loud noise stays "what gave you away"
+local LOOK_INTERVAL = 0.1 -- the most often a player's camera direction is taken
 
 local Noise = {}
 
 local layout
-local states = {} -- [Player] = { noise, inWater, lastVelocityY, room, root, humanoid, reported }
+local states = {} -- [Player] = { noise, inWater, lastVelocityY, room, root, humanoid, reported, hushedUntil, hushed, cause, causeAmount, causeAt, look, lookAt, dry }
 local pointSources = {} -- { position, loudness, room }
 
 local function noiseMultiplier(player)
@@ -26,7 +31,20 @@ function Noise.init(newLayout)
 	layout = newLayout
 
 	local function track(player)
-		states[player] = { noise = 0, inWater = false, lastVelocityY = 0, reported = -1 }
+		states[player] = {
+			noise = 0,
+			inWater = false,
+			lastVelocityY = 0,
+			reported = -1,
+			hushedUntil = 0,
+			hushed = false,
+			cause = nil,
+			causeAmount = 0,
+			causeAt = -math.huge,
+			look = nil, -- which way their camera points, across the ground
+			lookAt = -math.huge,
+			dry = nil, -- where they last stood on dry ground in the stages (a CFrame)
+		}
 	end
 	for _, player in Players:GetPlayers() do
 		track(player)
@@ -34,6 +52,26 @@ function Noise.init(newLayout)
 	Players.PlayerAdded:Connect(track)
 	Players.PlayerRemoving:Connect(function(player)
 		states[player] = nil
+	end)
+
+	-- Where each player's camera points (client/CameraReport.luau), so the
+	-- creature can come at them from where they are looking.
+	Remotes.CameraLook.OnServerEvent:Connect(function(player, direction)
+		local state = states[player]
+		if not state or typeof(direction) ~= "Vector3" then
+			return
+		end
+		local now = os.clock()
+		if now - state.lookAt < LOOK_INTERVAL then
+			return
+		end
+		local flat = Vector3.new(direction.X, 0, direction.Z)
+		local length = flat.Magnitude
+		if length ~= length or length < 0.1 or length > 2 then
+			return
+		end
+		state.lookAt = now
+		state.look = flat / length
 	end)
 end
 
@@ -45,18 +83,51 @@ function Noise.pointSources()
 	return pointSources
 end
 
--- Adds noise to a player, scaled by their difficulty.
-function Noise.add(player, amount)
+-- Adds noise to a player, scaled by their difficulty. Nothing while hushed.
+-- cause ("splash", "wading", "landing" or "creak") is remembered so a caught
+-- player can be told what gave them away: the loudest noise of the last few
+-- seconds, or after a quiet spell, whatever came next.
+function Noise.add(player, amount, cause)
 	local state = states[player]
-	if state then
-		state.noise = math.min(SETTINGS.Max, state.noise + amount * noiseMultiplier(player))
+	if state and os.clock() >= state.hushedUntil then
+		local added = amount * noiseMultiplier(player)
+		state.noise = math.min(SETTINGS.Max, state.noise + added)
+		local now = os.clock()
+		if cause and (now - state.causeAt > CAUSE_MEMORY or added >= state.causeAmount) then
+			state.cause, state.causeAmount, state.causeAt = cause, added, now
+		end
 	end
+end
+
+-- What most recently gave a player away, and how loud they are right now.
+function Noise.causeOf(player)
+	local state = states[player]
+	if not state then
+		return nil, 0
+	end
+	return state.cause, math.floor(state.noise + 0.5)
 end
 
 function Noise.clear(player)
 	local state = states[player]
 	if state then
 		state.noise = 0
+	end
+end
+
+-- Where a player last stood on dry ground in the stages, if anywhere: where
+-- a revive puts them back.
+function Noise.lastDry(player)
+	local state = states[player]
+	return state and state.dry
+end
+
+-- Silences a player completely for a while (the Hush boost).
+function Noise.hush(player, duration)
+	local state = states[player]
+	if state then
+		state.noise = 0
+		state.hushedUntil = math.max(state.hushedUntil, os.clock() + duration)
 	end
 end
 
@@ -82,6 +153,9 @@ function Noise.step(dt)
 
 		if not root or not humanoid or humanoid.Health <= 0 then
 			state.noise = 0
+			if state.inWater then
+				player:SetAttribute("InWater", false)
+			end
 			state.inWater = false
 			state.room = nil
 			state.root = nil
@@ -92,23 +166,29 @@ function Noise.step(dt)
 			local inWater = room ~= nil and layout.inPool(room, position) and position.Y < room.surfaceY + 1.5
 
 			if inWater and not state.inWater then
-				Noise.add(player, SETTINGS.Splash)
+				Noise.add(player, SETTINGS.Splash, "splash")
 				Effects.splash(Vector3.new(position.X, room.surfaceY, position.Z), 8)
 			end
 			setWalkSpeed(humanoid, if inWater then Config.Wading.WalkSpeed else Config.WalkSpeed)
 
 			if inWater then
-				Noise.add(player, SETTINGS.WadingPerSecond * dt)
+				Noise.add(player, SETTINGS.WadingPerSecond * dt, "wading")
 			else
+				if room and humanoid.FloorMaterial ~= Enum.Material.Air then
+					state.dry = root.CFrame
+				end
 				-- A hard landing: falling fast last frame, stopped this frame.
 				local velocityY = root.AssemblyLinearVelocity.Y
 				if state.lastVelocityY < -SETTINGS.HardLandingSpeed and velocityY > -5 then
 					local extra = (-state.lastVelocityY - SETTINGS.HardLandingSpeed) * SETTINGS.HardLandingPerStud
-					Noise.add(player, math.min(extra, SETTINGS.HardLandingMax))
+					Noise.add(player, math.min(extra, SETTINGS.HardLandingMax), "landing")
 				end
 			end
 
 			state.lastVelocityY = root.AssemblyLinearVelocity.Y
+			if inWater ~= state.inWater then
+				player:SetAttribute("InWater", inWater)
+			end
 			state.inWater = inWater
 			state.room = room
 			state.root = root
@@ -120,6 +200,11 @@ function Noise.step(dt)
 		if rounded ~= state.reported then
 			state.reported = rounded
 			player:SetAttribute("Noise", rounded)
+		end
+		local hushed = os.clock() < state.hushedUntil
+		if hushed ~= state.hushed then
+			state.hushed = hushed
+			player:SetAttribute("Hushed", hushed)
 		end
 	end
 

@@ -3,3 +3,8 @@
 *.rbxl.lock
 *.rbxlx.lock
 .DS_Store
+
+# Copies of art/models/*.glb gathered in one place for Studio's Import 3D.
+art/models/import/
+# Meshy task snapshots hold short-lived signed download links.
+art/models/meshy_output/**/task_*.json

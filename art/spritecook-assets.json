@@ -1,0 +1,376 @@
+{
+  "assets": [
+    {
+      "asset_id": "b727c35b-14a4-4a87-b24d-46777b0a1ca6",
+      "sha12": "2c408d00c78d",
+      "label": "Splash Park lobby concept",
+      "file": "concepts/splash-park-lobby.png"
+    },
+    {
+      "asset_id": "ec118cb1-1e51-43dd-89cc-eac393ebbbcf",
+      "sha12": "0655b0213284",
+      "label": "HUD buttons sheet",
+      "file": "ui/hud-buttons-sheet.png"
+    },
+    {
+      "asset_id": "daa182b3-304a-4021-b630-751ccea8abac",
+      "sha12": "5a426425ef8e",
+      "label": "Shop button",
+      "file": "ui/button-shop.png"
+    },
+    {
+      "asset_id": "a3170912-e599-455f-9846-d79b4612f74f",
+      "sha12": "8d6e420d3604",
+      "label": "Wear button",
+      "file": "ui/button-wear.png"
+    },
+    {
+      "asset_id": "793e5302-d8e8-4b40-8e84-be3be90dbe4c",
+      "sha12": "bca3a6515688",
+      "label": "Records button",
+      "file": "ui/button-records.png"
+    },
+    {
+      "asset_id": "f3b8974c-203f-4c68-a15e-535dc7a05187",
+      "sha12": "e3120ff94499",
+      "label": "Settings button",
+      "file": "ui/button-settings.png"
+    },
+    {
+      "asset_id": "14583863-a00f-464a-b85d-7ab73f24eb65",
+      "sha12": "25bbc77c440c",
+      "label": "Updraft boost button",
+      "file": "ui/boost-updraft.png"
+    },
+    {
+      "asset_id": "29dce4b1-84cf-48c8-acbc-ede3e7336daf",
+      "sha12": "3c1fff63c8ec",
+      "label": "Hush boost button",
+      "file": "ui/boost-hush.png"
+    },
+    {
+      "asset_id": "252bf8ce-d872-4f38-adb9-976f8f1a4290",
+      "sha12": "4b6374d16d6a",
+      "label": "Pebble button",
+      "file": "ui/button-pebble.png"
+    },
+    {
+      "asset_id": "b69d4d6d-9b42-4ca9-bec9-251988d0874b",
+      "sha12": "c6a1bf35e048",
+      "label": "Pearl currency icon",
+      "file": "ui/icon-pearl.png"
+    },
+    {
+      "asset_id": "9173bcf7-39a0-43b9-ad0c-8820087e99e3",
+      "sha12": "11a8d39f6cf1",
+      "label": "Clean slide reference for Meshy",
+      "file": "meshy-refs/slide-clean.png"
+    },
+    {
+      "asset_id": "25d72e62-2242-4d53-84a6-147330ba9b3a",
+      "sha12": "add79d7d3dc9",
+      "label": "UI kit: window",
+      "file": "ui/kit/parts/window.png"
+    },
+    {
+      "asset_id": "031a3963-a407-4b10-8785-843db5620dc2",
+      "sha12": "611e51e3af77",
+      "label": "UI kit: ribbon",
+      "file": "ui/kit/parts/ribbon.png"
+    },
+    {
+      "asset_id": "96408d6d-fd7b-4bea-9517-622e863794f5",
+      "sha12": "6cb35d6c17c8",
+      "label": "UI kit: close",
+      "file": "ui/kit/parts/close.png"
+    },
+    {
+      "asset_id": "7b924c33-6679-48f3-875f-ab47c45ac8e8",
+      "sha12": "c8a960ba77fb",
+      "label": "UI kit: button_pink",
+      "file": "ui/kit/parts/button_pink.png"
+    },
+    {
+      "asset_id": "ec7b14c3-7abf-4817-bd4a-a3912708b76a",
+      "sha12": "ccf189f89760",
+      "label": "UI kit: button_mint",
+      "file": "ui/kit/parts/button_mint.png"
+    },
+    {
+      "asset_id": "55bc0c67-4dd5-4da1-a52f-75d2e8cf595e",
+      "sha12": "cc70e97a165f",
+      "label": "UI kit: button_lemon",
+      "file": "ui/kit/parts/button_lemon.png"
+    },
+    {
+      "asset_id": "3a5ba55f-5f3b-4b55-8b01-b07035c0e079",
+      "sha12": "0479ee4307dd",
+      "label": "UI kit: button_white",
+      "file": "ui/kit/parts/button_white.png"
+    },
+    {
+      "asset_id": "31d61bae-4029-4a94-a3ee-2a1b57a60429",
+      "sha12": "19fbe6e4bfc9",
+      "label": "UI kit: button_sky",
+      "file": "ui/kit/parts/button_sky.png"
+    },
+    {
+      "asset_id": "62f95f16-8eac-4970-8ff5-c7da4eeb4af1",
+      "sha12": "3399a77df54c",
+      "label": "UI kit: button_grey",
+      "file": "ui/kit/parts/button_grey.png"
+    },
+    {
+      "asset_id": "6a435d1a-f61a-4dd7-9fc6-7c82ee3df0e0",
+      "sha12": "1df5dce010cf",
+      "label": "UI kit: minus",
+      "file": "ui/kit/parts/minus.png"
+    },
+    {
+      "asset_id": "d7ca9384-0994-4790-a122-29fa1f7d5440",
+      "sha12": "0979c61ddef8",
+      "label": "UI kit: plus",
+      "file": "ui/kit/parts/plus.png"
+    },
+    {
+      "asset_id": "7c183e85-4040-4551-ab2d-3be767915d76",
+      "sha12": "226d99a30b9f",
+      "label": "UI kit: toggle_on",
+      "file": "ui/kit/parts/toggle_on.png"
+    },
+    {
+      "asset_id": "d72ca2f1-b37a-4c07-a3bb-bdaf225f8656",
+      "sha12": "14261d377038",
+      "label": "UI kit: toggle_off",
+      "file": "ui/kit/parts/toggle_off.png"
+    },
+    {
+      "asset_id": "e6c44663-ad61-4cea-8559-52cf3155adc4",
+      "sha12": "b227adc962b4",
+      "label": "UI kit: card",
+      "file": "ui/kit/parts/card.png"
+    },
+    {
+      "asset_id": "94a05df3-5171-45d4-bc58-1e40dbf23f8a",
+      "sha12": "07de80224b9c",
+      "label": "UI kit: well",
+      "file": "ui/kit/parts/well.png"
+    },
+    {
+      "asset_id": "19e00e7b-824d-48ee-979c-75fd774b8250",
+      "sha12": "216282a7423a",
+      "label": "UI kit: tile",
+      "file": "ui/kit/parts/tile.png"
+    },
+    {
+      "asset_id": "0305aa17-6464-40ac-aef1-817fc8d6eb16",
+      "sha12": "fc2397cd0045",
+      "label": "UI kit: plus_mint",
+      "file": "ui/kit/parts/plus_mint.png"
+    },
+    {
+      "asset_id": "63d5c386-f350-439e-85d7-d0b42a9e46ab",
+      "sha12": "d96941cb7eca",
+      "label": "UI kit: stat_footprints",
+      "file": "ui/kit/parts/stat_footprints.png"
+    },
+    {
+      "asset_id": "3681c954-1696-4cfc-94a4-288c01e8e8a6",
+      "sha12": "b60210d78c01",
+      "label": "UI kit: stat_shell",
+      "file": "ui/kit/parts/stat_shell.png"
+    },
+    {
+      "asset_id": "8e95090b-3f3f-41f0-9a1b-f67878569678",
+      "sha12": "fa5ff5f21a84",
+      "label": "UI kit: stat_trophy",
+      "file": "ui/kit/parts/stat_trophy.png"
+    },
+    {
+      "asset_id": "60ffc705-7f17-4586-875b-f280328ce8aa",
+      "sha12": "e636f596f1c0",
+      "label": "UI kit: stat_stopwatch",
+      "file": "ui/kit/parts/stat_stopwatch.png"
+    },
+    {
+      "asset_id": "7648c03c-8871-48cc-a594-63f2809de451",
+      "sha12": "3946dfc54b1f",
+      "label": "UI kit: stat_skull",
+      "file": "ui/kit/parts/stat_skull.png"
+    },
+    {
+      "asset_id": "f4b14beb-988a-4c40-bc70-922205aebf9c",
+      "sha12": "cb4a7c4d2073",
+      "label": "UI kit: stat_wave",
+      "file": "ui/kit/parts/stat_wave.png"
+    },
+    {
+      "asset_id": "fdf24795-2195-47bd-9173-79aea325f13b",
+      "sha12": "206b4dd285bf",
+      "label": "UI kit: dock_bag",
+      "file": "ui/kit/parts/dock_bag.png"
+    },
+    {
+      "asset_id": "3b0258e0-0d9f-484b-ae3f-960b7a067597",
+      "sha12": "61cc607ed0c8",
+      "label": "UI kit: dock_stats",
+      "file": "ui/kit/parts/dock_stats.png"
+    },
+    {
+      "asset_id": "57ffec90-272d-45f1-8722-5975ee5cb5d5",
+      "sha12": "ff1d62cfa7b5",
+      "label": "UI kit: dock_settings",
+      "file": "ui/kit/parts/dock_settings.png"
+    },
+    {
+      "asset_id": "762cd83f-855b-4c3a-9119-32844d0b90ab",
+      "sha12": "a94dc4ca6824",
+      "label": "UI kit: dock_invite",
+      "file": "ui/kit/parts/dock_invite.png"
+    },
+    {
+      "asset_id": "7f1a259a-b9de-4e0f-b40a-c28017a34bcd",
+      "sha12": "7b60087e2423",
+      "label": "UI kit: dock_shop",
+      "file": "ui/kit/parts/dock_shop.png"
+    },
+    {
+      "asset_id": "14b39681-c7bc-47d3-a632-05df67524304",
+      "sha12": "676cefbe0212",
+      "label": "Robux shop icons sheet (cut into ui/kit/parts/robux_*.png)",
+      "file": "ui/kit/robux-icons-sheet.png"
+    },
+    {
+      "asset_id": "c2990a0f-3a37-499e-8baf-69d3afd32d5f",
+      "sha12": "1a8a3d4b1206",
+      "label": "Sparkle sheet (cut into ui/kit/parts/sparkle.png; its sunburst was lost)",
+      "file": "ui/kit/sunburst-sparkle-sheet.png"
+    },
+    {
+      "asset_id": "aa781d91-a19f-4d1f-8391-76b5c938c930",
+      "sha12": "74538baa9209",
+      "label": "Sunburst on black (made white with brightness as alpha: ui/kit/parts/sunburst.png)",
+      "file": "ui/kit/sunburst-on-black.png"
+    },
+    {
+      "asset_id": "8b57beeb-cead-490f-956f-1baa9197ecd6",
+      "sha12": "639ad002c6e1",
+      "label": "Robux shop icons, gold coin version (cut into ui/kit/parts/robux_*.png)",
+      "file": "ui/kit/coin-icons-sheet.png"
+    },
+    {
+      "asset_id": "dcb9bcbd-729f-4554-9f13-0c4a299fb0a5",
+      "sha12": "e8c9132145c2",
+      "label": "Coin counter (cut into ui/kit/parts/coin_counter.png)",
+      "file": "ui/kit/coin-counter-sheet.png"
+    },
+    {
+      "asset_id": "a8caf154-96ef-4ab8-a06e-e346fee1b1da",
+      "sha12": "b0f12e425fc1",
+      "label": "Gold coin with a wave",
+      "file": "ui/kit/parts/coin.png"
+    },
+    {
+      "asset_id": "b136ce26-7305-49da-880a-388ea80c69b3",
+      "sha12": "58430db7cac6",
+      "label": "Snowball button (edited from the pebble button)",
+      "file": "ui/kit/parts/action_snowball.png"
+    },
+    {
+      "asset_id": "0f2eb91b-e9b0-4fe6-8b9e-c2c73ba07cc4",
+      "sha12": "871d5b9f277b",
+      "label": "Christmas cottage shop concept (Meshy reference for the lobby shop)",
+      "file": "meshy-refs/lobby-cottage-shop.png"
+    },
+    {
+      "asset_id": "75470e80-6cd0-4f41-a8d5-04e06f3898af",
+      "sha12": "839949dc793b",
+      "label": "SHOP sign for the cottage shop",
+      "file": "ui/kit/parts/shop_sign.png"
+    },
+    {
+      "asset_id": "0a0e4ed8-f807-4a8c-a10e-328f38bc358b",
+      "sha12": "be35722566c8",
+      "label": "Christmas event button (edited from the shop dock button)",
+      "file": "ui/kit/parts/button_christmas.png"
+    },
+    {
+      "asset_id": "6c43c4c6-f343-4ec3-b60c-60892e290048",
+      "sha12": "349735add3b4",
+      "label": "2x Coins HUD button (edited from the shop dock button)",
+      "file": "ui/kit/parts/button_double_coins.png"
+    },
+    {
+      "asset_id": "6932771c-32cc-4b47-8c52-406546ba11b3",
+      "sha12": "182d4c43b35c",
+      "label": "Frostbite skin icon",
+      "file": "ui/kit/parts/icon_frostbite.png"
+    },
+    {
+      "asset_id": "ee146aca-ed8a-4550-900a-a8642ba3e5e2",
+      "sha12": "c183850b7b24",
+      "label": "Santa Hat icon",
+      "file": "ui/kit/parts/icon_santa_hat.png"
+    },
+    {
+      "asset_id": "606ac064-bf30-4dda-a111-b4cab92733f0",
+      "sha12": "d384d3f933c1",
+      "label": "Christmas Bundle picture",
+      "file": "ui/kit/parts/christmas_bundle.png"
+    },
+    {
+      "asset_id": "2500090e-d703-45d7-864a-83450638b9f7",
+      "sha12": "505b91a94b93",
+      "label": "Red LIMITED ribbon (blank)",
+      "file": "ui/kit/parts/ribbon_red.png"
+    },
+    {
+      "asset_id": "75eab11f-03c9-47a0-aaeb-ff3d7a3671fa",
+      "sha12": "90fcc3826af8",
+      "label": "UI kit: dock_community (Join button, edited from dock_invite)",
+      "file": "ui/kit/parts/dock_community.png"
+    },
+    {
+      "asset_id": "4f824340-7ae4-4992-9104-de23b135c7e9",
+      "sha12": "9b63254d269f",
+      "label": "Drowned forest concept (reference for key art)",
+      "file": "concepts/drowned-forest/forest/image_0.png"
+    },
+    {
+      "asset_id": "48f92d42-68ec-4b30-b531-34ec2fd18703",
+      "sha12": "51e34741cb61",
+      "label": "Drowned forest chase concept (reference for key art)",
+      "file": "concepts/drowned-forest/chase/image_0.png"
+    },
+    {
+      "asset_id": "f9d3360f-a87b-4f5b-8fac-5dfd55233088",
+      "sha12": "714b3aa85e1e",
+      "label": "Creature model preview (reference for key art)",
+      "file": "models/flesh-creature-preview.png"
+    },
+    {
+      "asset_id": "2832fd1e-d029-4cd9-a1fc-0acdd456c63a",
+      "sha12": "19ad77bd1ca4",
+      "label": "Game page thumbnail A (1376x768 source, saved at 1920x1080)",
+      "file": "marketing/thumbnail-a.png"
+    },
+    {
+      "asset_id": "fd1e77ee-2346-47f6-9f2e-86535971ab16",
+      "sha12": "f81b2abc736d",
+      "label": "Game page thumbnail B (1376x768 source, saved at 1920x1080)",
+      "file": "marketing/thumbnail-b.png"
+    },
+    {
+      "asset_id": "032b43b8-0d47-4356-8b29-c72facb7ed06",
+      "sha12": "ebfd795a51a1",
+      "label": "Game icon A, hooded avatar (saved at 512x512)",
+      "file": "marketing/icon-a.png"
+    },
+    {
+      "asset_id": "dd625044-1c9d-4697-bec8-daf3b5c88469",
+      "sha12": "7e1af9bc9462",
+      "label": "Game icon B, bold title (saved at 512x512)",
+      "file": "marketing/icon-b.png"
+    }
+  ]
+}

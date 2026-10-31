@@ -2,6 +2,7 @@
 
 local Debris = game:GetService("Debris")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local SoundService = game:GetService("SoundService")
 local TweenService = game:GetService("TweenService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
@@ -9,6 +10,21 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Effects = {}
 
 local folder
+
+-- Sounds go in groups so each player can turn them off in their settings
+-- (client/Settings.luau). Lobby music has a group of its own.
+local function soundGroup(name)
+	local group = SoundService:FindFirstChild(name)
+	if not group then
+		group = Instance.new("SoundGroup")
+		group.Name = name
+		group.Parent = SoundService
+	end
+	return group
+end
+for _, name in { "Music", "Ambience", "Effects" } do
+	soundGroup(name)
+end
 
 local function getFolder()
 	if not folder or not folder.Parent then
@@ -19,7 +35,8 @@ local function getFolder()
 	return folder
 end
 
-function Effects.sound(name, position)
+-- Plays a Config.Sounds sound at a spot, for everyone near enough to hear.
+function Effects.sound(name, position, volume)
 	local id = Config.Sounds[name]
 	if not id or id == "" then
 		return
@@ -30,14 +47,17 @@ function Effects.sound(name, position)
 
 	local sound = Instance.new("Sound")
 	sound.SoundId = id
+	sound.Volume = volume or 0.6
 	sound.RollOffMaxDistance = 140
+	sound.SoundGroup = soundGroup("Effects")
 	sound.Parent = attachment
 	sound:Play()
 	Debris:AddItem(attachment, 8)
 end
 
--- A white disc on the water that spreads out and fades.
-function Effects.splash(position, radius)
+-- A white disc on the water that spreads out and fades, with a splash
+-- (Config.Sounds.Splash, or the sound named).
+function Effects.splash(position, radius, soundName)
 	local ring = Instance.new("Part")
 	ring.Name = "Splash"
 	ring.Shape = Enum.PartType.Cylinder
@@ -59,7 +79,7 @@ function Effects.splash(position, radius)
 	})
 	tween:Play()
 	Debris:AddItem(ring, 1)
-	Effects.sound("Splash", position)
+	Effects.sound(soundName or "Splash", position, 0.8)
 end
 
 function Effects.startAmbience()
@@ -72,6 +92,7 @@ function Effects.startAmbience()
 	sound.SoundId = id
 	sound.Looped = true
 	sound.Volume = 0.4
+	sound.SoundGroup = soundGroup("Ambience")
 	sound.Parent = workspace
 	sound:Play()
 end

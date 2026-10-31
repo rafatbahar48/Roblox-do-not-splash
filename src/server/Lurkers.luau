@@ -1,4 +1,4 @@
--- Spawns the lurkers for every room and steps them each frame.
+-- Spawns the creature (one, for the whole forest) and steps it each frame.
 -- Players being chased get the "Hunted" attribute for the HUD.
 
 local Players = game:GetService("Players")
@@ -14,12 +14,17 @@ function Lurkers.init(layout)
 	folder.Name = "Lurkers"
 	folder.Parent = workspace
 
-	for _, room in layout.rooms do
-		local rng = Random.new(room.index * 104729)
-		for _ = 1, room.stage.lurkers or 1 do
-			table.insert(lurkers, Lurker.new(room, folder, rng))
-		end
-	end
+	-- Where it can go: the water of every stage, end to end.
+	local first, last = layout.rooms[1], layout.rooms[#layout.rooms]
+	local area = {
+		poolStart = first.poolStart,
+		poolEnd = last.poolEnd,
+		roamHalfWidth = first.roamHalfWidth,
+		floorY = first.floorY,
+		surfaceY = first.surfaceY,
+		roomAt = layout.roomAt,
+	}
+	table.insert(lurkers, Lurker.new(area, folder, Random.new(104729)))
 end
 
 function Lurkers.step(dt)

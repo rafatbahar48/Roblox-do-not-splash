@@ -8,6 +8,21 @@ local NAMES = {
 	"ThrowPebble", -- client -> server: Vector3 aim point
 	"Restart", -- client -> server: go back to stage 1
 	"Notify", -- server -> client: kind, text
+	"BuyItem", -- client -> server: item id
+	"EquipItem", -- client -> server: slot ("skin" or "accessory"), item id or nil to take it off
+	"UseBoost", -- client -> server: boost id
+	"BoostStarted", -- server -> client: boost id, duration
+	"Caught", -- server -> client: where it struck, what it heard ("splash", ...), how loud you were, its anchor
+	"PartySetup", -- server -> client: party door number to set up a party on and its mode (Config.Doors), or nil to close the pop-up
+	"CreateParty", -- client -> server: party door number, size, difficulty name (ignored where the door decides), friends only
+	"LeaveParty", -- client -> server: leave your party, or cancel setting one up
+	"PartyStatus", -- server -> client: { count, size, difficulty, practice, leavesAt, owner } for your party, or nil
+	"CameraLook", -- client -> server: which way your camera points, across the ground (unit Vector3)
+	"SaveSetting", -- client -> server: setting id, value (see Config.Settings)
+	"DeathChoice", -- client -> server: "revive", "bleed", "lobby", or "buying" (a Robux revive is on its way), after being caught
+	"ThrowSnowball", -- client -> server: Vector3 aim point, in the Christmas lobby
+	"SnowballHit", -- server -> client: a snowball hit you
+	"ClaimCommunity", -- client -> server: may have just joined the community; check and pay its reward
 }
 
 local folder
