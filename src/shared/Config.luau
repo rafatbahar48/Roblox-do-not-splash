@@ -2,7 +2,7 @@
 
 local Config = {}
 
-Config.GameName = "Still Water"
+Config.GameName = "The Silent Swamp"
 Config.Tagline = "Stay out of the water. It is listening."
 
 Config.DataStoreName = "StillWater_v1"

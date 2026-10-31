@@ -539,7 +539,7 @@ local function buildFacade(folder)
 	end
 
 	-- The game's sign in neon, over the archways.
-	local sign = screen(folder, "GameSign", Vector3.new(36, 7, 0.4), Vector3.new(0, TILE_TOP + 22.8, FACE - 0.3), -Vector3.zAxis, C.pink)
+	local sign = screen(folder, "GameSign", Vector3.new(40, 7, 0.4), Vector3.new(0, TILE_TOP + 22.8, FACE - 0.3), -Vector3.zAxis, C.pink)
 	bubbleText(sign, 6, { Position = UDim2.fromScale(0.03, 0.06), Size = UDim2.fromScale(0.94, 0.62), Font = Enum.Font.FredokaOne, TextColor3 = C.lemon, Text = string.upper(Config.GameName) })
 	label(sign, { Position = UDim2.fromScale(0.08, 0.72), Size = UDim2.fromScale(0.84, 0.2), Font = Enum.Font.FredokaOne, TextColor3 = C.aqua, Text = Config.Tagline })
 	glow(folder, Vector3.new(0, TILE_TOP + 22, FACE - 6), C.pink, 22, 0.4)
