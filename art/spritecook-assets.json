@@ -287,6 +287,42 @@
       "sha12": "839949dc793b",
       "label": "SHOP sign for the cottage shop",
       "file": "ui/kit/parts/shop_sign.png"
+    },
+    {
+      "asset_id": "0a0e4ed8-f807-4a8c-a10e-328f38bc358b",
+      "sha12": "be35722566c8",
+      "label": "Christmas event button (edited from the shop dock button)",
+      "file": "ui/kit/parts/button_christmas.png"
+    },
+    {
+      "asset_id": "6c43c4c6-f343-4ec3-b60c-60892e290048",
+      "sha12": "349735add3b4",
+      "label": "2x Coins HUD button (edited from the shop dock button)",
+      "file": "ui/kit/parts/button_double_coins.png"
+    },
+    {
+      "asset_id": "6932771c-32cc-4b47-8c52-406546ba11b3",
+      "sha12": "182d4c43b35c",
+      "label": "Frostbite skin icon",
+      "file": "ui/kit/parts/icon_frostbite.png"
+    },
+    {
+      "asset_id": "ee146aca-ed8a-4550-900a-a8642ba3e5e2",
+      "sha12": "c183850b7b24",
+      "label": "Santa Hat icon",
+      "file": "ui/kit/parts/icon_santa_hat.png"
+    },
+    {
+      "asset_id": "606ac064-bf30-4dda-a111-b4cab92733f0",
+      "sha12": "d384d3f933c1",
+      "label": "Christmas Bundle picture",
+      "file": "ui/kit/parts/christmas_bundle.png"
+    },
+    {
+      "asset_id": "2500090e-d703-45d7-864a-83450638b9f7",
+      "sha12": "505b91a94b93",
+      "label": "Red LIMITED ribbon (blank)",
+      "file": "ui/kit/parts/ribbon_red.png"
     }
   ]
 }

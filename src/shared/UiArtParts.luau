@@ -49,4 +49,10 @@ return {
 	robux_kit = { atlas = "icons", x = 170, y = 828, w = 161, h = 149, slice = nil },
 	sunburst = { atlas = "icons", x = 0, y = 0, w = 256, h = 256, slice = nil },
 	sparkle = { atlas = "icons", x = 486, y = 828, w = 93, h = 99, slice = nil },
+	button_christmas = { atlas = "event", x = 406, y = 0, w = 172, h = 173, slice = nil },
+	button_double_coins = { atlas = "event", x = 582, y = 0, w = 170, h = 169, slice = nil },
+	icon_frostbite = { atlas = "event", x = 756, y = 0, w = 81, h = 113, slice = nil },
+	icon_santa_hat = { atlas = "event", x = 841, y = 0, w = 117, h = 99, slice = nil },
+	christmas_bundle = { atlas = "event", x = 0, y = 0, w = 402, h = 362, slice = nil },
+	ribbon_red = { atlas = "event", x = 0, y = 366, w = 243, h = 96, slice = nil },
 }

@@ -25,6 +25,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Perks = require(ReplicatedStorage.Shared.Perks)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local RobuxCatalog = require(ReplicatedStorage.Shared.RobuxCatalog)
+local ChristmasBundle = require(script.Parent.ChristmasBundle)
 local ItemIcons = require(script.Parent.ItemIcons)
 local ShopPreview = require(script.Parent.ShopPreview)
 local Windows = require(script.Parent.Windows)
@@ -101,6 +102,11 @@ local function onCardPressed(item)
 		-- More of it, from the shop.
 		mode = "shop"
 		ShopUi.render()
+		return
+	end
+	if item.exclusive and not ownedSet()[item.id] then
+		-- Not for coins: it comes in its bundle.
+		ChristmasBundle.open()
 		return
 	end
 	if item.kind == "boost" or not ownedSet()[item.id] then
@@ -483,7 +489,10 @@ function ShopUi.render()
 	local anyShown = false
 	for _, item in Catalog.items do
 		local card = cards[item.id]
-		local shown = item.kind == currentKind and (mode == "shop" or inBag(item, owned))
+		-- A bundle's exclusive shows while the bundle is on sale, and after
+		-- that only to those who have it.
+		local offered = not item.exclusive or owned[item.id] or ChristmasBundle.onSale()
+		local shown = item.kind == currentKind and offered and (mode == "shop" or inBag(item, owned))
 		card.holder.Visible = shown
 		anyShown = anyShown or shown
 		-- What the button says and does. A greyed button still sends its
@@ -509,6 +518,9 @@ function ShopUi.render()
 			wearing = worn[item.kind] == item.id
 			statusText, statusColor = if wearing then "Wearing" else "Owned", OWNED
 			label, color = if wearing then "Take off" else "Wear", if wearing then WHITE else Candy.MINT
+		elseif item.exclusive then
+			statusText = "Christmas Bundle only"
+			label, color = "See the bundle", Candy.PINK
 		elseif coins >= item.price then
 			showPrice = true
 		else
@@ -520,7 +532,7 @@ function ShopUi.render()
 		Candy.paint(card.button, color, if flat then WHITE else INK, flat)
 		card.button.Label.Text = if showPrice then "" else label
 		card.price.Visible = showPrice
-		card.priceText.Text = tostring(item.price)
+		card.priceText.Text = tostring(item.price or "")
 	end
 
 	for _, card in robuxCards do

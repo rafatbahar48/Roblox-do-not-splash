@@ -15,6 +15,12 @@
 --         server/Progress.luau's grant
 --
 -- What the passes do is in Config.PassPerks and shared/Perks.luau.
+--
+-- Bundles are Developer Products too (ids in Config.Products), sold for a
+-- while, until endsAt, from their own window (client/ChristmasBundle.luau)
+-- and the HUD's event button rather than the Robux tab. gives can include
+-- items (catalog ids) that are only had this way; perks are the lines the
+-- window shows: a UI kit icon, a name, a line about it and a tag.
 
 local RobuxCatalog = {}
 
@@ -111,9 +117,28 @@ RobuxCatalog.passes = {
 	},
 }
 
+RobuxCatalog.bundles = {
+	{
+		id = "ChristmasBundle",
+		rarity = "Legendary",
+		name = "Christmas Bundle",
+		endsAt = DateTime.fromUniversalTime(2027, 1, 1).UnixTimestamp, -- midnight on New Year's Day, UTC
+		gives = { coins = 1000, selfRevives = 3, items = { "frostbite", "santa_hat" } },
+		perks = {
+			{ art = "icon_frostbite", name = "Frostbite Skin", blurb = "Exclusive. Frozen solid, still moving.", tag = "FOREVER" },
+			{ art = "icon_santa_hat", name = "Santa Hat", blurb = "Exclusive. Red, fluffy, a bit floppy.", tag = "FOREVER" },
+			{ art = "robux_coins_chest", name = "1,000 Coins", blurb = "Spend them on anything in the shop.", tag = "+1,000" },
+			{ art = "robux_self_revive", name = "3 Self-Revives", blurb = "Get back up when it catches you.", tag = "×3" },
+		},
+	},
+}
+
 RobuxCatalog.productById = {}
 for _, product in RobuxCatalog.products do
 	RobuxCatalog.productById[product.id] = product
+end
+for _, bundle in RobuxCatalog.bundles do
+	RobuxCatalog.productById[bundle.id] = bundle
 end
 RobuxCatalog.passById = {}
 for _, pass in RobuxCatalog.passes do

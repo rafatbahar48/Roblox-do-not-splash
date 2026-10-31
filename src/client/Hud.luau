@@ -1,11 +1,15 @@
 -- The on-screen HUD, made of the SpriteCook UI kit's art (shared/Candy.luau):
 --
---   top left      coins (its + opens the shop), and which stage you are on
+--   top left      which stage you are on
+--   bottom left   coins (its + opens the shop); top left on touch screens,
+--                 clear of the thumbstick
 --   top middle    the run timer, and "IT HEARD YOU" while something hunts you
 --   top right     the difficulty buttons
---   left          the noise meter (only out in the forest)
---   bottom        the dock: shop, bag, stats, settings, invite (not out in
---                 the forest: in the lobby, the cave and the way out)
+--   left          big Shop and Bag buttons, or out in the forest the noise
+--                 meter
+--   right         the Christmas Bundle (LIMITED, with how long is left) and
+--                 2x Coins, and Stats, Settings and Invite (not out in the
+--                 forest: in the lobby, the cave and the way out)
 --   bottom right  pebble, Updraft and Hush buttons (only out in the forest);
 --                 in the Christmas lobby, the snowball button
 --
@@ -28,6 +32,7 @@ local Zones = require(ReplicatedStorage.Shared.Zones)
 local Boosts = require(script.Parent.Boosts)
 local SettingsUi = require(script.Parent.SettingsUi)
 local Sounds = require(script.Parent.Sounds)
+local ChristmasBundle = require(script.Parent.ChristmasBundle)
 local ShopUi = require(script.Parent.ShopUi)
 local StatsUi = require(script.Parent.StatsUi)
 local Throw = require(script.Parent.Throw)
@@ -40,7 +45,9 @@ local GREYED = Color3.fromRGB(150, 150, 165) -- tints an action button with none
 local DIFFICULTY_COLORS = { Easy = Candy.MINT, Normal = Candy.LEMON, Hard = Candy.PINK }
 local SEGMENTS = 6 -- in the noise meter
 local MARGIN = 16
-local DOCK_BUTTON = 84
+local SIDE_BUTTON = 112 -- Shop and Bag, on the left
+local GRID_BUTTON = 92 -- the buttons on the right
+local GRID_GAP = 12
 
 local Hud = {}
 
@@ -112,11 +119,13 @@ function Hud.start()
 		Parent = gui,
 	})
 
-	-- Top left: coins, and the stage under them --------------------------------
+	-- Bottom left: coins (top left on touch screens); top left: the stage ----
 
+	local touch = UserInputService.TouchEnabled
 	local coinsPill = Candy.art("coin_counter", {
 		Name = "Coins",
-		Position = UDim2.fromOffset(MARGIN, 10),
+		AnchorPoint = Vector2.new(0, if touch then 0 else 1),
+		Position = if touch then UDim2.fromOffset(MARGIN, 10) else UDim2.new(0, MARGIN, 1, -MARGIN),
 		Size = UDim2.fromOffset(200, 64),
 		Parent = gui,
 	}, 64)
@@ -145,7 +154,7 @@ function Hud.start()
 
 	local stagePill = Candy.art("button_white", {
 		Name = "Stage",
-		Position = UDim2.fromOffset(MARGIN, 82),
+		Position = UDim2.fromOffset(MARGIN, if touch then 82 else 12),
 		Size = UDim2.fromOffset(0, 40),
 		AutomaticSize = Enum.AutomaticSize.X,
 		Parent = gui,
@@ -241,41 +250,92 @@ function Hud.start()
 		Parent = noisePanel,
 	})
 
-	-- Bottom: the dock -------------------------------------------------------------
+	-- Left: Shop and Bag, big ----------------------------------------------------
 
-	local dock = create("Frame", {
-		Name = "Dock",
-		AnchorPoint = Vector2.new(0.5, 1),
-		Position = UDim2.new(0.5, 0, 1, -14),
-		Size = UDim2.fromOffset(5 * DOCK_BUTTON + 4 * 12, DOCK_BUTTON),
+	local leftDock = create("Frame", {
+		Name = "LeftDock",
+		AnchorPoint = Vector2.new(0, 0.5),
+		Position = UDim2.new(0, MARGIN, 0.5, 0),
+		Size = UDim2.fromOffset(SIDE_BUTTON, SIDE_BUTTON * 2 + 14),
 		BackgroundTransparency = 1,
 		Parent = gui,
 	}, {
 		create("UIListLayout", {
-			FillDirection = Enum.FillDirection.Horizontal,
-			HorizontalAlignment = Enum.HorizontalAlignment.Center,
-			VerticalAlignment = Enum.VerticalAlignment.Center,
-			Padding = UDim.new(0, 12),
+			FillDirection = Enum.FillDirection.Vertical,
+			Padding = UDim.new(0, 14),
 			SortOrder = Enum.SortOrder.LayoutOrder,
 		}),
 	})
-	for order, entry in {
-		{ art = "dock_shop", name = "Shop", key = "B", open = function()
-			ShopUi.open("shop")
-		end },
-		{ art = "dock_bag", name = "Bag", open = function()
-			ShopUi.open("bag")
-		end },
-		{ art = "dock_stats", name = "Stats", open = StatsUi.toggle },
-		{ art = "dock_settings", name = "Settings", open = SettingsUi.toggle },
-		{ art = "dock_invite", name = "Invite", open = inviteFriends },
-	} do
-		local face = pictureButton(dock, entry.art, entry.name, DOCK_BUTTON, { LayoutOrder = order })
-		face.Activated:Connect(entry.open)
-		if entry.key and UserInputService.KeyboardEnabled then
-			Candy.badge(face, entry.key, 28, UDim2.fromOffset(-6, -6))
-		end
+	local shopButton = pictureButton(leftDock, "dock_shop", "Shop", SIDE_BUTTON, { LayoutOrder = 1 })
+	shopButton.Activated:Connect(function()
+		ShopUi.open("shop")
+	end)
+	if UserInputService.KeyboardEnabled then
+		Candy.badge(shopButton, "B", 30, UDim2.fromOffset(-6, -6))
 	end
+	local bagButton = pictureButton(leftDock, "dock_bag", "Bag", SIDE_BUTTON, { LayoutOrder = 2 })
+	bagButton.Activated:Connect(function()
+		ShopUi.open("bag")
+	end)
+
+	-- Right: the Christmas Bundle and 2x Coins, then Stats, Settings, Invite -----
+
+	local step = GRID_BUTTON + GRID_GAP
+	local rightDock = create("Frame", {
+		Name = "RightDock",
+		AnchorPoint = Vector2.new(1, 0.5),
+		Position = UDim2.new(1, -MARGIN, 0.5, if touch then -60 else 0),
+		Size = UDim2.fromOffset(GRID_BUTTON * 2 + GRID_GAP, step * 3 + 30),
+		BackgroundTransparency = 1,
+		Parent = gui,
+	})
+	local function gridButton(art, name, column, row, open)
+		local face = pictureButton(rightDock, art, name, GRID_BUTTON, { Position = UDim2.fromOffset(column * step, row * step) })
+		face.Activated:Connect(open)
+		return face
+	end
+	gridButton("dock_stats", "Stats", 1, 0, StatsUi.toggle)
+	gridButton("dock_settings", "Settings", 1, 1, SettingsUi.toggle)
+	gridButton("dock_invite", "Invite", 1, 2, inviteFriends)
+	local christmasButton = gridButton("button_christmas", "Christmas", 0, 0, ChristmasBundle.open)
+	local doubleButton = gridButton("button_double_coins", "2x Coins", 0, 1, function()
+		ShopUi.open("shop", "pass")
+	end)
+	-- LIMITED across its corner, and how long is left under it.
+	local limited = Candy.art("ribbon_red", {
+		Name = "Limited",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.new(0.62, 0, 0, 4),
+		Size = UDim2.fromOffset(96, 38),
+		Rotation = 14,
+		ZIndex = 6,
+		Parent = christmasButton,
+	})
+	Candy.outlined({ Position = UDim2.fromScale(0.16, 0.16), Size = UDim2.fromScale(0.68, 0.52), TextColor3 = WHITE, Text = "LIMITED", ZIndex = 7, Parent = limited }, 2)
+	local timeLeft = Candy.art("button_white", {
+		Name = "TimeLeft",
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.new(0.5, 0, 1, -2),
+		Size = UDim2.fromOffset(GRID_BUTTON, 26),
+		ZIndex = 5,
+		Parent = christmasButton,
+	}, 26)
+	local timeLeftText = text({ Position = UDim2.fromScale(0.08, 0.1), Size = UDim2.fromScale(0.84, 0.66), Text = "", ZIndex = 6, Parent = timeLeft })
+	local function updateChristmas()
+		local onSale = ChristmasBundle.onSale()
+		christmasButton.Visible = onSale
+		-- 2x Coins sits under the time left, or in its place once it's gone.
+		doubleButton.Position = UDim2.fromOffset(0, if onSale then step + 30 else 0)
+		local left = ChristmasBundle.timeLeft()
+		timeLeftText.Text = if left then ChristmasBundle.shortTime(left) else ""
+	end
+	updateChristmas()
+	task.spawn(function()
+		while true do
+			task.wait(20)
+			updateChristmas()
+		end
+	end)
 
 	-- Bottom right: pebble and boost buttons -------------------------------------
 
@@ -524,7 +584,8 @@ function Hud.start()
 		local inStages = zone == "forest"
 		noisePanel.Parent.Visible = inStages
 		actions.Visible = inStages
-		dock.Visible = not inStages
+		leftDock.Visible = not inStages
+		rightDock.Visible = not inStages
 		snowActions.Visible = Config.Christmas and zone == "lobby"
 
 		local target = (player:GetAttribute("Noise") or 0) / Config.Noise.Max

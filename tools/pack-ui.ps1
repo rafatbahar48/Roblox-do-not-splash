@@ -122,7 +122,14 @@ $specs = @(
     @("robux_pockets", "icons", 0.6, $null, $true),
     @("robux_kit", "icons", 0.6, $null, $true),
     @("sunburst", "icons", 0.5, $null, $true),
-    @("sparkle", "icons", 0.2, $null, $true)
+    @("sparkle", "icons", 0.2, $null, $true),
+    # Seasonal: the Christmas event button, bundle window and its art
+    @("button_christmas", "event", 0.175, $null, $true),
+    @("button_double_coins", "event", 0.17, $null, $true),
+    @("icon_frostbite", "event", 0.12, $null, $true),
+    @("icon_santa_hat", "event", 0.13, $null, $true),
+    @("christmas_bundle", "event", 0.42, $null, $true),
+    @("ribbon_red", "event", 0.125, $null, $true)
 )
 
 $MAX = 1024
@@ -130,7 +137,7 @@ $PAD = 4
 $placed = @{}
 $lines = New-Object System.Collections.Generic.List[string]
 
-foreach ($atlasName in @("panels", "icons")) {
+foreach ($atlasName in @("panels", "icons", "event")) {
     $items = @()
     foreach ($s in $specs) {
         if ($s[1] -ne $atlasName) { continue }

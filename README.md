@@ -15,7 +15,8 @@ A Roblox horror obby. Cross a drowned forest at night by jumping from stump to s
 - **The cave:** every party starts in a cave behind the building, with room to walk about and a supply stall (G) for last-minute shopping. It is gloomy but never too dark, lit by torches, lanterns and glowing crystals, with water dripping and wind blowing in through its wide mouth onto the forest. A few seconds after you arrive, something out there steps on a stick, growls two seconds later, and a note says it is your last chance to grab supplies (with a button to the shop). Practice runs skip that.
 - **Run timer:** starts when you walk out of the cave's mouth and stops at the exit. A run counts for the easiest difficulty played during it. Your best time on each difficulty is saved.
 - **Coins:** earned for each stage cleared, each shell found and each escape. Spend them in the **Shop** (the dock's shop button, the + on your coins, or B).
-- **The HUD:** coins and your stage top left, the run timer top middle, difficulty top right. In the lobby and the cave a dock along the bottom opens the **Shop**, your **Bag** (what you own, to wear or take off), your **Stats** (escapes, fastest escape, stages cleared, times caught, shells found, runs started, time played), **Settings** (music, night sounds, sound effects, camera shake, field of view) and **Invite** (Roblox's invite-friends prompt). Out in the forest the dock makes way for the noise meter on the left and round pebble, Updraft and Hush buttons bottom right, which work on touch screens too.
+- **The HUD:** your stage top left, coins bottom left (top left on touch screens, clear of the thumbstick), the run timer top middle, difficulty top right. In the lobby and the cave, big **Shop** and **Bag** buttons (what you own, to wear or take off) sit on the left, and on the right the **Christmas** button (with a LIMITED ribbon and how long is left) and **2x Coins** (the Passes tab), then **Stats** (escapes, fastest escape, stages cleared, times caught, shells found, runs started, time played), **Settings** (music, night sounds, sound effects, camera shake, field of view) and **Invite** (Roblox's invite-friends prompt). Out in the forest they make way for the noise meter on the left and round pebble, Updraft and Hush buttons bottom right, which work on touch screens too.
+- **The Christmas Bundle** (until New Year, UTC): a limited Robux bundle with the exclusive **Frostbite** skin (ice) and **Santa Hat**, 1,000 coins and 3 Self-Revives. Its window has a countdown and its own SpriteCook art. The skin and hat aren't sold for coins: in the shop they point to the bundle, and once it's over they only show to those who have them.
 - **Robux shop:** two more tabs in the shop. **Robux**: coin packs (Handful, Jar, Chest, Sunken Hoard), the Night Kit bundle (coins, Updrafts, Hushes and 2 Self-Revives), Self-Revives (1 or 3, kept until you need them) and 5-packs of Updraft and Hush. **Passes**: **2× Coins** (double coins from stages, shells and escapes) and **Deep Pockets** (5 pebbles a life and up to 15 of each boost). The + on your coins opens the Robux tab. What each one gives is in `src/shared/RobuxCatalog.luau`.
 - **Getting caught:** its face up close, then a dead TV channel with what gave you away. The static stays until you choose: **Revive** (a Self-Revive if you have one, else 50 coins, else a Self-Revive bought with Robux) puts you back on the last dry ground you stood on, silent for a moment, with your run still going; **Bleed out** sends you to your last checkpoint, or the lobby if you have none; **Back to lobby** ends the run. Not choosing bleeds out after 30 seconds (`Config.Revive`).
 - **Music and sound:** a music box in the lobby, an ominous bed in the forest and chase music while it hunts you, fading into each other; crickets at night; splashes, creaky boards, pebbles, your own feet in the water, the creature's footsteps and growl from where it is, a heartbeat while you are hunted, its roar and the TV static when it gets you, and chimes for stages, shells, escapes and purchases. All from Roblox's licensed libraries (APM Music and ProSoundEffects), set in `Config.Sounds`.
@@ -50,17 +51,17 @@ Or skip the live sync: run `rojo build -o StillWater.rbxl` and open the file in 
 
 The panels, buttons, toggles, tiles and icons come from a SpriteCook UI kit. Each part is a PNG in `art/ui/kit/parts/` (logged with its SpriteCook asset id in `art/spritecook-assets.json`); `concept-a.png` and `sheet-1.png` are the concept and the sheet they were cut from.
 
-Roblox only shows uploaded images, so the parts are packed into two atlases, `art/ui/kit/atlas-panels.png` and `atlas-icons.png` (each at most 1024x1024), and `src/shared/UiArtParts.luau` says where each part sits and how it stretches. To change a part:
+Roblox only shows uploaded images, so the parts are packed into atlases, `art/ui/kit/atlas-panels.png`, `atlas-icons.png` and `atlas-event.png` (seasonal art; each at most 1024x1024), and `src/shared/UiArtParts.luau` says where each part sits and how it stretches. To change a part:
 
 1. Replace its PNG in `art/ui/kit/parts/`.
 2. Run `powershell -ExecutionPolicy Bypass -File tools/pack-ui.ps1` to repack both atlases and rewrite `UiArtParts.luau`.
-3. Upload both atlases in Studio (pick the file in an ImageLabel's **Image** property, or use the Asset Manager) and paste their new ids into `src/shared/UiArt.luau`.
+3. Upload the atlases that changed in Studio (pick the file in an ImageLabel's **Image** property, or use the Asset Manager) and paste their new ids into `src/shared/UiArt.luau`.
 
 ### Before publishing
 
 1. **File → Publish to Roblox.** Give it your own name, description and thumbnail.
 2. **Game Settings → Security → Enable Studio Access to API Services.** Turn this on to test saving in Studio. Published games can always save.
-3. **Robux:** in the Creator Dashboard, open the published game > Monetization. Under **Developer Products** create one for each entry in `Config.Products` (CoinsSmall, CoinsJar, CoinsChest, CoinsHoard, NightKit, SelfRevive1, SelfRevive3, Updraft5, Hush5) and under **Passes** one for each in `Config.Passes` (DoubleCoins, DeepPockets), with the names and prices you want, then paste each id into `src/shared/Config.luau`. Anything left at 0 isn't offered in the live game (Studio shows it all, so you can see it). SelfRevive1 is also what the death screen sells when you are short of coins.
+3. **Robux:** in the Creator Dashboard, open the published game > Monetization. Under **Developer Products** create one for each entry in `Config.Products` (CoinsSmall, CoinsJar, CoinsChest, CoinsHoard, NightKit, SelfRevive1, SelfRevive3, Updraft5, Hush5, and ChristmasBundle while it's on) and under **Passes** one for each in `Config.Passes` (DoubleCoins, DeepPockets), with the names and prices you want, then paste each id into `src/shared/Config.luau`. Anything left at 0 isn't offered in the live game (Studio shows it all, so you can see it). SelfRevive1 is also what the death screen sells when you are short of coins.
 4. **Sounds:** every sound's id is in `Config.Sounds` in `src/shared/Config.luau`. Swap any of them for another from the Creator Store; an empty id is skipped.
 
 ## Changing the game
@@ -97,7 +98,8 @@ Roblox only shows uploaded images, so the parts are packed into two atlases, `ar
 | Shop cards: the 3D (you in it, or its model), rarity colours, sunburst, sparkles, glint | `src/client/ShopUi.luau`, `src/client/ShopPreview.luau`; rarities in `src/shared/Catalog.luau` and `src/shared/RobuxCatalog.luau` |
 | How accessories are built onto a character (in the game and in the shop) | `src/shared/AccessoryLook.luau` |
 | Coins per stage, shell and escape; boost timing | `Config.Coins`, `Config.Boosts` |
-| HUD and its dock | `src/client/Hud.luau` |
+| HUD: where everything sits, the left and right buttons | `src/client/Hud.luau` |
+| The Christmas Bundle: what it gives, when it ends, the lines its window shows; its window | `RobuxCatalog.bundles` in `src/shared/RobuxCatalog.luau`, `src/client/ChristmasBundle.luau`; the exclusive items are in `src/shared/Catalog.luau` (`exclusive`) and the Santa Hat's shape in `src/shared/AccessoryLook.luau` |
 | The menus' and HUD's building blocks: the kit's window, panels, buttons, badges and coins, and the lettering on them | `src/shared/Candy.luau` |
 | Which picture each part is, and the atlas ids | `src/shared/UiArt.luau`, `src/shared/UiArtParts.luau` (generated), `art/ui/kit/` |
 | The shop and the bag | `src/client/ShopUi.luau` |
@@ -166,6 +168,7 @@ src/
     ItemIcons.luau       pictures of the shop's items
     ShopPreview.luau     the 3D on shop cards: you wearing it, or its model
     PartyUi.luau         the party pop-up and banner
+    ChristmasBundle.luau the Christmas Bundle's window and countdown
     Cave.luau            the cave's drips, wind and torches; the scare and note when you arrive
     Snow.luau            falling snow in the Christmas lobby, and snow in your face when hit
     Boosts.luau          boost input (Q / F / the HUD's buttons) and Updraft flight

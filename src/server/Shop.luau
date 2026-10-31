@@ -47,6 +47,10 @@ function Shop.buy(player, itemId)
 	if not profile or not item then
 		return false
 	end
+	if item.exclusive then
+		-- Only in its bundle, for Robux (Purchases.luau).
+		return false
+	end
 	if item.kind == "boost" then
 		if profile.boosts[item.id] >= Perks.maxBoosts(player) then
 			tell(player, ("You can't carry more than %d."):format(Perks.maxBoosts(player)))

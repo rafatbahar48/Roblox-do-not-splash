@@ -171,6 +171,34 @@ function builders.drowned_halo(model, character)
 	return true
 end
 
+function builders.santa_hat(model, character)
+	local hat = findAttachment(character, "HatAttachment")
+	if not hat then
+		return false
+	end
+	local head = hat.Parent
+	local size = head.Size
+	local red = Color3.fromRGB(222, 32, 48)
+	local fur = Color3.fromRGB(250, 250, 252)
+	-- A wide, fluffy white band, sitting high enough to show over hair
+	-- (cylinders lie along X, so each is stood up on end).
+	local upright = CFrame.Angles(0, 0, math.pi / 2)
+	local base = hat.WorldCFrame * CFrame.new(0, size.Y * 0.12, 0)
+	piece(model, head, base * upright, Vector3.new(size.Y * 0.32, size.X * 1.4, size.X * 1.4), fur, Enum.Material.Snow, "Cylinder")
+	-- The red body: drums getting smaller as it flops over to one side, and
+	-- a big pompom on the end.
+	local at = base * CFrame.new(0, size.Y * 0.1, 0)
+	local radius = size.X * 0.62
+	for i = 1, 5 do
+		local height = size.Y * 0.26
+		at = at * CFrame.new(0, height * 0.8, 0) * CFrame.Angles(math.rad(-8), 0, math.rad(6 + i * 5))
+		piece(model, head, at * upright, Vector3.new(height, radius * 2, radius * 2), red, Enum.Material.SmoothPlastic, "Cylinder")
+		radius *= 0.76
+	end
+	piece(model, head, at * CFrame.new(0, size.Y * 0.18, 0), Vector3.one * size.X * 0.4, fur, Enum.Material.Snow, "Ball")
+	return true
+end
+
 -- Puts the accessory with this catalog id on a character, or with nil takes
 -- the shop's accessory off.
 function AccessoryLook.apply(character, id)

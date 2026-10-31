@@ -648,9 +648,10 @@ function Progress.reviveBought(player)
 end
 
 -- Gives what a Robux product gives (Purchases.luau, RobuxCatalog.luau):
--- coins; boosts, with any past what they can carry as coins instead; and
+-- coins; boosts, with any past what they can carry as coins instead;
 -- Self-Revives, one of them used at once if it has them and they are
--- choosing. Saves straight away. True once given.
+-- choosing; and items to keep (a bundle's exclusives). Saves straight away.
+-- True once given.
 function Progress.grant(player, gives)
 	local profile = profiles[player]
 	if not profile then
@@ -664,6 +665,12 @@ function Progress.grant(player, gives)
 			local added = math.min(room, count)
 			profile.boosts[id] += added
 			coins += (count - added) * item.price
+		end
+	end
+	for _, id in gives.items or {} do
+		local item = Catalog.byId[id]
+		if item and item.kind ~= "boost" then
+			profile.owned[id] = true
 		end
 	end
 	local revives = gives.selfRevives or 0

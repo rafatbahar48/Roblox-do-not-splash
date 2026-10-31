@@ -88,6 +88,7 @@ Config.Products = {
 	SelfRevive3 = 0,
 	Updraft5 = 0,
 	Hush5 = 0,
+	ChristmasBundle = 0, -- the limited bundle (RobuxCatalog.bundles), until New Year
 }
 Config.Passes = {
 	DoubleCoins = 0,

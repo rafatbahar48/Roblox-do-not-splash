@@ -1,6 +1,6 @@
 -- The menu and button art: parts of the SpriteCook UI kit "Still Water lobby
--- menus", packed into two atlases (art/ui/kit/atlas-panels.png and
--- atlas-icons.png) that are uploaded to Roblox. UiArtParts.luau says where
+-- menus", packed into atlases (art/ui/kit/atlas-panels.png, atlas-icons.png
+-- and atlas-event.png, the seasonal art) that are uploaded to Roblox. UiArtParts.luau says where
 -- each part sits in its atlas.
 --
 -- After repacking (tools/pack-ui.ps1), upload the atlases again and paste
@@ -11,6 +11,7 @@ local Parts = require(script.Parent.UiArtParts)
 local ATLASES = {
 	panels = "rbxassetid://71375555921517", -- art/ui/kit/atlas-panels.png
 	icons = "rbxassetid://133999025123447", -- art/ui/kit/atlas-icons.png
+	event = "rbxassetid://73354802440089", -- art/ui/kit/atlas-event.png
 }
 
 local UiArt = {}

@@ -7,6 +7,8 @@
 --          its shop card
 -- focus    (accessories) "head" for things worn there: the shop shows your
 --          head and shoulders
+-- exclusive  the id of the bundle it comes in (RobuxCatalog.bundles): not
+--          sold for coins, and it has no price
 --
 -- Skins recolour body regions (head, torso, arms, legs). A region left out
 -- keeps the avatar's own colour. Wearing any skin hides shirts and pants.
@@ -96,6 +98,20 @@ Catalog.items = {
 		legs = region(196, 226, 236, Enum.Material.Glass, 0.35),
 	},
 
+	{
+		id = "frostbite",
+		kind = "skin",
+		rarity = "Legendary",
+		exclusive = "ChristmasBundle",
+		name = "Frostbite",
+		blurb = "Frozen solid, and still moving. Christmas Bundle only.",
+		swatch = Color3.fromRGB(170, 220, 255),
+		head = region(214, 238, 255, Enum.Material.Ice),
+		torso = region(150, 205, 245, Enum.Material.Ice),
+		arms = region(190, 226, 250, Enum.Material.Ice),
+		legs = region(110, 160, 220, Enum.Material.Ice),
+	},
+
 	-- Accessories
 	{
 		id = "swim_cap",
@@ -154,6 +170,16 @@ Catalog.items = {
 		price = 320,
 		blurb = "A ring of pale lights that follows you around.",
 		swatch = Color3.fromRGB(150, 240, 255),
+	},
+	{
+		id = "santa_hat",
+		kind = "accessory",
+		rarity = "Legendary",
+		exclusive = "ChristmasBundle",
+		focus = "head",
+		name = "Santa Hat",
+		blurb = "Red, fluffy and a little floppy. Christmas Bundle only.",
+		swatch = Color3.fromRGB(214, 40, 56),
 	},
 
 	-- Boosts
