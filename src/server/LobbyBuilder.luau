@@ -2,10 +2,11 @@
 -- the old building the stages are in. No roof, just the night sky; lamp posts,
 -- string lights and neon instead (client/Mood.luau does the lighting).
 --
---   the building   brick, with lit windows and the game's sign in neon. Three
---                  stone archways into stage 1, one per difficulty, each with
---                  a glowing pad and a screen (server/LobbyDoors.luau), and a
---                  party door either side (server/Parties.luau)
+--   the building   brick, with lit windows and the game's sign in neon, and
+--                  five shut doors (Config.Doors), each with a glowing pad
+--                  and a screen (server/Parties.luau): three stone archways
+--                  in the middle for parties, an Easy door on the left wing
+--                  and a practice door on the right
 --   west wing      more of the building: brick, rows of mostly dark windows
 --   east wall      the record boards (Leaderboards.luau), and the float hut,
 --                  which is the shop
@@ -68,15 +69,16 @@ local C = {
 	ink = Color3.fromRGB(43, 34, 87),
 	white = Color3.fromRGB(250, 252, 252),
 	door = Color3.fromRGB(70, 76, 110),
+	oak = Color3.fromRGB(78, 56, 44), -- the archways' doors
 	puddle = Color3.fromRGB(110, 140, 200),
 }
 
--- One colour per difficulty door, and what its screen says. The screens
--- never say what is inside.
-local DOORS = {
-	Easy = { color = C.mint, blurb = "Quieter steps. More room for mistakes." },
-	Normal = { color = C.lemon, blurb = "The water as it was meant to be." },
-	Hard = { color = C.candy, blurb = "Every step is louder. No room for mistakes." },
+-- Each kind of door's colour and what its screen says (Config.Doors). The
+-- screens never say what is inside.
+local DOOR_LOOKS = {
+	easy = { title = "EASY", color = C.mint, blurb = "Quieter steps. More room for mistakes." },
+	party = { title = "PARTY", color = C.lemon, blurb = "Normal or Hard, up to " .. Config.Party.MaxSize .. " together." },
+	practice = { title = "PRACTICE", color = C.sky, blurb = "Nothing out there. No coins or records." },
 }
 
 local BRICK = Enum.Material.Brick
@@ -373,9 +375,44 @@ local function buildArch(folder, face, x, color)
 	return face - depth
 end
 
--- The building's front: brick, lit windows, the game's sign, a stone archway
--- into stage 1 per difficulty and a party door either side. Returns the
--- doors and party doors, and the z of the archways' fronts.
+-- A pair of heavy oak doors, shut, filling the doorway behind an archway at
+-- x, with iron bands and knobs.
+local function shutDoors(folder, x)
+	local w, h = ROOM.DoorWidth, ROOM.DoorHeight
+	local z = FACE + 0.3
+	for _, side in { -1, 1 } do
+		local cx = x + side * w / 4
+		block(folder, "ArchDoor", Vector3.new(w / 2 - 0.06, h, 0.4), CFrame.new(cx, TILE_TOP + h / 2, z), C.oak, Enum.Material.WoodPlanks)
+		for _, y in { 2.2, h - 3.4 } do
+			block(folder, "DoorBand", Vector3.new(w / 2 - 0.3, 0.35, 0.1), CFrame.new(cx, TILE_TOP + y, z - 0.25), C.iron, Enum.Material.Metal, DECOR)
+		end
+		block(folder, "DoorKnob", Vector3.one * 0.5, CFrame.new(x + side * 0.6, TILE_TOP + 4.6, z - 0.35), C.iron, Enum.Material.Metal, {
+			Shape = Enum.PartType.Ball,
+			CanCollide = false,
+			CanQuery = false,
+		})
+	end
+end
+
+-- A door on a wing at x: shut metal doors in a frame lined with neon.
+local function wingDoor(folder, x, color)
+	local width, height = 7, 10
+	box(folder, "WingDoorFrame", Vector3.new(x - width / 2 - 0.8, TILE_TOP, FACE - 0.5), Vector3.new(x + width / 2 + 0.8, TILE_TOP + height + 0.8, FACE), C.iron)
+	for _, side in { -1, 1 } do
+		block(folder, "WingDoor", Vector3.new(width / 2 - 0.05, height, 0.3), CFrame.new(x + side * width / 4, TILE_TOP + height / 2, FACE - 0.6), C.door, Enum.Material.Metal, {
+			Reflectance = 0.15,
+		})
+	end
+	strip(folder, Vector3.new(x - width / 2 - 0.8, TILE_TOP + height + 0.55, FACE - 0.6), Vector3.new(x + width / 2 + 0.8, TILE_TOP + height + 0.8, FACE - 0.5), color)
+	for _, side in { -1, 1 } do
+		local edge = x + side * (width / 2 + 0.8)
+		strip(folder, Vector3.new(edge - 0.125, TILE_TOP, FACE - 0.6), Vector3.new(edge + 0.125, TILE_TOP + height + 0.8, FACE - 0.5), color)
+	end
+end
+
+-- The building's front: brick, lit windows, the game's sign, and the doors
+-- (Config.Doors), each with a screen and a pad. Returns the doors, for
+-- Parties.luau, and the z of the archways' fronts.
 local function buildFacade(folder)
 	local half = ROOM.DoorWidth / 2
 	local doorTop = TILE_TOP + ROOM.DoorHeight
@@ -428,20 +465,29 @@ local function buildFacade(folder)
 	label(sign, { Position = UDim2.fromScale(0.08, 0.72), Size = UDim2.fromScale(0.84, 0.2), Font = Enum.Font.FredokaOne, TextColor3 = C.aqua, Text = Config.Tagline })
 	glow(folder, Vector3.new(0, TILE_TOP + 22, FACE - 6), C.pink, 22, 0.4)
 
-	-- The archways, one per difficulty, each with a screen and a pad.
+	-- The doors, each with a screen over it and a pad in front.
 	local doors = {}
-	local front
-	for name, x in ROOM.EntranceDoors do
-		local info = DOORS[name]
-		front = buildArch(folder, FACE, x, C.stone:Lerp(info.color, 0.3))
-		local gui = screen(folder, name .. "Screen", Vector3.new(10, 4.4, 0.4), Vector3.new(x, doorTop + 4.8, FACE - 0.3), -Vector3.zAxis, info.color)
-		bubbleText(gui, 4, {
+	local front = FACE
+	for i, spec in Config.Doors do
+		local look = DOOR_LOOKS[spec.mode]
+		local x = spec.x
+		local padZ
+		if table.find(ROOM.EntranceDoors, x) then
+			front = buildArch(folder, FACE, x, C.stone:Lerp(look.color, 0.3))
+			shutDoors(folder, x)
+			padZ = front - 3.8
+		else
+			wingDoor(folder, x, look.color)
+			padZ = FACE - 4.6
+		end
+		local gui = screen(folder, "DoorScreen" .. i, Vector3.new(10, 4.4, 0.4), Vector3.new(x, doorTop + 4.8, FACE - 0.3), -Vector3.zAxis, look.color)
+		local title = bubbleText(gui, 4, {
 			Name = "Title",
 			Position = UDim2.fromScale(0.05, 0.05),
 			Size = UDim2.fromScale(0.9, 0.42),
 			Font = Enum.Font.FredokaOne,
-			TextColor3 = info.color,
-			Text = string.upper(name),
+			TextColor3 = look.color,
+			Text = look.title,
 		})
 		label(gui, {
 			Name = "Info",
@@ -449,7 +495,7 @@ local function buildFacade(folder)
 			Size = UDim2.fromScale(0.88, 0.2),
 			Font = Enum.Font.FredokaOne,
 			TextColor3 = C.white,
-			Text = info.blurb,
+			Text = look.blurb,
 		})
 		local status = label(gui, {
 			Name = "Status",
@@ -459,52 +505,14 @@ local function buildFacade(folder)
 			TextColor3 = C.aqua,
 			Text = "",
 		})
-		local pad = glowPad(folder, x, front - 3.8, ROOM.DoorWidth, 6, info.color)
-		pad.Name = name .. "Pad"
-		table.insert(doors, { difficulty = name, pad = pad, status = status })
-	end
-
-	-- A party door on each wing: closed doors in a neon frame, a screen, a pad.
-	local partyDoors = {}
-	for i, x in { -33, 33 } do
-		local width, height = 7, 10
-		box(folder, "PartyFrame", Vector3.new(x - width / 2 - 0.8, TILE_TOP, FACE - 0.5), Vector3.new(x + width / 2 + 0.8, TILE_TOP + height + 0.8, FACE), C.iron)
-		for _, side in { -1, 1 } do
-			block(folder, "PartyDoor", Vector3.new(width / 2 - 0.05, height, 0.3), CFrame.new(x + side * width / 4, TILE_TOP + height / 2, FACE - 0.6), C.door, Enum.Material.Metal, {
-				Reflectance = 0.15,
-			})
-		end
-		strip(folder, Vector3.new(x - width / 2 - 0.8, TILE_TOP + height + 0.55, FACE - 0.6), Vector3.new(x + width / 2 + 0.8, TILE_TOP + height + 0.8, FACE - 0.5), C.aqua)
-		for _, side in { -1, 1 } do
-			local edge = x + side * (width / 2 + 0.8)
-			strip(folder, Vector3.new(edge - 0.125, TILE_TOP, FACE - 0.6), Vector3.new(edge + 0.125, TILE_TOP + height + 0.8, FACE - 0.5), C.aqua)
-		end
-
-		local gui = screen(folder, "PartyScreen" .. i, Vector3.new(9, 3.8, 0.4), Vector3.new(x, TILE_TOP + height + 3.4, FACE - 0.3), -Vector3.zAxis, C.aqua)
-		local title = bubbleText(gui, 4, {
-			Name = "Title",
-			Position = UDim2.fromScale(0.05, 0.06),
-			Size = UDim2.fromScale(0.9, 0.48),
-			Font = Enum.Font.FredokaOne,
-			TextColor3 = C.aqua,
-			Text = "PARTY",
-		})
-		local status = label(gui, {
-			Name = "Status",
-			Position = UDim2.fromScale(0.06, 0.6),
-			Size = UDim2.fromScale(0.88, 0.3),
-			Font = Enum.Font.FredokaOne,
-			TextColor3 = C.white,
-			Text = "Step on the pad to start a party",
-		})
-		local pad = glowPad(folder, x, FACE - 4.6, 7, 5, C.aqua)
-		pad.Name = "PartyPad" .. i
-		table.insert(partyDoors, { pad = pad, title = title, status = status })
+		local pad = glowPad(folder, x, padZ, ROOM.DoorWidth, 6, look.color)
+		pad.Name = "DoorPad" .. i
+		table.insert(doors, { mode = spec.mode, x = x, pad = pad, title = title, status = status })
 	end
 
 	prop(folder, "Planter", 2, -24.5, FACE - 2, 0)
 	prop(folder, "Planter", 2, 24.5, FACE - 2, 0)
-	return doors, partyDoors, front
+	return doors, front
 end
 
 -- The west wing: more of the old building, a tall brick wall with two rows of
@@ -715,7 +723,7 @@ function LobbyBuilder.build(map)
 	folder.Parent = map
 
 	buildGround(folder)
-	local doors, partyDoors, doorFront = buildFacade(folder)
+	local doors, doorFront = buildFacade(folder)
 	buildWestWing(folder)
 	local boards = buildEastSide(folder)
 	buildSouthSide(folder)
@@ -734,14 +742,7 @@ function LobbyBuilder.build(map)
 	spawn.TopSurface = Enum.SurfaceType.Smooth
 	spawn.Parent = folder
 
-	-- Walking through any of stage 1's doors starts the run timer (Progress.luau).
-	local runStart = block(folder, "RunStart", Vector3.new(ROOM.Width, ROOM.DoorHeight, 2), CFrame.new(0, TILE_TOP + ROOM.DoorHeight / 2, 1.5), C.lemon, nil, {
-		Transparency = 1,
-		CanCollide = false,
-		CanQuery = false,
-	})
-
-	return { boards = boards, runStart = runStart, doors = doors, partyDoors = partyDoors }
+	return { boards = boards, partyDoors = doors }
 end
 
 return LobbyBuilder

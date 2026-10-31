@@ -9,22 +9,24 @@ A Roblox horror obby. Cross a drowned forest at night by jumping from stump to s
 - **Stepping stones to watch for:** creaky boards (pale old planks on posts), floating moss (pale green mats that go under a second after you step on them), drifting rafts and narrow broken trunks.
 - **7 stages**, each a stretch of the forest from one island to the next, with a checkpoint on the far island. Each one has a hidden shell to collect. After the last stage, walk through the exit to escape.
 - **Easy, Normal and Hard:** harder modes make you louder and the creature faster.
-- **The lobby** is a big open courtyard at night, under the stars, in front of the old brick building the stages are in: lit windows, the game's sign in neon, lamp posts, string lights, grass beds with palms and benches. It is colourful on purpose, so the forest feels darker after it. Nothing in the lobby shows what waits inside: the building hides the forest, and its doorways are pitch black until you step through. The east wall has the record boards (most escapes and the fastest escape on each difficulty) and the shop hut (G).
-- **Three doors into stage 1**, one per difficulty (Easy, Normal, Hard). Stepping on a door's pad picks that difficulty; its screen shows how many people are in the water on it.
-- **Party doors:** step on a party door's pad and a pop-up sets up a party: size (1 to 4), difficulty, friends only. Others join by stepping on the pad. When the countdown ends the party leaves together for a private server of its own (in Studio, which can't teleport, it goes straight into stage 1 instead).
-- **Run timer:** starts when you walk through any of stage 1's doors and stops at the exit. A run counts for the easiest difficulty you played during it. Your best time on each difficulty is saved.
-- **Pearls:** earned for each stage cleared, each shell found and each escape. Spend them in the **Shop** (the dock's shop button, the + on your pearls, or B).
-- **The HUD:** pearls and your stage top left, the run timer top middle, difficulty top right. In the lobby a dock along the bottom opens the **Shop**, your **Bag** (what you own, to wear or take off), your **Stats** (escapes, fastest escape, stages cleared, times caught, shells found, runs started, time played), **Settings** (music, night sounds, sound effects, camera shake, field of view) and **Invite** (Roblox's invite-friends prompt). In the stages the dock makes way for the noise meter on the left and round pebble, Updraft and Hush buttons bottom right, which work on touch screens too.
-- **Getting caught:** its face up close, then a dead TV channel with what gave you away. The static stays until you choose: **Revive** (50 pearls) puts you back on the last dry ground you stood on, silent for a moment, with your run still going; **Bleed out** sends you to your last checkpoint, or the lobby if you have none. Not choosing bleeds out after 30 seconds (`Config.Revive`).
+- **The lobby** is a big open courtyard at night, under the stars, in front of the old brick building the stages are in: lit windows, the game's sign in neon, lamp posts, string lights, grass beds with palms and benches. It is colourful on purpose, so the forest feels darker after it. Nothing in the lobby shows what waits inside: the building hides the forest, and its doors stay shut. The east wall has the record boards (most escapes and the fastest escape on each difficulty) and the shop hut (G).
+- **Five doors, and nobody walks through them.** You stand on a door's pad and either start a party there (you are the host) or join the one waiting. The three stone archways in the middle are party doors, so three parties can get going at once; their host picks Normal or Hard. The door on the far left makes Easy parties, and the one on the far right is for **practice**: no creature, and no coins, shells, stats or records (none of a practice run is saved). The pop-up sets the size (1 to 4) and friends only; others join by stepping on the pad. When the countdown ends the party leaves together for a private server of its own (in Studio, which can't teleport, it goes straight into the cave here instead).
+- **The cave:** every party starts in a cave behind the building, with room to walk about and a supply stall (G) for last-minute shopping. It is gloomy but never too dark, lit by torches, lanterns and glowing crystals, with water dripping and wind blowing in through its wide mouth onto the forest. A few seconds after you arrive, something out there steps on a stick, growls two seconds later, and a note says it is your last chance to grab supplies (with a button to the shop). Practice runs skip that.
+- **Run timer:** starts when you walk out of the cave's mouth and stops at the exit. A run counts for the easiest difficulty played during it. Your best time on each difficulty is saved.
+- **Coins:** earned for each stage cleared, each shell found and each escape. Spend them in the **Shop** (the dock's shop button, the + on your coins, or B).
+- **The HUD:** coins and your stage top left, the run timer top middle, difficulty top right. In the lobby and the cave a dock along the bottom opens the **Shop**, your **Bag** (what you own, to wear or take off), your **Stats** (escapes, fastest escape, stages cleared, times caught, shells found, runs started, time played), **Settings** (music, night sounds, sound effects, camera shake, field of view) and **Invite** (Roblox's invite-friends prompt). Out in the forest the dock makes way for the noise meter on the left and round pebble, Updraft and Hush buttons bottom right, which work on touch screens too.
+- **Robux shop:** two more tabs in the shop. **Robux**: coin packs (Handful, Jar, Chest, Sunken Hoard), the Night Kit bundle (coins, Updrafts, Hushes and 2 Self-Revives), Self-Revives (1 or 3, kept until you need them) and 5-packs of Updraft and Hush. **Passes**: **2× Coins** (double coins from stages, shells and escapes) and **Deep Pockets** (5 pebbles a life and up to 15 of each boost). The + on your coins opens the Robux tab. What each one gives is in `src/shared/RobuxCatalog.luau`.
+- **Getting caught:** its face up close, then a dead TV channel with what gave you away. The static stays until you choose: **Revive** (a Self-Revive if you have one, else 50 coins, else a Self-Revive bought with Robux) puts you back on the last dry ground you stood on, silent for a moment, with your run still going; **Bleed out** sends you to your last checkpoint, or the lobby if you have none; **Back to lobby** ends the run. Not choosing bleeds out after 30 seconds (`Config.Revive`).
 - **Music and sound:** a music box in the lobby, an ominous bed in the forest and chase music while it hunts you, fading into each other; crickets at night; splashes, creaky boards, pebbles, your own feet in the water, the creature's footsteps and growl from where it is, a heartbeat while you are hunted, its roar and the TV static when it gets you, and chimes for stages, shells, escapes and purchases. All from Roblox's licensed libraries (APM Music and ProSoundEffects), set in `Config.Sounds`.
 - **The menus and buttons are SpriteCook art**, from the UI kit "Still Water lobby menus" (see below); the code only places them and writes the words and numbers.
-- **Shop:** 6 skins, 6 accessories, and 2 boosts you carry and use: **Updraft** (Q / L1 / Fly button) lifts you and lets you glide for 2 seconds, and **Hush** (F / Y / Hush button) makes you completely silent for 5 seconds.
-- Your progress, shells, escapes, difficulty, pearls, items, stats and settings are saved.
+- **Shop:** 6 skins, 6 accessories, and 2 boosts. Every item has a big card with the thing itself in 3D: skins and accessories on **you** (your own avatar, turning; head things close up), and everything else as its 3D model, spinning and bobbing. Each stands in front of a spinning sunburst in its rarity colour (Common mint, Rare sky, Epic pink, Legendary lemon), with twinkling sparkles and a glint now and then. The boosts, which you carry and use: **Updraft** (Q / L1 / Fly button) lifts you and lets you glide for 2 seconds, and **Hush** (F / Y / Hush button) makes you completely silent for 5 seconds.
+- Your progress, shells, escapes, difficulty, coins, items, stats and settings are saved.
 
 The whole map is built by script when the server starts, so almost everything lives in the Luau files under `src/`. The exceptions are the 3D models made in Meshy (`art/models/`), which are imported into the place:
 
 - **The lobby's props** live in `ServerStorage.LobbyProps`. The lobby uses `FloatHut` (the shop), `PottedPalm` and `Planter`, places each one it finds and skips any that are missing.
 - **The forest's trees** near the trail are the models in `ServerStorage.ForestProps` (`GnarledTree` and `BrokenTrunk`, from `art/models/dead-tree3.glb` and `dead-tree2.glb`, each standing on its own pivot at the bottom of its roots). Each is planted at a random size and turn, with an invisible post round its trunk. Far off in the fog, or without the models, trees are built from parts.
+- **The shop's 3D models** live in `ReplicatedStorage.ShopModels`, one per thing sold that isn't worn (coin packs, Night Kit, Self-Revive, passes, Updraft and Hush), named like its icon art (`robux_coins_chest`, `action_hush`, ...). They were made in Meshy from three-quarter drawings of the shop's SpriteCook icons (`art/meshy-refs/shop-3q-*.png`; the models in `art/models/shop/`, previews beside them; `art/models/import/shop/` has copies for Import 3D). `robux_coins_jar` is put together in Studio, because Meshy can't make clear glass: the Meshy coin heap (`coins_heap.glb`) inside see-through glass parts with a lilac lid, its coins as the model's primary part. Without a model, its card shows its icon bobbing instead.
 - **The creature** is the model in `ReplicatedStorage.Creatures` (now `Creature`, from `art/models/flesh-creature-rigged.glb`: remeshed to about 10,000 triangles and rigged in Meshy, scaled to 18 studs, facing -Z). Each client poses its bones as it walks, so any model with Meshy's humanoid skeleton works. Attributes on the model say whether it has its own mouth (`OwnMouth`), whether to add glowing eyes (`Eyes`), and how the death scene frames its mouth (`CloseUpDistance`, `CloseUpHeight`, `CloseUpAim`). Without a model, a body built from parts stands in. The earlier stilt wader is still in `art/models/stilt-wader-rigged.glb`.
 
 ## Open it in Roblox Studio
@@ -39,7 +41,7 @@ You need [Roblox Studio](https://create.roblox.com/) and [Rojo](https://rojo.spa
    rojo serve
    ```
 3. In Studio, create a new **Baseplate** place. Open the Rojo plugin and click **Connect**. The scripts appear under ServerScriptService, ReplicatedStorage and StarterPlayerScripts.
-4. Press **Play**. You spawn in the lobby, and the doorway leads to stage 1.
+4. Press **Play**. You spawn in the lobby. Stand on a door's pad and create a party (size 1 leaves in 5 seconds) to go into the cave and stage 1.
 
 Or skip the live sync: run `rojo build -o StillWater.rbxl` and open the file in Studio.
 
@@ -57,7 +59,8 @@ Roblox only shows uploaded images, so the parts are packed into two atlases, `ar
 
 1. **File → Publish to Roblox.** Give it your own name, description and thumbnail.
 2. **Game Settings → Security → Enable Studio Access to API Services.** Turn this on to test saving in Studio. Published games can always save.
-3. **Sounds:** every sound's id is in `Config.Sounds` in `src/shared/Config.luau`. Swap any of them for another from the Creator Store; an empty id is skipped.
+3. **Robux:** in the Creator Dashboard, open the published game > Monetization. Under **Developer Products** create one for each entry in `Config.Products` (CoinsSmall, CoinsJar, CoinsChest, CoinsHoard, NightKit, SelfRevive1, SelfRevive3, Updraft5, Hush5) and under **Passes** one for each in `Config.Passes` (DoubleCoins, DeepPockets), with the names and prices you want, then paste each id into `src/shared/Config.luau`. Anything left at 0 isn't offered in the live game (Studio shows it all, so you can see it). SelfRevive1 is also what the death screen sells when you are short of coins.
+4. **Sounds:** every sound's id is in `Config.Sounds` in `src/shared/Config.luau`. Swap any of them for another from the Creator Store; an empty id is skipped.
 
 ## Changing the game
 
@@ -70,26 +73,34 @@ Roblox only shows uploaded images, so the parts are packed into two atlases, `ar
 | How each stretch is laid out, lighting, fog and colour grading | `src/server/MapBuilder.luau` |
 | What trees, stumps, islands, lanterns and signposts look like | `src/server/Forest.luau` |
 | Lobby: size (`Config.Room.LobbyWidth`, `LobbyLength`), the building, doors and party doors, signs, record wall, lamps and string lights, where each prop stands, spawn | `src/server/LobbyBuilder.luau` |
-| Where the difficulty doors are; party size and countdowns | `Config.Room.EntranceDoors`, `Config.Party` |
-| Difficulty door pads and screens | `src/server/LobbyDoors.luau` |
-| Parties: joining, leaving, countdown, sending a party to its own server | `src/server/Parties.luau` |
+| Which door does what (Easy, party, practice) and where; party size and countdowns | `Config.Doors`, `Config.Room.EntranceDoors` (the archways), `Config.Party` |
+| Parties: the doors' pads and screens, joining, leaving, countdown, sending a party to its own server or into the cave | `src/server/Parties.luau` |
+| Practice runs (nothing earned or saved) | `src/server/Progress.luau`; the creature ignores practice players in `src/server/Lurker.luau` and isn't drawn for them in `src/client/LurkerVisuals.luau` |
+| The cave: its size (`Config.Cave`), rock, torches, crystals, stalactites, the supply stall, where a party arrives | `src/server/CaveBuilder.luau` |
+| The cave's sounds, the stick and growl when you arrive and how long after, the last-chance note | `src/client/Cave.luau`, `Config.Cave`, `Config.Sounds` |
 | The party pop-up and banner | `src/client/PartyUi.luau` |
 | Record boards (titles, colours, refresh rate) | `src/server/Leaderboards.luau` |
-| Moonlit lobby and exit lighting | `src/client/Mood.luau` |
+| Moonlit lobby and exit lighting, the cave's gloom | `src/client/Mood.luau` |
 | Creature behaviour | `src/server/Lurker.luau` |
 | Creature look: posing the Meshy model, how it walks, runs and grabs, the part-built stand-in | `src/client/LurkerVisuals.luau` |
 | Fear effects: vignette, heartbeat, faltering lights, camera shake | `src/client/Fear.luau` |
 | Being caught: turned to face it, the close-up as its mouth opens, the TV static, "what it heard" recap, the Revive and Bleed out buttons | `src/client/DeathScene.luau` (the cause comes from `src/server/Noise.luau`) |
 | Shop items, names, prices and skin colours | `src/shared/Catalog.luau` |
-| Accessory shapes | `src/server/Cosmetics.luau` |
-| Pearls per stage, shell and escape; boost timing | `Config.Pearls`, `Config.Boosts` |
+| Accessory shapes | `src/shared/AccessoryLook.luau` |
+| How a skin recolours a character (used in the game and in the shop preview) | `src/shared/SkinLook.luau` |
+| Shop cards: the 3D (you in it, or its model), rarity colours, sunburst, sparkles, glint | `src/client/ShopUi.luau`, `src/client/ShopPreview.luau`; rarities in `src/shared/Catalog.luau` and `src/shared/RobuxCatalog.luau` |
+| How accessories are built onto a character (in the game and in the shop) | `src/shared/AccessoryLook.luau` |
+| Coins per stage, shell and escape; boost timing | `Config.Coins`, `Config.Boosts` |
 | HUD and its dock | `src/client/Hud.luau` |
-| The menus' and HUD's building blocks: the kit's window, panels, buttons, badges and pearls, and the lettering on them | `src/shared/Candy.luau` |
+| The menus' and HUD's building blocks: the kit's window, panels, buttons, badges and coins, and the lettering on them | `src/shared/Candy.luau` |
 | Which picture each part is, and the atlas ids | `src/shared/UiArt.luau`, `src/shared/UiArtParts.luau` (generated), `art/ui/kit/` |
 | The shop and the bag | `src/client/ShopUi.luau` |
 | Stats window | `src/client/StatsUi.luau` (the numbers are kept in `src/server/Progress.luau`) |
 | Settings: the list and defaults, the window, what each one does | `Config.Settings`, `src/client/SettingsUi.luau`, `src/client/Settings.luau` |
 | Revive cost, how long you have to choose, how long a revive keeps you silent | `Config.Revive` (the waiting and paying are in `src/server/Progress.luau`) |
+| Robux: what is sold, its name, picture and what it gives | `src/shared/RobuxCatalog.luau` |
+| Robux ids; what the passes do | `Config.Products`, `Config.Passes`, `Config.PassPerks` (`src/shared/Perks.luau`) |
+| Granting purchases | `src/server/Purchases.luau`, `Progress.grant` in `src/server/Progress.luau` |
 | Which music and sound effects play | `Config.Sounds` |
 | When each piece of music plays, and the fades | `src/client/Music.luau` |
 | Sounds only you hear (wading, chimes); the creature's footsteps and growl | `src/client/Sounds.luau`, `src/client/LurkerVisuals.luau` |
@@ -104,8 +115,13 @@ src/
   shared/              ReplicatedStorage.Shared
     Config.luau          tuning
     Stages.luau          stage list
-    Catalog.luau         shop items
+    Catalog.luau         shop items (for coins)
+    RobuxCatalog.luau    coin packs, Self-Revives, bundles and passes (for Robux)
+    Perks.luau           what the passes change
+    SkinLook.luau        how a skin recolours a character
+    AccessoryLook.luau   how accessories are built onto a character
     Format.luau          time formatting
+    Zones.luau           which part of the map a point is in (lobby, cave, forest, exit)
     Candy.luau           the menus' building blocks (kit windows, panels, buttons, lettering)
     UiArt.luau           which part of which uploaded atlas each picture is
     UiArtParts.luau      where each part sits in its atlas (made by tools/pack-ui.ps1)
@@ -113,38 +129,41 @@ src/
   server/              ServerScriptService.Server
     Main.server.luau     starts everything
     MapBuilder.luau      builds the forest stages and the way out; lighting
+    CaveBuilder.luau     the cave a party arrives in, at the start of stage 1
     Forest.luau          trees, stumps, islands, lanterns, signposts
     LobbyBuilder.luau    builds the night courtyard lobby
     Parts.luau           part-building helpers both builders use
-    LobbyDoors.luau      the difficulty doors' pads and screens
-    Parties.luau         party doors: parties, countdowns, private servers
+    Parties.luau         the lobby's doors: parties, countdowns, private servers, practice
     Leaderboards.luau    record boards (OrderedDataStores)
     Noise.luau           per-player noise, splashes, hard landings, Hush
     Lurker.luau          one creature: watching, stalking, chasing (moves an invisible anchor)
     Lurkers.luau         spawns and updates all creatures
     Hazards.luau         creaky boards, sinking moss, rafts, flickering lanterns
     Pebbles.luau         thrown pebbles
-    Progress.luau        checkpoints, shells, escapes, run timer, pearls, items, saving, spawning
+    Progress.luau        checkpoints, shells, escapes, run timer, coins, items, saving, spawning
     Shop.luau            buying, wearing and using items (all checks on the server)
+    Purchases.luau       Robux purchases (each granted once) and who owns which pass
     Cosmetics.luau       puts skins and accessories on characters
     Effects.luau         splash rings and sounds (in sound groups the settings turn off)
   client/              StarterPlayerScripts.Client
     Main.client.luau
-    Hud.luau             pearls, stage, timer, difficulty, noise meter, the dock, action buttons
+    Hud.luau             coins, stage, timer, difficulty, noise meter, the dock, action buttons
     ShopUi.luau          the shop window and the bag
     StatsUi.luau         the stats window
     SettingsUi.luau      the settings window
     Settings.luau        applies and saves settings (sound, shake, field of view)
     Windows.luau         keeps one menu window open at a time
-    Music.luau           lobby, forest and chase music, faded into each other
+    Music.luau           lobby, forest and chase music, faded into each other (none in the cave)
     Sounds.luau          sounds only you hear, and your wading
     ItemIcons.luau       pictures of the shop's items
+    ShopPreview.luau     the 3D on shop cards: you wearing it, or its model
     PartyUi.luau         the party pop-up and banner
+    Cave.luau            the cave's drips, wind and torches; the scare and note when you arrive
     Boosts.luau          boost input (Q / F / the HUD's buttons) and Updraft flight
     LurkerVisuals.luau   poses the creature model (or a body of parts) as it walks
     Fear.luau            vignette, heartbeat, faltering lights, shake
     DeathScene.luau      the death scene: its face up close, TV static, "what it heard", revive or bleed out
-    Mood.luau            warm lobby and exit lighting, cold forest fog, drifting mist
+    Mood.luau            warm lobby and exit lighting, the cave's gloom, cold forest fog, drifting mist
     Throw.luau           throw input (E / R2 / the HUD's pebble button)
     CameraReport.luau    tells the server which way your camera points (for where the creature appears)
 tools/

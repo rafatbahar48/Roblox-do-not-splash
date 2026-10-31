@@ -1,7 +1,9 @@
--- The party pop-up and the party banner. Stepping on a party door's pad in
--- the lobby opens the pop-up (server/Parties.luau): party size, difficulty
--- and friends only, then Create. While you are in a party, a banner says how
--- full it is and when it leaves, with a button to leave it.
+-- The party pop-up and the party banner. Stepping on a door's pad in the
+-- lobby opens the pop-up (server/Parties.luau): party size, friends only,
+-- and at the middle doors Normal or Hard, then Create. The Easy door's
+-- parties are always Easy, and the practice door's have no creature. While
+-- you are in a party, a banner says how full it is and when it leaves, with
+-- a button to leave it.
 --
 -- Made of the SpriteCook UI kit's art (shared/Candy.luau). Everything here
 -- only asks; the server decides.
@@ -23,6 +25,13 @@ local DIFFICULTIES = {
 	{ name = "Normal", color = LEMON },
 	{ name = "Hard", color = PINK },
 }
+-- What each kind of door (Config.Doors) offers: the pop-up's title, and the
+-- difficulties to pick from, or a line saying what it is instead.
+local MODES = {
+	easy = { title = "EASY PARTY", difficulties = { "Easy" } },
+	party = { title = "NEW PARTY", difficulties = { "Normal", "Hard" } },
+	practice = { title = "PRACTICE", line = "No creature. No coins or records." },
+}
 local WIDTH, HEIGHT = 520, 470
 local TOP, SIDE = Candy.WINDOW_TOP, Candy.WINDOW_SIDE
 
@@ -33,6 +42,7 @@ local PartyUi = {}
 local gui, popup, banner, bannerText
 local refreshChoices -- redraws the pop-up's buttons from choice
 local doorIndex -- the party door the pop-up is for
+local doorMode = "party" -- and what kind it is
 local choice = { size = Config.Party.MaxSize, difficulty = Config.DefaultDifficulty, friendsOnly = false }
 local status -- the server's latest word on our party, or nil
 
@@ -58,7 +68,7 @@ local function pictureButton(parent, art, size, position)
 end
 
 local function buildPopup()
-	local window, _, closeButton = Candy.window(gui, { name = "PartySetup", size = UDim2.fromOffset(WIDTH, HEIGHT), title = "NEW PARTY" })
+	local window, title, closeButton = Candy.window(gui, { name = "PartySetup", size = UDim2.fromOffset(WIDTH, HEIGHT), title = "NEW PARTY" })
 	popup = window
 	popup.Visible = false
 	Candy.fit(popup, Vector2.new(WIDTH + 10, HEIGHT + 10), 24)
@@ -67,8 +77,8 @@ local function buildPopup()
 		close()
 	end)
 
-	local function row(y, title)
-		text({ Position = UDim2.fromOffset(SIDE + 4, y + 10), Size = UDim2.fromOffset(150, 30), TextSize = 22, Text = title, TextXAlignment = Enum.TextXAlignment.Left, Parent = popup })
+	local function row(y, caption)
+		return text({ Position = UDim2.fromOffset(SIDE + 4, y + 10), Size = UDim2.fromOffset(150, 30), TextSize = 22, Text = caption, TextXAlignment = Enum.TextXAlignment.Left, Parent = popup })
 	end
 
 	-- Party size: - [n] +
@@ -85,13 +95,21 @@ local function buildPopup()
 		refreshChoices()
 	end)
 
-	-- Difficulty: three buttons.
-	row(TOP + 68, "Difficulty")
+	-- Difficulty: a button for each this door offers, or a line instead.
+	local difficultyRow = row(TOP + 68, "Difficulty")
+	local modeLine = text({
+		Position = UDim2.fromOffset(SIDE + 4, TOP + 76),
+		Size = UDim2.new(1, -2 * SIDE - 8, 0, 34),
+		TextSize = 22,
+		TextColor3 = MUTED,
+		Text = "",
+		Parent = popup,
+	})
 	local pills = {}
-	for i, difficulty in DIFFICULTIES do
+	for _, difficulty in DIFFICULTIES do
 		local pill = Candy.button(popup, {
-			size = UDim2.fromOffset(100, 52),
-			position = UDim2.fromOffset(176 + (i - 1) * 104, TOP + 64),
+			size = UDim2.fromOffset(150, 52),
+			position = UDim2.fromOffset(176, TOP + 64),
 			text = difficulty.name,
 		})
 		pill.Activated:Connect(function()
@@ -142,10 +160,21 @@ local function buildPopup()
 	end)
 
 	refreshChoices = function()
+		local mode = MODES[doorMode] or MODES.party
+		title.Text = mode.title
 		count.Text = tostring(choice.size)
 		minus.Visible = choice.size > 1
 		plus.Visible = choice.size < Config.Party.MaxSize
+		local offered = mode.difficulties or {}
+		difficultyRow.Visible = #offered > 0
+		modeLine.Visible = mode.line ~= nil
+		modeLine.Text = mode.line or ""
 		for name, pill in pills do
+			local slot = table.find(offered, name)
+			pill.face.Parent.Visible = slot ~= nil
+			if slot then
+				pill.face.Parent.Position = UDim2.fromOffset(176 + (slot - 1) * 154, TOP + 64)
+			end
 			if name == choice.difficulty then
 				paint(pill.face, pill.color)
 			else
@@ -186,13 +215,17 @@ function PartyUi.start()
 	buildPopup()
 	buildBanner()
 
-	Remotes.PartySetup.OnClientEvent:Connect(function(index)
+	Remotes.PartySetup.OnClientEvent:Connect(function(index, mode)
 		if type(index) ~= "number" then
 			close()
 			return
 		end
 		doorIndex = index
-		choice.difficulty = player:GetAttribute("Difficulty") or Config.DefaultDifficulty
+		doorMode = if MODES[mode] then mode else "party"
+		-- What you played last, if this door offers it.
+		local offered = MODES[doorMode].difficulties or {}
+		local last = player:GetAttribute("Difficulty")
+		choice.difficulty = if table.find(offered, last) then last else offered[1]
 		refreshChoices()
 		popup.Visible = true
 	end)
@@ -207,7 +240,11 @@ function PartyUi.start()
 			return
 		end
 		local seconds = math.max(0, math.ceil(status.leavesAt - workspace:GetServerTimeNow()))
-		bannerText.Text = ("PARTY %d/%d  ·  %s  ·  %ds"):format(status.count, status.size, status.difficulty, seconds)
+		if status.practice then
+			bannerText.Text = ("PRACTICE %d/%d  ·  %ds"):format(status.count, status.size, seconds)
+		else
+			bannerText.Text = ("PARTY %d/%d  ·  %s  ·  %ds"):format(status.count, status.size, status.difficulty or "", seconds)
+		end
 	end)
 end
 

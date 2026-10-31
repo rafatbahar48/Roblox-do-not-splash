@@ -7,6 +7,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Catalog = require(ReplicatedStorage.Shared.Catalog)
 local Config = require(ReplicatedStorage.Shared.Config)
+local Perks = require(ReplicatedStorage.Shared.Perks)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Cosmetics = require(script.Parent.Cosmetics)
 local Noise = require(script.Parent.Noise)
@@ -47,19 +48,19 @@ function Shop.buy(player, itemId)
 		return false
 	end
 	if item.kind == "boost" then
-		if profile.boosts[item.id] >= Config.Boosts.MaxCarried then
-			tell(player, ("You can't carry more than %d."):format(Config.Boosts.MaxCarried))
+		if profile.boosts[item.id] >= Perks.maxBoosts(player) then
+			tell(player, ("You can't carry more than %d."):format(Perks.maxBoosts(player)))
 			return false
 		end
 	elseif profile.owned[item.id] then
 		return false
 	end
-	if profile.pearls < item.price then
-		tell(player, ("Not enough pearls. %s costs %d."):format(item.name, item.price))
+	if profile.coins < item.price then
+		tell(player, ("Not enough coins. %s costs %d."):format(item.name, item.price))
 		return false
 	end
 
-	profile.pearls -= item.price
+	profile.coins -= item.price
 	if item.kind == "boost" then
 		profile.boosts[item.id] += 1
 	else

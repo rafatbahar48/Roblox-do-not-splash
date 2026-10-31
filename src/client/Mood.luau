@@ -1,7 +1,8 @@
 -- Lighting by where you are: a warm, colourful night in the courtyard and on
 -- the way out, cold blue fog in the drowned forest, with mist drifting low
--- over the water round you. The contrast is the point: the forest feels
--- darker for having just left somewhere safe.
+-- over the water round you, and in the cave between them, gloom you can
+-- still see by. The contrast is the point: the forest feels darker for
+-- having just left somewhere safe.
 --
 -- Changes made here are only seen on this screen. The dark values are the
 -- ones the server set (MapBuilder.luau's setupLighting).
@@ -12,7 +13,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
-local Stages = require(ReplicatedStorage.Shared.Stages)
+local Zones = require(ReplicatedStorage.Shared.Zones)
 local DeathScene = require(script.Parent.DeathScene)
 
 local player = Players.LocalPlayer
@@ -45,6 +46,32 @@ local SAFE = {
 		Intensity = 0.3,
 		Size = 18,
 		Threshold = 1.8,
+	},
+}
+
+-- The cave (server/CaveBuilder.luau): its torches and crystals do most of
+-- the lighting, with enough fill that the rock never goes black, and a
+-- haze that swallows the forest past its mouth.
+local CAVE = {
+	lighting = {
+		ClockTime = 0,
+		Brightness = 1.2,
+		Ambient = Color3.fromRGB(66, 62, 78),
+		OutdoorAmbient = Color3.fromRGB(70, 76, 98),
+		EnvironmentDiffuseScale = 0.3,
+		FogStart = 16,
+		FogEnd = 110,
+		FogColor = Color3.fromRGB(28, 32, 44),
+	},
+	grade = {
+		Saturation = -0.08,
+		Contrast = 0.12,
+		TintColor = Color3.fromRGB(240, 232, 240),
+	},
+	bloom = {
+		Intensity = 0.5,
+		Size = 22,
+		Threshold = 1.5,
 	},
 }
 
@@ -101,20 +128,14 @@ function Mood.start()
 		end
 	end
 
-	-- The way out begins where the last stage ends.
-	local exitZ = 0
-	for _, stage in Stages do
-		exitZ += stage.length
-	end
-
-	local current -- "safe" or "dark"
+	local current -- "safe", "cave" or "dark"
 	local wasDying = false
 	local mist, mistEmitter = makeMist()
 
 	local function apply(mood)
 		local wasDark = current == "dark"
 		current = mood
-		local values = if mood == "safe" then SAFE else dark
+		local values = if mood == "safe" then SAFE elseif mood == "cave" then CAVE else dark
 		for name, target in targets do
 			TweenService:Create(target, FADE, values[name]):Play()
 		end
@@ -137,8 +158,8 @@ function Mood.start()
 				local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
 				if root then
 					mist.Position = Vector3.new(root.Position.X, Config.Room.SurfaceY + 1.5, root.Position.Z)
-					local z = root.Position.Z
-					local mood = if z < 0 or z >= exitZ then "safe" else "dark"
+					local zone = Zones.at(root.Position)
+					local mood = if zone == "forest" then "dark" elseif zone == "cave" then "cave" else "safe"
 					if mood ~= current then
 						apply(mood)
 					end

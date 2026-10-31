@@ -9,8 +9,8 @@
 local Parts = require(script.Parent.UiArtParts)
 
 local ATLASES = {
-	panels = "rbxassetid://133949921640997", -- art/ui/kit/atlas-panels.png
-	icons = "rbxassetid://128362729162366", -- art/ui/kit/atlas-icons.png
+	panels = "rbxassetid://134371202136266", -- art/ui/kit/atlas-panels.png
+	icons = "rbxassetid://115281491013232", -- art/ui/kit/atlas-icons.png
 }
 
 local UiArt = {}

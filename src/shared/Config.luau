@@ -62,12 +62,41 @@ Config.Lurker = {
 
 -- When it catches you, the static stays up until you choose (client/
 -- DeathScene.luau, server/Progress.luau): Revive puts you back on the last
--- dry ground you stood on, for pearls; Bleed out sends you to your last
--- checkpoint, or the lobby. Not choosing bleeds out after ChoiceTime.
+-- dry ground you stood on, using a Self-Revive if you have one, else
+-- coins (or Robux for a Self-Revive, if you are short);
+-- Bleed out sends you to your last checkpoint; Back to lobby ends the run.
+-- Not choosing bleeds out after ChoiceTime.
 Config.Revive = {
-	Cost = 50, -- pearls
+	Cost = 50, -- coins
 	ChoiceTime = 30, -- seconds to choose
+	BuyTime = 60, -- extra seconds while a Robux purchase goes through
 	SafeSeconds = 3, -- after a revive, how long you make no noise at all
+}
+
+-- Robux: ids from the Creator Dashboard (the published game > Monetization).
+-- Products are Developer Products, bought again and again; passes are Game
+-- Passes, owned forever. 0 means not set up, and the game doesn't offer it.
+-- What each one is and gives: shared/RobuxCatalog.luau. Prices are set on
+-- the dashboard.
+Config.Products = {
+	CoinsSmall = 0,
+	CoinsJar = 0,
+	CoinsChest = 0,
+	CoinsHoard = 0,
+	NightKit = 0,
+	SelfRevive1 = 0, -- also what the death screen sells when you are short of coins
+	SelfRevive3 = 0,
+	Updraft5 = 0,
+	Hush5 = 0,
+}
+Config.Passes = {
+	DoubleCoins = 0,
+	DeepPockets = 0,
+}
+-- What the passes do (shared/Perks.luau).
+Config.PassPerks = {
+	DoubleCoins = { multiplier = 2 }, -- coins from stages, shells and escapes
+	DeepPockets = { pebbles = 5, maxBoosts = 15 },
 }
 
 Config.Pebbles = {
@@ -83,9 +112,9 @@ Config.Wading = {
 	WalkSpeed = 9,
 }
 
--- Pearls are the shop currency. A stage pays out each time a run clears it,
+-- Coins are the shop currency. A stage pays out each time a run clears it,
 -- a shell pays once ever, and an escape pays every time.
-Config.Pearls = {
+Config.Coins = {
 	PerStage = 10,
 	PerShell = 25,
 	PerEscape = 60,
@@ -134,9 +163,36 @@ Config.Room = {
 	LobbyWidth = 100,
 	FacadeHeight = 30, -- how tall the building's front is
 	ExitLength = 24,
-	-- Stage 1's front wall has a doorway per difficulty, at these x positions.
-	-- Walking through one picks that difficulty (server/LobbyDoors.luau).
-	EntranceDoors = { Easy = 13, Normal = 0, Hard = -13 },
+	-- Stage 1's front wall has three stone archways at these x positions; they
+	-- are party doors now, and nobody walks through (Config.Doors).
+	EntranceDoors = { 13, 0, -13 },
+}
+
+-- The doors on the lobby's building, left to right as you face it. Nobody
+-- walks through them: you stand on a door's pad and start a party there (the
+-- host) or join the one waiting, and when its countdown ends the party goes
+-- into the cave behind, together (server/Parties.luau, client/PartyUi.luau).
+--   x     where the door is (the archways are at Room.EntranceDoors)
+--   mode  "easy"      an Easy party
+--         "party"     the host picks Normal or Hard
+--         "practice"  no creature, and no coins or records
+Config.Doors = {
+	{ x = 33, mode = "easy" },
+	{ x = 13, mode = "party" },
+	{ x = 0, mode = "party" },
+	{ x = -13, mode = "party" },
+	{ x = -33, mode = "practice" },
+}
+
+-- The cave behind the doors, where a party arrives: the start of stage 1,
+-- with room to walk about and a supply stall, opening wide onto the forest
+-- (server/CaveBuilder.luau). The run timer starts at its mouth.
+Config.Cave = {
+	Length = 40, -- from the building's back wall to the mouth
+	HalfWidth = 24,
+	Height = 18,
+	ArrivalDelay = 3, -- seconds after arriving before something snaps a stick out there
+	GrowlDelay = 2, -- and then it growls
 }
 
 -- The stages are stretches of a drowned forest at night, behind the lobby's
@@ -191,6 +247,12 @@ Config.Sounds = {
 	-- The creature, from where it is (client/LurkerVisuals.luau)
 	CreatureSteps = "rbxassetid://9114082550", -- big feet in the water, while it runs
 	CreatureGrowl = "rbxassetid://9113985466", -- a low growl, while it hunts
+
+	-- The cave where a party arrives (client/Cave.luau)
+	CaveDrips = "rbxassetid://9126190860", -- water dripping, while you are in it
+	CaveWind = "rbxassetid://9113732233", -- wind through its mouth, louder nearer it
+	StickSnap = "rbxassetid://9113582284", -- something steps on a stick out there, just after you arrive
+	CaveGrowl = "rbxassetid://9116292585", -- and growls, two seconds later
 
 	-- Just for you (client/Sounds.luau)
 	Wading = "rbxassetid://9120609785", -- your feet in the water

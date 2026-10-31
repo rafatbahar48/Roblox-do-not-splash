@@ -21,9 +21,12 @@
 --             far above the mouth, and how far above the mouth it looks
 --             (studs; bigger mouths want the camera further back)
 --
--- Creatures too far away to see through the fog are left where they are.
+-- Creatures too far away to see through the fog are left where they are. On a
+-- practice run (the Practice attribute) there is no creature at all: no body
+-- and no sound.
 
 local Debris = game:GetService("Debris")
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
@@ -62,6 +65,8 @@ local RIPPLE = Color3.fromRGB(150, 170, 180)
 -- within near studs, gone past far, and how fast they fade in between.
 local STEPS = { volume = 4, near = 10, far = 230, mode = Enum.RollOffMode.Linear }
 local GROWL = { volume = 3.5, near = 4, far = 120, mode = Enum.RollOffMode.LinearSquare }
+
+local player = Players.LocalPlayer
 
 local LurkerVisuals = {}
 
@@ -375,8 +380,9 @@ local function setAlert(creature)
 			end
 		end
 	end
-	playIf(creature.steps, creature.running and not creature.lunging)
-	playIf(creature.growl, creature.alert and not creature.lunging)
+	local heard = player:GetAttribute("Practice") ~= true
+	playIf(creature.steps, heard and creature.running and not creature.lunging)
+	playIf(creature.growl, heard and creature.alert and not creature.lunging)
 end
 
 local function ripple(position, size, transparency)
@@ -660,7 +666,14 @@ end
 function LurkerVisuals.start()
 	bodies = Instance.new("Folder")
 	bodies.Name = "LurkerBodies"
-	bodies.Parent = workspace
+	local function showOrHide()
+		bodies.Parent = if player:GetAttribute("Practice") then nil else workspace
+		for _, creature in creatures do
+			setAlert(creature)
+		end
+	end
+	player:GetAttributeChangedSignal("Practice"):Connect(showOrHide)
+	showOrHide()
 
 	task.spawn(function()
 		local folder = ReplicatedStorage:WaitForChild("Creatures", 5)

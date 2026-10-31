@@ -1,13 +1,17 @@
--- The party doors at the back of the lobby. Step on an empty door's pad and
--- a pop-up asks how big a party, which difficulty and whether it is for
--- friends only (client/PartyUi.luau). Others join by stepping on the pad;
--- stepping off leaves, and the party ends if the one who made it leaves.
--- When the countdown runs out, or a few seconds after the party fills,
--- everyone in it goes off together: in the published game to a private
--- server of their own, with the difficulty sent along (Progress.luau reads
--- it); in Studio, which can't teleport, straight into stage 1 here.
+-- The doors on the lobby's building (Config.Doors). Nobody walks through
+-- them. Step on a free door's pad and a pop-up asks how big a party and
+-- whether it is for friends only, and at the middle three, Normal or Hard
+-- (client/PartyUi.luau): the door on the left makes Easy parties, the one
+-- on the right practice runs, with no creature. Others join by stepping on
+-- the pad; stepping off leaves, and the party ends if the one who made it
+-- (the host) leaves. When the countdown runs out, or a few seconds after the
+-- party fills, everyone in it goes off together: in the published game to a
+-- private server of their own, with the difficulty and practice sent along
+-- (Progress.luau reads them, and starts everyone in the cave); in Studio,
+-- which can't teleport, straight into the cave behind the doors here.
 --
--- In a party's private server the party doors are switched off.
+-- In a party's own server the party is already together, so the doors
+-- don't make parties: their pads take you back into the cave.
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -19,17 +23,24 @@ local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Progress = require(script.Parent.Progress)
 
 local PARTY = Config.Party
-local ROOM = Config.Room
 local TICK = 0.25
 local REQUEST_GAP = 0.3 -- seconds between a player's requests
 
 local Parties = {}
 
+-- Which difficulties a party door's host picks from, by its mode. A
+-- practice run has no difficulty.
+local CHOICES = {
+	easy = { "Easy" },
+	party = { "Normal", "Hard" },
+	practice = {},
+}
+
 local doors -- layout.partyDoors, each with its party's state added
 local lastRequest = {} -- [player] = os.clock() of their last request
 local friends = {} -- [owner] = { [player] = true or false }, so each pair is asked once
 
-local inPartyServer = game.PrivateServerId ~= "" and game.PrivateServerOwnerId == 0
+local inPartyServer = Progress.inPartyServer
 
 local function allowed(player)
 	local now = os.clock()
@@ -88,6 +99,7 @@ local function sendStatus(door)
 			count = #door.members,
 			size = door.size,
 			difficulty = door.difficulty,
+			practice = door.mode == "practice",
 			leavesAt = door.leavesAt,
 			owner = member == door.owner,
 		})
@@ -132,9 +144,12 @@ end
 local function launch(door)
 	local members = door.members
 	local difficulty = door.difficulty
+	local practice = door.mode == "practice"
 	for _, member in members do
 		door.ignored[member] = true
-		Progress.setDifficulty(member, difficulty)
+		if difficulty then
+			Progress.setDifficulty(member, difficulty)
+		end
 		Remotes.PartyStatus:FireClient(member, nil)
 	end
 	clear(door)
@@ -143,7 +158,7 @@ local function launch(door)
 		local ok, problem = pcall(function()
 			local options = Instance.new("TeleportOptions")
 			options.ReservedServerAccessCode = TeleportService:ReserveServer(game.PlaceId)
-			options:SetTeleportData({ difficulty = difficulty })
+			options:SetTeleportData({ difficulty = difficulty, practice = practice })
 			TeleportService:TeleportAsync(game.PlaceId, members, options)
 		end)
 		if ok then
@@ -152,25 +167,21 @@ local function launch(door)
 		warn("[Parties] Could not send the party to its own server, starting it here:", problem)
 	end
 
-	-- Studio, or the teleport failed: in through their difficulty's door together.
-	local x = ROOM.EntranceDoors[difficulty]
-	local y = ROOM.SurfaceY + ROOM.TileHeight + 3
+	-- Studio, or the teleport failed: into the cave together.
 	for i, member in members do
-		local character = member.Character
-		if character and character.Parent then
-			character:PivotTo(CFrame.new(x + (i - (#members + 1) / 2) * 1.6, y, 4))
-			Progress.startRun(member)
-			Remotes.Notify:FireClient(member, "party", "Your party is in. Stay quiet.")
+		if member.Parent then
+			Progress.enterCave(member, practice, i, #members)
 		end
 	end
 end
 
 local function updateScreen(door, now)
 	if inPartyServer then
-		door.status.Text = "You're already in a party"
+		door.status.Text = "Step on the pad to go back in"
 	elseif door.owner then
 		local seconds = math.max(0, math.ceil(door.leavesAt - now))
-		door.status.Text = ("%d/%d  ·  %s  ·  leaving in %ds"):format(#door.members, door.size, door.difficulty, seconds)
+		local kind = if door.mode == "party" then "  ·  " .. door.difficulty else ""
+		door.status.Text = ("%d/%d%s  ·  leaving in %ds"):format(#door.members, door.size, kind, seconds)
 	elseif door.setup then
 		door.status.Text = door.setup.DisplayName .. " is setting up a party"
 	else
@@ -187,7 +198,15 @@ local function step()
 			end
 		end
 
-		if door.setup then
+		if inPartyServer then
+			-- Back from the lobby: straight into the cave again.
+			for _, player in Players:GetPlayers() do
+				if onPad(door, player) and not door.ignored[player] then
+					door.ignored[player] = true
+					Progress.enterCave(player)
+				end
+			end
+		elseif door.setup then
 			local player = door.setup
 			if not player.Parent or not onPad(door, player) or os.clock() > door.setupUntil then
 				closeSetup(door)
@@ -229,7 +248,7 @@ local function step()
 				if onPad(door, player) and not door.ignored[player] and not doorOf(player) then
 					door.setup = player
 					door.setupUntil = os.clock() + PARTY.SetupTimeout
-					Remotes.PartySetup:FireClient(player, index)
+					Remotes.PartySetup:FireClient(player, index, door.mode)
 					break
 				end
 			end
@@ -245,10 +264,13 @@ function Parties.init(layout)
 		clear(door)
 	end
 
-	if inPartyServer then
-		for _, door in doors do
-			updateScreen(door, 0)
+	task.spawn(function()
+		while true do
+			step()
+			task.wait(TICK)
 		end
+	end)
+	if inPartyServer then
 		return
 	end
 
@@ -256,11 +278,21 @@ function Parties.init(layout)
 		if not allowed(player) then
 			return
 		end
-		if type(index) ~= "number" or type(size) ~= "number" or size ~= size or type(difficulty) ~= "string" or type(friendsOnly) ~= "boolean" then
+		if type(index) ~= "number" or type(size) ~= "number" or size ~= size or type(friendsOnly) ~= "boolean" then
 			return
 		end
 		local door = doors[index]
-		if not door or door.setup ~= player or not Config.Difficulties[difficulty] or not onPad(door, player) then
+		if not door or door.setup ~= player or not onPad(door, player) then
+			return
+		end
+		-- The door decides what can be picked: Easy at the Easy door, nothing
+		-- for practice.
+		local choices = CHOICES[door.mode]
+		if #choices == 0 then
+			difficulty = nil
+		elseif #choices == 1 then
+			difficulty = choices[1]
+		elseif type(difficulty) ~= "string" or not table.find(choices, difficulty) then
 			return
 		end
 		size = math.clamp(math.floor(size), 1, PARTY.MaxSize)
@@ -292,13 +324,6 @@ function Parties.init(layout)
 		friends[player] = nil
 		for _, cache in friends do
 			cache[player] = nil
-		end
-	end)
-
-	task.spawn(function()
-		while true do
-			step()
-			task.wait(TICK)
 		end
 	end)
 end

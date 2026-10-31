@@ -1,6 +1,7 @@
 -- The music, fading from one track to the next: a music box in the lobby
 -- and at the way out, scary suspense out in the forest, and the chase
--- while something hunts you. Silent while it has you (DeathScene.luau).
+-- while something hunts you. Silent in the cave, where you hear the drips
+-- and the wind (Cave.luau), and while it has you (DeathScene.luau).
 -- Ids are in Config.Sounds; the Music setting turns the Music sound group
 -- off (Settings.luau).
 
@@ -8,7 +9,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
-local Stages = require(ReplicatedStorage.Shared.Stages)
+local Zones = require(ReplicatedStorage.Shared.Zones)
 local DeathScene = require(script.Parent.DeathScene)
 local Sounds = require(script.Parent.Sounds)
 
@@ -33,18 +34,15 @@ function Music.start()
 		end
 	end
 
-	-- The stages run from z = 0 to the way out (as in Hud.luau and Mood.luau).
-	local exitZ = 0
-	for _, stage in Stages do
-		exitZ += stage.length
-	end
-
 	local function wanted()
 		if DeathScene.playing() then
 			return nil
 		end
 		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-		if root and root.Position.Z >= 0 and root.Position.Z < exitZ then
+		local zone = if root then Zones.at(root.Position) else "lobby"
+		if zone == "cave" then
+			return nil
+		elseif zone == "forest" then
 			return if player:GetAttribute("Hunted") then "chase" else "forest"
 		end
 		return "lobby"

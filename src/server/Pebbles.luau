@@ -71,16 +71,22 @@ local function throw(player, target)
 	local velocity = offset / flightTime - gravity * flightTime / 2
 
 	local start = origin + offset.Unit * 1.5
-	table.insert(flying, { part = makePebble(start), position = start, velocity = velocity, age = 0 })
+	table.insert(flying, { part = makePebble(start), position = start, velocity = velocity, age = 0, thrower = player })
 end
 
 local function land(pebble, result)
+	-- Pebbles thrown on a practice run make no noise the creature hears.
+	local heard = pebble.thrower:GetAttribute("Practice") ~= true
 	if result.Instance.Name == "Water" then
-		Noise.emitAt(result.Position, Config.Noise.PebbleSplash)
+		if heard then
+			Noise.emitAt(result.Position, Config.Noise.PebbleSplash)
+		end
 		Effects.splash(result.Position, 3, "PebbleSplash")
 		pebble.part:Destroy()
 	else
-		Noise.emitAt(result.Position, Config.Noise.PebbleClatter)
+		if heard then
+			Noise.emitAt(result.Position, Config.Noise.PebbleClatter)
+		end
 		Effects.sound("Clatter", result.Position)
 		pebble.part.Position = result.Position + result.Normal * 0.3
 		task.delay(2, function()

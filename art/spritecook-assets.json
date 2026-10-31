@@ -157,22 +157,10 @@
       "file": "ui/kit/parts/well.png"
     },
     {
-      "asset_id": "7f68fd60-a615-48d8-9d94-bdd3687c84fb",
-      "sha12": "4f258355d0c9",
-      "label": "UI kit: pearl_counter",
-      "file": "ui/kit/parts/pearl_counter.png"
-    },
-    {
       "asset_id": "19e00e7b-824d-48ee-979c-75fd774b8250",
       "sha12": "216282a7423a",
       "label": "UI kit: tile",
       "file": "ui/kit/parts/tile.png"
-    },
-    {
-      "asset_id": "f43178dd-55c9-4658-a4c3-1d0f8d406df9",
-      "sha12": "b90c027d1b19",
-      "label": "UI kit: pearl",
-      "file": "ui/kit/parts/pearl.png"
     },
     {
       "asset_id": "0305aa17-6464-40ac-aef1-817fc8d6eb16",
@@ -245,6 +233,42 @@
       "sha12": "7b60087e2423",
       "label": "UI kit: dock_shop",
       "file": "ui/kit/parts/dock_shop.png"
+    },
+    {
+      "asset_id": "14b39681-c7bc-47d3-a632-05df67524304",
+      "sha12": "676cefbe0212",
+      "label": "Robux shop icons sheet (cut into ui/kit/parts/robux_*.png)",
+      "file": "ui/kit/robux-icons-sheet.png"
+    },
+    {
+      "asset_id": "c2990a0f-3a37-499e-8baf-69d3afd32d5f",
+      "sha12": "1a8a3d4b1206",
+      "label": "Sparkle sheet (cut into ui/kit/parts/sparkle.png; its sunburst was lost)",
+      "file": "ui/kit/sunburst-sparkle-sheet.png"
+    },
+    {
+      "asset_id": "aa781d91-a19f-4d1f-8391-76b5c938c930",
+      "sha12": "74538baa9209",
+      "label": "Sunburst on black (made white with brightness as alpha: ui/kit/parts/sunburst.png)",
+      "file": "ui/kit/sunburst-on-black.png"
+    },
+    {
+      "asset_id": "8b57beeb-cead-490f-956f-1baa9197ecd6",
+      "sha12": "639ad002c6e1",
+      "label": "Robux shop icons, gold coin version (cut into ui/kit/parts/robux_*.png)",
+      "file": "ui/kit/coin-icons-sheet.png"
+    },
+    {
+      "asset_id": "dcb9bcbd-729f-4554-9f13-0c4a299fb0a5",
+      "sha12": "e8c9132145c2",
+      "label": "Coin counter (cut into ui/kit/parts/coin_counter.png)",
+      "file": "ui/kit/coin-counter-sheet.png"
+    },
+    {
+      "asset_id": "a8caf154-96ef-4ab8-a06e-e346fee1b1da",
+      "sha12": "b0f12e425fc1",
+      "label": "Gold coin with a wave",
+      "file": "ui/kit/parts/coin.png"
     }
   ]
 }

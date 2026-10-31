@@ -2,6 +2,8 @@
 -- a stage.
 --
 -- length    stretch length in studs (start island + water + end island)
+-- startLanding  (optional) how long its start island is; stage 1's holds the
+--           cave (Config.Cave) as well as the usual landing
 -- gap       {min, max} gap between stepping stones, edge to edge
 -- tileSize  {min, max} stepping stone width
 -- shift     how far each one can sit sideways from the one before
@@ -19,7 +21,8 @@
 return {
 	{
 		name = "The Shallows",
-		length = 90,
+		length = 130, -- 90 of forest, and the cave before it
+		startLanding = 50,
 		gap = { 3, 4 },
 		tileSize = { 7, 9 },
 		shift = 4,

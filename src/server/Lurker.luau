@@ -41,6 +41,11 @@ local function flat(vector)
 	return Vector3.new(vector.X, 0, vector.Z)
 end
 
+-- On a practice run (Progress.luau) it neither watches nor hears them.
+local function practising(player)
+	return player:GetAttribute("Practice") == true
+end
+
 local function speedMultiplier(player)
 	local difficulty = Config.Difficulties[player:GetAttribute("Difficulty")] or Config.Difficulties[Config.DefaultDifficulty]
 	return difficulty.lurkerSpeedMultiplier
@@ -109,8 +114,8 @@ end
 -- The nearest living player in the forest, and how far, or nil.
 function Lurker:nearestPlayer()
 	local best, bestDistance
-	for _, state in Noise.states() do
-		if state.room and state.root then
+	for player, state in Noise.states() do
+		if state.room and state.root and not practising(player) then
 			local distance = flatDistance(self.position, state.root.Position)
 			if not best or distance < bestDistance then
 				best, bestDistance = state, distance
@@ -263,7 +268,7 @@ function Lurker:listen()
 	local best, bestScore = nil, SETTINGS.HearingThreshold
 	for player, state in Noise.states() do
 		local hunted = player == self.huntingPlayer
-		if state.room and state.root and (state.inWater or hunted) then
+		if state.room and state.root and (state.inWater or hunted) and not practising(player) then
 			local score = state.noise - flatDistance(self.position, state.root.Position) * SETTINGS.DistanceFalloff
 			if hunted then
 				score += SETTINGS.Stickiness

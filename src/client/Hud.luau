@@ -1,11 +1,12 @@
 -- The on-screen HUD, made of the SpriteCook UI kit's art (shared/Candy.luau):
 --
---   top left      pearls (its + opens the shop), and which stage you are on
+--   top left      coins (its + opens the shop), and which stage you are on
 --   top middle    the run timer, and "IT HEARD YOU" while something hunts you
 --   top right     the difficulty buttons
---   left          the noise meter (only in the stages)
---   bottom        the dock: shop, bag, stats, settings, invite (not in the stages)
---   bottom right  pebble, Updraft and Hush buttons (only in the stages)
+--   left          the noise meter (only out in the forest)
+--   bottom        the dock: shop, bag, stats, settings, invite (not out in
+--                 the forest: in the lobby, the cave and the way out)
+--   bottom right  pebble, Updraft and Hush buttons (only out in the forest)
 --
 -- plus short notifications and the escape screen.
 
@@ -22,6 +23,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Stages = require(ReplicatedStorage.Shared.Stages)
+local Zones = require(ReplicatedStorage.Shared.Zones)
 local Boosts = require(script.Parent.Boosts)
 local SettingsUi = require(script.Parent.SettingsUi)
 local Sounds = require(script.Parent.Sounds)
@@ -109,35 +111,35 @@ function Hud.start()
 		Parent = gui,
 	})
 
-	-- Top left: pearls, and the stage under them --------------------------------
+	-- Top left: coins, and the stage under them --------------------------------
 
-	local pearlsPill = Candy.art("pearl_counter", {
-		Name = "Pearls",
+	local coinsPill = Candy.art("coin_counter", {
+		Name = "Coins",
 		Position = UDim2.fromOffset(MARGIN, 10),
 		Size = UDim2.fromOffset(200, 64),
 		Parent = gui,
 	}, 64)
-	local pearlsLabel = text({
+	local coinsLabel = text({
 		Name = "Count",
 		Position = UDim2.fromOffset(66, 6),
 		Size = UDim2.new(1, -122, 1, -14),
 		TextSize = 28,
 		TextXAlignment = Enum.TextXAlignment.Left,
 		Text = "0",
-		Parent = pearlsPill,
+		Parent = coinsPill,
 	})
-	local morePearls = create("TextButton", {
+	local moreCoins = create("TextButton", {
 		Name = "More",
 		AnchorPoint = Vector2.new(1, 0),
 		Position = UDim2.fromScale(1, 0),
 		Size = UDim2.new(0, 56, 1, 0),
 		BackgroundTransparency = 1,
 		Text = "",
-		Parent = pearlsPill,
+		Parent = coinsPill,
 	})
-	morePearls.Activated:Connect(function()
+	moreCoins.Activated:Connect(function()
 		Candy.click()
-		ShopUi.open("shop")
+		ShopUi.open("shop", "robux")
 	end)
 
 	local stagePill = Candy.art("button_white", {
@@ -383,10 +385,10 @@ function Hud.start()
 		pebbleButton.ImageColor3 = if count > 0 then WHITE else GREYED
 	end
 
-	local function updatePearls()
-		local pearls = tostring(player:GetAttribute("Pearls") or 0)
-		pearlsLabel.Text = pearls
-		pearlsPill.Size = UDim2.fromOffset(math.max(180, 66 + textWidth(pearls, 28) + 66), 64)
+	local function updateCoins()
+		local coins = tostring(player:GetAttribute("Coins") or 0)
+		coinsLabel.Text = coins
+		coinsPill.Size = UDim2.fromOffset(math.max(180, 66 + textWidth(coins, 28) + 66), 64)
 	end
 
 	local function updateBoosts()
@@ -477,14 +479,14 @@ function Hud.start()
 	player:GetAttributeChangedSignal("Difficulty"):Connect(updateDifficulty)
 	player:GetAttributeChangedSignal("Hunted"):Connect(updateHunted)
 	player:GetAttributeChangedSignal("ShellsFound"):Connect(hideFoundShells)
-	player:GetAttributeChangedSignal("Pearls"):Connect(updatePearls)
+	player:GetAttributeChangedSignal("Coins"):Connect(updateCoins)
 	player:GetAttributeChangedSignal("Boost_updraft"):Connect(updateBoosts)
 	player:GetAttributeChangedSignal("Boost_hush"):Connect(updateBoosts)
 	player:GetAttributeChangedSignal("Hushed"):Connect(updateHushed)
 	updateStage()
 	updatePebbles()
 	updateDifficulty()
-	updatePearls()
+	updateCoins()
 	updateBoosts()
 	updateHushed()
 	updateHunted()
@@ -493,16 +495,10 @@ function Hud.start()
 		hideFoundShells()
 	end)
 
-	-- The lobby and the way out start where Mood.luau says they do.
-	local exitZ = 0
-	for _, stage in Stages do
-		exitZ += stage.length
-	end
-
 	local shown = 0
 	RunService.RenderStepped:Connect(function(dt)
 		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-		local inStages = root ~= nil and root.Position.Z >= 0 and root.Position.Z < exitZ
+		local inStages = root ~= nil and Zones.at(root.Position) == "forest"
 		noisePanel.Parent.Visible = inStages
 		actions.Visible = inStages
 		dock.Visible = not inStages

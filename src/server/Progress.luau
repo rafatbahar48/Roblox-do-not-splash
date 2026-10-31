@@ -1,4 +1,4 @@
--- Checkpoints, shells, escapes, difficulty, pearls, shop items, stats,
+-- Checkpoints, shells, escapes, difficulty, coins, shop items, stats,
 -- settings, spawning and saving.
 --
 -- Player attributes the client reads:
@@ -6,7 +6,7 @@
 --   Difficulty         "Easy", "Normal" or "Hard"
 --   Pebbles            pebbles left this life
 --   ShellsFound        comma-separated stage numbers whose shell was collected
---   Pearls             pearls to spend in the shop
+--   Coins             coins to spend in the shop
 --   Owned              comma-separated ids of skins and accessories owned
 --   EquippedSkin       id of the skin worn, if any
 --   EquippedAccessory  id of the accessory worn, if any
@@ -17,16 +17,25 @@
 --   StatRuns           runs started (through stage 1's doors)
 --   StatCaught         times it caught them
 --   StatStages         stages cleared, all runs together
---   StatEarned         pearls earned, all time
+--   StatEarned         coins earned, all time
 --   PlayTime           seconds played, as of PlayTimeAt (server time)
 --   Best_<difficulty>  fastest escape on that difficulty, in seconds
 --   Setting_<id>       their settings (Config.Settings)
+--   SelfRevives        Self-Revives they have (bought for Robux), used first
+--                      when it catches them
 --   DownedUntil        server time they bleed out at, while caught and choosing
---                      to revive or bleed out (Config.Revive)
+--                      to revive, bleed out or go back to the lobby (Config.Revive)
+--   Practice           true on a practice run: no creature, and no coins,
+--                      shells, stats or records
+--   CaveArrival        server time their party last arrived in the cave
+--                      (client/Cave.luau plays what happens next)
 --
--- A run is timed from walking through stage 1's door to escaping. It counts
--- for the easiest difficulty played along the way, and the best time on each
--- difficulty is saved and sent to the record boards (Leaderboards.luau).
+-- A run starts in the cave behind the lobby, where a party arrives
+-- (Parties.luau), and is timed from walking out of its mouth to escaping.
+-- It counts for the easiest difficulty played along the way, and the best
+-- time on each difficulty is saved and sent to the record boards
+-- (Leaderboards.luau). Practice runs aren't saved: leave halfway and you
+-- start in the lobby next time.
 
 local DataStoreService = game:GetService("DataStoreService")
 local Players = game:GetService("Players")
@@ -35,6 +44,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Catalog = require(ReplicatedStorage.Shared.Catalog)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
+local Perks = require(ReplicatedStorage.Shared.Perks)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Stages = require(ReplicatedStorage.Shared.Stages)
 local Cosmetics = require(script.Parent.Cosmetics)
@@ -46,6 +56,9 @@ local RESTART_COOLDOWN = 2
 local SETTING_GAP = 0.1 -- seconds between changes to one of a player's settings
 
 local Progress = {}
+
+-- True in a party's own server (Parties.luau): everyone starts in the cave.
+Progress.inPartyServer = game.PrivateServerId ~= "" and game.PrivateServerOwnerId == 0
 
 local layout
 local profiles = {} -- [Player] = profile
@@ -149,7 +162,8 @@ local function load(player)
 	local boosts = {}
 	for _, item in Catalog.items do
 		if item.kind == "boost" then
-			boosts[item.id] = wholeNumber(type(data.boosts) == "table" and data.boosts[item.id], Config.Boosts.MaxCarried)
+			-- Up to the most anyone can carry; Deep Pockets is checked after loading.
+			boosts[item.id] = wholeNumber(type(data.boosts) == "table" and data.boosts[item.id], math.max(Config.Boosts.MaxCarried, Config.PassPerks.DeepPockets.maxBoosts))
 		end
 	end
 
@@ -182,11 +196,12 @@ local function load(player)
 		wins = wholeNumber(data.wins),
 		difficulty = if Config.Difficulties[data.difficulty] then data.difficulty else Config.DefaultDifficulty,
 		escaped = false,
-		pearls = wholeNumber(data.pearls),
+		coins = wholeNumber(data.coins or data.pearls), -- saves from before coins said pearls
 		owned = owned,
 		equipped = equipped,
 		boosts = boosts,
 		bestTimes = bestTimes, -- [difficulty name] = seconds
+		selfRevives = wholeNumber(data.selfRevives),
 		runs = wholeNumber(data.runs),
 		caught = wholeNumber(data.caught),
 		stages = wholeNumber(data.stages),
@@ -195,6 +210,9 @@ local function load(player)
 		joinedAt = os.clock(),
 		settings = settings, -- [setting id] = value
 		run = nil, -- { startedAt = os.clock(), easiest = difficulty order } while timing
+		inCave = false, -- on a run that started in the cave, so stage 1 restarts there
+		practice = false,
+		partyPractice = false, -- this party's own server is for practice
 		canSave = loaded,
 	}
 end
@@ -217,16 +235,18 @@ local function save(player, profile)
 	end
 	pendingSaves += 1
 	local ok, err = pcall(store.SetAsync, store, keyFor(player), {
-		checkpoint = profile.checkpoint,
+		-- Nothing from a practice run is kept: next time is a fresh start.
+		checkpoint = if profile.practice then 0 else profile.checkpoint,
 		shells = shells,
 		wins = profile.wins,
 		difficulty = profile.difficulty,
-		escaped = profile.escaped,
-		pearls = profile.pearls,
+		escaped = profile.escaped and not profile.practice,
+		coins = profile.coins,
 		owned = owned,
 		equipped = { skin = profile.equipped.skin, accessory = profile.equipped.accessory },
 		boosts = profile.boosts,
 		bestTimes = profile.bestTimes,
+		selfRevives = profile.selfRevives,
 		runs = profile.runs,
 		caught = profile.caught,
 		stages = profile.stages,
@@ -263,13 +283,15 @@ local function sync(player, profile)
 	player:SetAttribute("Checkpoint", profile.checkpoint)
 	player:SetAttribute("Difficulty", profile.difficulty)
 	player:SetAttribute("ShellsFound", table.concat(found, ","))
-	player:SetAttribute("Pearls", profile.pearls)
+	player:SetAttribute("Coins", profile.coins)
 	player:SetAttribute("Owned", table.concat(owned, ","))
 	player:SetAttribute("EquippedSkin", profile.equipped.skin)
 	player:SetAttribute("EquippedAccessory", profile.equipped.accessory)
 	for id, count in profile.boosts do
 		player:SetAttribute("Boost_" .. id, count)
 	end
+	player:SetAttribute("SelfRevives", profile.selfRevives)
+	player:SetAttribute("Practice", if profile.practice then true else nil)
 	player:SetAttribute("Escapes", profile.wins)
 	player:SetAttribute("StatRuns", profile.runs)
 	player:SetAttribute("StatCaught", profile.caught)
@@ -289,14 +311,14 @@ local function sync(player, profile)
 		stats.Stage.Value = math.min(profile.checkpoint + 1, #Stages)
 		stats.Shells.Value = shellCount(profile)
 		stats.Escapes.Value = profile.wins
-		stats.Pearls.Value = profile.pearls
+		stats.Coins.Value = profile.coins
 	end
 end
 
 local function makeLeaderstats(player)
 	local stats = Instance.new("Folder")
 	stats.Name = "leaderstats"
-	for _, name in { "Stage", "Shells", "Escapes", "Pearls" } do
+	for _, name in { "Stage", "Shells", "Escapes", "Coins" } do
 		local value = Instance.new("IntValue")
 		value.Name = name
 		value.Parent = stats
@@ -314,8 +336,13 @@ local function playerFromHit(hit)
 	return nil, nil
 end
 
--- Gives a player a new character at their checkpoint (the lobby if none), or
--- at the given spot.
+-- Where in the cave the slot-th of count players stands as they arrive.
+local function caveSpot(slot, count)
+	return layout.cave.spawn * CFrame.new(((slot or 1) - ((count or 1) + 1) / 2) * 3, 0, 0)
+end
+
+-- Gives a player a new character at their checkpoint (the cave if their run
+-- started there, else the lobby, if none), or at the given spot.
 local function spawnPlayer(player, at)
 	local profile = profiles[player]
 	if not profile or not player.Parent then
@@ -327,6 +354,8 @@ local function spawnPlayer(player, at)
 		character:PivotTo(at)
 	elseif character and profile.checkpoint > 0 then
 		character:PivotTo(layout.rooms[profile.checkpoint].checkpointCFrame)
+	elseif character and profile.inCave then
+		character:PivotTo(caveSpot())
 	end
 end
 
@@ -335,15 +364,27 @@ end
 local function awaitChoice(player, profile, downed)
 	local seconds = Config.Revive.ChoiceTime
 	player:SetAttribute("DownedUntil", workspace:GetServerTimeNow() + seconds)
-	local deadline = os.clock() + seconds
-	while player.Parent and profile.downed == downed and not downed.choice and os.clock() < deadline do
+	downed.deadline = os.clock() + seconds
+	while player.Parent and profile.downed == downed and not downed.choice and os.clock() < downed.deadline do
 		task.wait(0.1)
 	end
 	player:SetAttribute("DownedUntil", nil)
 end
 
+-- Ends a player's run: back to stage 1, from the lobby.
+local function leaveRun(player, profile)
+	profile.checkpoint = 0
+	profile.escaped = false
+	profile.run = nil
+	profile.downed = nil
+	profile.inCave = false
+	profile.practice = false
+	player:SetAttribute("RunStartedAt", nil)
+	sync(player, profile)
+end
+
 local function onCharacterAdded(player, character)
-	player:SetAttribute("Pebbles", Config.Pebbles.PerLife)
+	player:SetAttribute("Pebbles", Perks.pebblesPerLife(player))
 	local profile = profiles[player]
 	if profile then
 		-- A new body: whatever caught the last one is over with.
@@ -373,6 +414,9 @@ local function onCharacterAdded(player, character)
 			spawnPlayer(player, downed.spot)
 			Noise.hush(player, Config.Revive.SafeSeconds)
 		else
+			if downed and downed.choice == "lobby" and current then
+				leaveRun(player, current)
+			end
 			spawnPlayer(player)
 		end
 	end)
@@ -388,15 +432,23 @@ local function onPlayerAdded(player)
 	if not player.Parent then
 		return
 	end
-	-- A party sent here from another server's party door brings its difficulty.
+	-- A party sent here from another server's party door brings its
+	-- difficulty, and whether it is practice.
 	local joinData = player:GetJoinData().TeleportData
-	if type(joinData) == "table" and type(joinData.difficulty) == "string" and Config.Difficulties[joinData.difficulty] then
-		profile.difficulty = joinData.difficulty
+	if type(joinData) == "table" then
+		if type(joinData.difficulty) == "string" and Config.Difficulties[joinData.difficulty] then
+			profile.difficulty = joinData.difficulty
+		end
+		profile.partyPractice = joinData.practice == true
 	end
 	profiles[player] = profile
 	sync(player, profile)
 	Leaderboards.seed(player, profile.wins, profile.bestTimes)
-	spawnPlayer(player)
+	if Progress.inPartyServer then
+		Progress.enterCave(player)
+	else
+		spawnPlayer(player)
+	end
 end
 
 local function difficultyByOrder(order)
@@ -413,7 +465,9 @@ local function startRun(player, profile)
 		return
 	end
 	profile.run = { startedAt = os.clock(), easiest = Config.Difficulties[profile.difficulty].order }
-	profile.runs += 1
+	if not profile.practice then
+		profile.runs += 1
+	end
 	player:SetAttribute("RunStartedAt", workspace:GetServerTimeNow())
 	sync(player, profile)
 end
@@ -435,6 +489,9 @@ local function finishRun(player, profile)
 	player:SetAttribute("RunStartedAt", nil)
 
 	local seconds = math.floor((os.clock() - run.startedAt) * 10) / 10
+	if profile.practice then
+		return ("\nTime %s, practice"):format(Format.time(seconds))
+	end
 	local difficulty = difficultyByOrder(run.easiest)
 	local best = profile.bestTimes[difficulty]
 	if best and seconds >= best then
@@ -445,8 +502,8 @@ local function finishRun(player, profile)
 	return ("\nTime %s on %s   New best!"):format(Format.time(seconds), difficulty)
 end
 
-local function addPearls(player, profile, amount)
-	profile.pearls += amount
+local function addCoins(player, profile, amount)
+	profile.coins += amount
 	sync(player, profile)
 end
 
@@ -456,23 +513,31 @@ local function onCheckpoint(room, hit)
 		return
 	end
 	profile.checkpoint = room.index
+	if profile.practice then
+		player:SetAttribute("Pebbles", Perks.pebblesPerLife(player))
+		sync(player, profile)
+		Remotes.Notify:FireClient(player, "checkpoint", ("Stage %d cleared (practice)"):format(room.index))
+		return
+	end
 	profile.stages += 1
-	profile.earned += Config.Pearls.PerStage
-	player:SetAttribute("Pebbles", Config.Pebbles.PerLife)
-	addPearls(player, profile, Config.Pearls.PerStage)
+	local coins = Config.Coins.PerStage * Perks.coinMultiplier(player)
+	profile.earned += coins
+	player:SetAttribute("Pebbles", Perks.pebblesPerLife(player))
+	addCoins(player, profile, coins)
 	local text = if room.index == #Stages then "Every stage cleared. Find the way out." else "Stage " .. room.index .. " cleared"
-	Remotes.Notify:FireClient(player, "checkpoint", ("%s   +%d pearls"):format(text, Config.Pearls.PerStage))
+	Remotes.Notify:FireClient(player, "checkpoint", ("%s   +%d coins"):format(text, coins))
 end
 
 local function onShell(room, hit)
 	local player, profile = playerFromHit(hit)
-	if not player or profile.shells[room.index] then
+	if not player or profile.shells[room.index] or profile.practice then
 		return
 	end
 	profile.shells[room.index] = true
-	profile.earned += Config.Pearls.PerShell
-	addPearls(player, profile, Config.Pearls.PerShell)
-	Remotes.Notify:FireClient(player, "shell", ("Shell found (%d/%d)   +%d pearls"):format(shellCount(profile), #Stages, Config.Pearls.PerShell))
+	local coins = Config.Coins.PerShell * Perks.coinMultiplier(player)
+	profile.earned += coins
+	addCoins(player, profile, coins)
+	Remotes.Notify:FireClient(player, "shell", ("Shell found (%d/%d)   +%d coins"):format(shellCount(profile), #Stages, coins))
 end
 
 local function onExit(hit)
@@ -481,15 +546,20 @@ local function onExit(hit)
 		return
 	end
 	profile.escaped = true
+	if profile.practice then
+		Remotes.Notify:FireClient(player, "win", "Practice run done. Now do it for real: something will be listening." .. finishRun(player, profile))
+		return
+	end
 	profile.wins += 1
 	local timeLine = finishRun(player, profile)
-	profile.earned += Config.Pearls.PerEscape
-	addPearls(player, profile, Config.Pearls.PerEscape)
+	local coins = Config.Coins.PerEscape * Perks.coinMultiplier(player)
+	profile.earned += coins
+	addCoins(player, profile, coins)
 	Leaderboards.recordEscape(player, profile.wins)
 	Remotes.Notify:FireClient(
 		player,
 		"win",
-		("You got out. Escapes: %d   Shells: %d/%d   +%d pearls%s"):format(profile.wins, shellCount(profile), #Stages, Config.Pearls.PerEscape, timeLine)
+		("You got out. Escapes: %d   Shells: %d/%d   +%d coins%s"):format(profile.wins, shellCount(profile), #Stages, coins, timeLine)
 	)
 	task.spawn(save, player, profile)
 end
@@ -521,12 +591,35 @@ function Progress.setDifficulty(player, name)
 	sync(player, profile)
 end
 
--- Starts a player's run clock, as walking through stage 1's doors does. For a
--- party that is moved straight into stage 1 (Parties.luau).
-function Progress.startRun(player)
+-- Puts a player in the cave at the start of stage 1, on a new run: the
+-- slot-th of a party of count arriving (Parties.luau), or arriving in their
+-- party's own server. practice: no creature, and nothing earned or kept; nil
+-- for what their party's server is for.
+function Progress.enterCave(player, practice, slot, count)
 	local profile = profiles[player]
-	if profile then
-		startRun(player, profile)
+	if not profile then
+		return
+	end
+	if practice == nil then
+		practice = profile.partyPractice
+	end
+	profile.checkpoint = 0
+	profile.escaped = false
+	profile.run = nil
+	profile.inCave = true
+	profile.practice = practice
+	player:SetAttribute("RunStartedAt", nil)
+	sync(player, profile)
+	local character = player.Character
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	if humanoid and humanoid.Health > 0 then
+		character:PivotTo(caveSpot(slot, count))
+	else
+		spawnPlayer(player, caveSpot(slot, count))
+	end
+	player:SetAttribute("CaveArrival", workspace:GetServerTimeNow())
+	if practice then
+		Remotes.Notify:FireClient(player, "party", "Practice run: nothing is out there tonight. No coins or records.")
 	end
 end
 
@@ -542,11 +635,53 @@ function Progress.recordCaught(player, spot)
 	end
 end
 
--- For other systems and testing: gives (or with a negative amount, takes) pearls.
-function Progress.addPearls(player, amount)
+-- Gets a caught player back up, free (a Self-Revive bought just now). False
+-- if they aren't waiting to choose any more, or there is nowhere to put them.
+function Progress.reviveBought(player)
+	local profile = profiles[player]
+	local downed = profile and profile.downed
+	if not downed or downed.choice or not downed.spot then
+		return false
+	end
+	downed.choice = "revive"
+	return true
+end
+
+-- Gives what a Robux product gives (Purchases.luau, RobuxCatalog.luau):
+-- coins; boosts, with any past what they can carry as coins instead; and
+-- Self-Revives, one of them used at once if it has them and they are
+-- choosing. Saves straight away. True once given.
+function Progress.grant(player, gives)
+	local profile = profiles[player]
+	if not profile then
+		return false
+	end
+	local coins = gives.coins or 0
+	for id, count in gives.boosts or {} do
+		local item = Catalog.byId[id]
+		if item and item.kind == "boost" then
+			local room = math.max(0, Perks.maxBoosts(player) - profile.boosts[id])
+			local added = math.min(room, count)
+			profile.boosts[id] += added
+			coins += (count - added) * item.price
+		end
+	end
+	local revives = gives.selfRevives or 0
+	if revives > 0 and Progress.reviveBought(player) then
+		revives -= 1
+	end
+	profile.selfRevives += revives
+	profile.coins += coins
+	sync(player, profile)
+	task.spawn(save, player, profile)
+	return true
+end
+
+-- For other systems and testing: gives (or with a negative amount, takes) coins.
+function Progress.addCoins(player, amount)
 	local profile = profiles[player]
 	if profile and type(amount) == "number" then
-		addPearls(player, profile, math.max(-profile.pearls, math.floor(amount)))
+		addCoins(player, profile, math.max(-profile.coins, math.floor(amount)))
 	end
 end
 
@@ -591,7 +726,19 @@ function Progress.init(newLayout)
 	Remotes.DeathChoice.OnServerEvent:Connect(function(player, choice)
 		local profile = profiles[player]
 		local downed = profile and profile.downed
-		if not downed or downed.choice or (choice ~= "revive" and choice ~= "bleed") then
+		if not downed or downed.choice then
+			return
+		end
+		if choice == "buying" then
+			-- A Robux revive is being bought: more time, once.
+			if downed.deadline and not downed.extended then
+				downed.extended = true
+				downed.deadline += Config.Revive.BuyTime
+				player:SetAttribute("DownedUntil", (player:GetAttribute("DownedUntil") or workspace:GetServerTimeNow()) + Config.Revive.BuyTime)
+			end
+			return
+		end
+		if choice ~= "revive" and choice ~= "bleed" and choice ~= "lobby" then
 			return
 		end
 		if choice == "revive" then
@@ -600,11 +747,15 @@ function Progress.init(newLayout)
 				Remotes.Notify:FireClient(player, "downed", "Nowhere to get back up. Bleed out instead.")
 				return
 			end
-			if profile.pearls < Config.Revive.Cost then
-				Remotes.Notify:FireClient(player, "downed", ("Not enough pearls. Reviving costs %d."):format(Config.Revive.Cost))
+			if profile.selfRevives > 0 then
+				profile.selfRevives -= 1
+				sync(player, profile)
+			elseif profile.coins >= Config.Revive.Cost then
+				addCoins(player, profile, -Config.Revive.Cost)
+			else
+				Remotes.Notify:FireClient(player, "downed", ("Not enough coins. Reviving costs %d."):format(Config.Revive.Cost))
 				return
 			end
-			addPearls(player, profile, -Config.Revive.Cost)
 		end
 		downed.choice = choice
 	end)
@@ -616,12 +767,7 @@ function Progress.init(newLayout)
 			return
 		end
 		lastRestart[player] = now
-		profile.checkpoint = 0
-		profile.escaped = false
-		profile.run = nil
-		profile.downed = nil
-		player:SetAttribute("RunStartedAt", nil)
-		sync(player, profile)
+		leaveRun(player, profile)
 		spawnPlayer(player)
 	end)
 

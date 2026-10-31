@@ -10,13 +10,16 @@
 --   1.55s  cut to a dead TV channel: static, rolling bars, NO SIGNAL
 --   3.00s  over the static: what gave you away ("It heard your splash"),
 --          how loud you were, and a tip
---   3.40s  and your choice, from the UI kit's buttons: Revive (pearls, back
---          on the last dry ground you stood on) or Bleed out (your last
---          checkpoint, or the lobby). The static stays until you choose, or
---          until you bleed out on your own (Config.Revive)
+--   3.40s  and your choice, from the UI kit's buttons: Revive (a Self-Revive
+--          if you have one, else coins, else a Self-Revive for Robux; back
+--          on the last dry ground you stood on), Bleed out (your last
+--          checkpoint) or Back to lobby (ends the run). The static stays
+--          until you choose, or until you bleed out on your own
+--          (Config.Revive)
 --   respawn: the static cuts out and you're back
 
 local AssetService = game:GetService("AssetService")
+local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -40,7 +43,8 @@ local SNOW_FRAMES = 6 -- drawn once, shown in a random order
 local STATIC_COLUMNS, STATIC_ROWS = 64, 36 -- the coarser snow, if images can't be drawn
 local STATIC_LAYERS = 3
 local CAMERA_STEP = "DeathCamera"
-local CHOICE_SIZE = Vector2.new(500, 150)
+local CHOICE_SIZE = Vector2.new(690, 150)
+local BUTTON_GAP = 15
 
 -- What gave you away, by the cause the server reports (server/Noise.luau).
 local CAUSES = {
@@ -59,6 +63,8 @@ local ui = {}
 local hud -- the HUD, hidden while the scene plays
 local staticConnection
 local chosen = false -- a choice has been sent this time
+local reviveMode = "none" -- "selfRevive", "coins", "robux" (not enough coins) or "none"
+local robuxPrice -- of a Self-Revive for Robux, once known
 
 local function create(className, props, children)
 	local instance = Instance.new(className)
@@ -297,7 +303,7 @@ local function build()
 		Parent = ui.recap,
 	})
 
-	-- The choice: two of the kit's buttons, what each one does under it,
+	-- The choice: three of the kit's buttons, what each one does under it,
 	-- and how long until you bleed out anyway.
 	ui.choice = create("Frame", {
 		Name = "Choice",
@@ -310,17 +316,21 @@ local function build()
 		Parent = gui,
 	})
 	Candy.fit(ui.choice, CHOICE_SIZE + Vector2.new(10, 10), 24)
-	local buttonWidth = (CHOICE_SIZE.X - 20) / 2
-	ui.revive = Candy.button(ui.choice, { name = "Revive", size = UDim2.fromOffset(buttonWidth, 70), color = Candy.MINT })
-	ui.bleed = Candy.button(ui.choice, {
-		name = "BleedOut",
-		anchor = Vector2.new(1, 0),
-		position = UDim2.fromScale(1, 0),
-		size = UDim2.fromOffset(buttonWidth, 70),
-		color = Candy.PINK,
-		text = "Bleed out",
-	})
-	-- "Revive", a pearl and the cost, in a row in the middle of its button.
+	local buttonWidth = (CHOICE_SIZE.X - 2 * BUTTON_GAP) / 3
+	local function choiceButton(name, x, color, text)
+		return Candy.button(ui.choice, {
+			name = name,
+			anchor = Vector2.new(x, 0),
+			position = UDim2.fromScale(x, 0),
+			size = UDim2.fromOffset(buttonWidth, 70),
+			color = color,
+			text = text,
+		})
+	end
+	ui.revive = choiceButton("Revive", 0, Candy.MINT)
+	ui.bleed = choiceButton("BleedOut", 0.5, Candy.PINK, "Bleed out")
+	ui.lobby = choiceButton("Lobby", 1, Candy.WHITE, "Back to lobby")
+	-- "Revive", a coin and the cost, in a row in the middle of its button.
 	ui.price = create("Frame", {
 		Name = "Price",
 		AnchorPoint = Vector2.new(0.5, 0.5),
@@ -339,13 +349,13 @@ local function build()
 		}),
 	})
 	Candy.text({ LayoutOrder = 1, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromScale(0, 1), TextSize = 24, Text = "Revive", Parent = ui.price })
-	Candy.pearl(ui.price, 30).LayoutOrder = 2
+	Candy.coin(ui.price, 30).LayoutOrder = 2
 	Candy.text({ LayoutOrder = 3, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromScale(0, 1), TextSize = 24, Text = tostring(Config.Revive.Cost), Parent = ui.price })
 
 	local function caption(name, x)
 		return create("TextLabel", {
 			Name = name,
-			AnchorPoint = Vector2.new(0.5, 0),
+			AnchorPoint = Vector2.new(x, 0),
 			Position = UDim2.new(x, 0, 0, 76),
 			Size = UDim2.fromOffset(buttonWidth, 20),
 			BackgroundTransparency = 1,
@@ -357,8 +367,9 @@ local function build()
 			Parent = ui.choice,
 		})
 	end
-	ui.reviveNote = caption("ReviveNote", buttonWidth / 2 / CHOICE_SIZE.X)
-	ui.bleedNote = caption("BleedNote", 1 - buttonWidth / 2 / CHOICE_SIZE.X)
+	ui.reviveNote = caption("ReviveNote", 0)
+	ui.bleedNote = caption("BleedNote", 0.5)
+	caption("LobbyNote", 1).Text = "Ends this run"
 	ui.countdown = create("TextLabel", {
 		Name = "Countdown",
 		AnchorPoint = Vector2.new(0.5, 1),
@@ -373,27 +384,56 @@ local function build()
 		Parent = ui.choice,
 	})
 
+	-- What a Self-Revive costs in Robux, from the dashboard.
+	if Config.Products.SelfRevive1 ~= 0 then
+		task.spawn(function()
+			local ok, info = pcall(MarketplaceService.GetProductInfo, MarketplaceService, Config.Products.SelfRevive1, Enum.InfoType.Product)
+			if ok and info then
+				robuxPrice = info.PriceInRobux
+			end
+		end)
+	end
+
+	local function choose(choice, message)
+		chosen = true
+		ui.countdown.Text = message
+		Remotes.DeathChoice:FireServer(choice)
+	end
 	ui.revive.Activated:Connect(function()
 		if chosen then
 			return
 		end
-		if (player:GetAttribute("Pearls") or 0) < Config.Revive.Cost then
-			ui.countdown.Text = "NOT ENOUGH PEARLS"
-			return
+		if reviveMode == "selfRevive" or reviveMode == "coins" then
+			choose("revive", "GETTING UP...")
+		elseif reviveMode == "robux" then
+			if Config.Products.SelfRevive1 == 0 then
+				ui.countdown.Text = "SET CONFIG.PRODUCTS.SELFREVIVE1 FIRST"
+				return
+			end
+			-- More time while the purchase goes through (once).
+			choose("buying", "WAITING FOR THE PURCHASE...")
+			MarketplaceService:PromptProductPurchase(player, Config.Products.SelfRevive1)
+		else
+			ui.countdown.Text = "NOT ENOUGH COINS"
 		end
-		chosen = true
-		ui.countdown.Text = "GETTING UP..."
-		Remotes.DeathChoice:FireServer("revive")
 	end)
 	ui.bleed.Activated:Connect(function()
-		if chosen then
-			return
+		if not chosen then
+			choose("bleed", "BLEEDING OUT...")
 		end
-		chosen = true
-		ui.countdown.Text = "BLEEDING OUT..."
-		Remotes.DeathChoice:FireServer("bleed")
 	end)
-	-- The server said no (not enough pearls after all): choose again.
+	ui.lobby.Activated:Connect(function()
+		if not chosen then
+			choose("lobby", "BACK TO THE LOBBY...")
+		end
+	end)
+	-- Changed their mind about paying: choose again.
+	MarketplaceService.PromptProductPurchaseFinished:Connect(function(userId, productId, purchased)
+		if userId == player.UserId and productId == Config.Products.SelfRevive1 and playing and not purchased then
+			chosen = false
+		end
+	end)
+	-- The server said no (not enough coins after all): choose again.
 	Remotes.Notify.OnClientEvent:Connect(function(kind, message)
 		if kind == "downed" and playing then
 			chosen = false
@@ -404,17 +444,35 @@ local function build()
 	gui.Parent = player:WaitForChild("PlayerGui")
 end
 
--- Redraws the choice: whether you can pay to revive, where bleeding out
--- takes you, and the time left.
+-- Redraws the choice: whether you can revive with a Self-Revive, coins or
+-- else Robux, where bleeding out takes you, and the time left.
 local function refreshChoice()
-	local pearls = player:GetAttribute("Pearls") or 0
-	local canPay = pearls >= Config.Revive.Cost
-	Candy.paint(ui.revive, Candy.MINT, nil, not canPay)
-	ui.revive.Label.Text = if canPay then "" else ("Need %d more"):format(Config.Revive.Cost - pearls)
-	ui.price.Visible = canPay
-	ui.reviveNote.Text = ("Get back up · you have %d"):format(pearls)
+	local coins = player:GetAttribute("Coins") or 0
+	local selfRevives = player:GetAttribute("SelfRevives") or 0
+	local short = Config.Revive.Cost - coins
+	-- Robux is offered once the product is set up; in Studio always, to see it.
+	local robux = Config.Products.SelfRevive1 ~= 0 or RunService:IsStudio()
+	reviveMode = if selfRevives > 0 then "selfRevive" elseif short <= 0 then "coins" elseif robux then "robux" else "none"
+	if reviveMode == "selfRevive" then
+		Candy.paint(ui.revive, Candy.SKY)
+		ui.revive.Label.Text = "Self-Revive"
+		ui.reviveNote.Text = ("Free · you have %d"):format(selfRevives)
+	elseif reviveMode == "coins" then
+		Candy.paint(ui.revive, Candy.MINT)
+		ui.revive.Label.Text = ""
+		ui.reviveNote.Text = ("Get back up · you have %d"):format(coins)
+	elseif reviveMode == "robux" then
+		Candy.paint(ui.revive, Candy.LEMON)
+		ui.revive.Label.Text = if robuxPrice then ("Self-Revive · R$ %d"):format(robuxPrice) else "Self-Revive · Robux"
+		ui.reviveNote.Text = ("%d coins short · buy one"):format(short)
+	else
+		Candy.paint(ui.revive, Candy.MINT, nil, true)
+		ui.revive.Label.Text = ("Need %d more"):format(short)
+		ui.reviveNote.Text = ("Get back up · you have %d"):format(coins)
+	end
+	ui.price.Visible = reviveMode == "coins"
 	local checkpoint = player:GetAttribute("Checkpoint") or 0
-	ui.bleedNote.Text = if checkpoint > 0 then ("Back to the stage %d checkpoint"):format(checkpoint) else "Back to the lobby"
+	ui.bleedNote.Text = if checkpoint > 0 then ("To the stage %d checkpoint"):format(checkpoint) else "To the lobby, run goes on"
 	local untilTime = player:GetAttribute("DownedUntil")
 	if not chosen then
 		ui.countdown.Text = if untilTime then ("BLEEDING OUT IN %d"):format(math.max(0, math.ceil(untilTime - workspace:GetServerTimeNow()))) else ""

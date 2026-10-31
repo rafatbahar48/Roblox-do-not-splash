@@ -1,8 +1,12 @@
 -- Everything the shop sells, in the order the shop shows it. Prices are in
--- pearls (see Config.Pearls for how they are earned).
+-- coins (see Config.Coins for how they are earned).
 --
 -- kind     "skin", "accessory" or "boost"
 -- swatch   colour on the shop card
+-- rarity   "Common", "Rare", "Epic" or "Legendary": the tag and colour of
+--          its shop card
+-- focus    (accessories) "head" for things worn there: the shop shows your
+--          head and shoulders
 --
 -- Skins recolour body regions (head, torso, arms, legs). A region left out
 -- keeps the avatar's own colour. Wearing any skin hides shirts and pants.
@@ -20,6 +24,7 @@ Catalog.items = {
 	{
 		id = "lifeguard",
 		kind = "skin",
+		rarity = "Common",
 		name = "Lifeguard",
 		price = 150,
 		blurb = "Red top, dark trunks. Someone has to keep watch.",
@@ -30,6 +35,7 @@ Catalog.items = {
 	{
 		id = "night_swimmer",
 		kind = "skin",
+		rarity = "Common",
 		name = "Night Swimmer",
 		price = 200,
 		blurb = "A dark wetsuit for swimming after closing time.",
@@ -41,6 +47,7 @@ Catalog.items = {
 	{
 		id = "porcelain",
 		kind = "skin",
+		rarity = "Rare",
 		name = "Porcelain",
 		price = 300,
 		blurb = "Cold, white and very still.",
@@ -53,6 +60,7 @@ Catalog.items = {
 	{
 		id = "drowned",
 		kind = "skin",
+		rarity = "Rare",
 		name = "Drowned",
 		price = 350,
 		blurb = "You look like you've been down there a while.",
@@ -65,6 +73,7 @@ Catalog.items = {
 	{
 		id = "glowtide",
 		kind = "skin",
+		rarity = "Epic",
 		name = "Glowtide",
 		price = 450,
 		blurb = "Dark suit, glowing limbs. Easy to find in the dark.",
@@ -76,6 +85,7 @@ Catalog.items = {
 	{
 		id = "phantom",
 		kind = "skin",
+		rarity = "Legendary",
 		name = "Phantom",
 		price = 500,
 		blurb = "Half here, half somewhere else.",
@@ -90,6 +100,8 @@ Catalog.items = {
 	{
 		id = "swim_cap",
 		kind = "accessory",
+		rarity = "Common",
+		focus = "head",
 		name = "Swim Cap",
 		price = 100,
 		blurb = "Keeps your hair dry. Nothing else.",
@@ -98,6 +110,8 @@ Catalog.items = {
 	{
 		id = "dive_goggles",
 		kind = "accessory",
+		rarity = "Common",
+		focus = "head",
 		name = "Dive Goggles",
 		price = 140,
 		blurb = "Big round lenses. Purely for looks.",
@@ -106,6 +120,7 @@ Catalog.items = {
 	{
 		id = "float_ring",
 		kind = "accessory",
+		rarity = "Rare",
 		name = "Float Ring",
 		price = 180,
 		blurb = "Won't keep you up. Looks cheerful, though.",
@@ -114,6 +129,7 @@ Catalog.items = {
 	{
 		id = "dorsal_fin",
 		kind = "accessory",
+		rarity = "Rare",
 		name = "Dorsal Fin",
 		price = 220,
 		blurb = "Make it think twice.",
@@ -122,6 +138,8 @@ Catalog.items = {
 	{
 		id = "head_lamp",
 		kind = "accessory",
+		rarity = "Epic",
+		focus = "head",
 		name = "Head Lamp",
 		price = 260,
 		blurb = "A small light of your own in the dark rooms.",
@@ -130,6 +148,8 @@ Catalog.items = {
 	{
 		id = "drowned_halo",
 		kind = "accessory",
+		rarity = "Legendary",
+		focus = "head",
 		name = "Drowned Halo",
 		price = 320,
 		blurb = "A ring of pale lights that follows you around.",
@@ -140,6 +160,7 @@ Catalog.items = {
 	{
 		id = "updraft",
 		kind = "boost",
+		rarity = "Rare",
 		name = "Updraft",
 		price = 40,
 		blurb = "Fly for 2 seconds. Press Q or tap Updraft.",
@@ -148,6 +169,7 @@ Catalog.items = {
 	{
 		id = "hush",
 		kind = "boost",
+		rarity = "Rare",
 		name = "Hush",
 		price = 30,
 		blurb = "Make no sound at all for 5 seconds. Press F or tap Hush.",

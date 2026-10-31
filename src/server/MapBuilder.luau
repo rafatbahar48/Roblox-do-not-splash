@@ -3,6 +3,7 @@
 -- night: black still water, dead trees and fog, with one stretch per stage
 -- along +Z and the way out at the end. Each stretch runs from an island,
 -- across a trail of stepping stones, to an island with its checkpoint.
+-- Stage 1 starts in the cave behind the building (CaveBuilder.luau).
 -- Returns a layout table the other server modules use to find stages.
 
 local Lighting = game:GetService("Lighting")
@@ -10,6 +11,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Stages = require(ReplicatedStorage.Shared.Stages)
+local CaveBuilder = require(script.Parent.CaveBuilder)
 local Forest = require(script.Parent.Forest)
 local LobbyBuilder = require(script.Parent.LobbyBuilder)
 local Parts = require(script.Parent.Parts)
@@ -26,7 +28,7 @@ local BASE_Y = FLOOR_Y - 1 -- underside of everything
 
 local COLORS = {
 	wall = Color3.fromRGB(70, 62, 74), -- the back of the lobby's building
-	veil = Color3.fromRGB(3, 3, 5),
+	door = Color3.fromRGB(52, 38, 30), -- the backs of its doors
 	floor = Color3.fromRGB(30, 28, 26),
 	water = Color3.fromRGB(14, 20, 26),
 	checkpoint = Color3.fromRGB(70, 150, 112),
@@ -66,7 +68,8 @@ local function addSign(part, face, title, subtitle)
 end
 
 -- The back wall of the lobby's building at z, with a doorway centred on each
--- x in doorXs: stage 1 starts on the other side.
+-- x in doorXs, shut: stage 1's cave is on the other side, and parties are
+-- brought through (Parties.luau).
 local function buildDoorWall(folder, z, doorXs)
 	local min, max = z - 0.5, z + 0.5
 	local top = SURFACE_Y + ROOM.Height
@@ -77,13 +80,9 @@ local function buildDoorWall(folder, z, doorXs)
 	for _, x in xs do
 		box(folder, "DoorWall", Vector3.new(left, BASE_Y, min), Vector3.new(x - half, top, max), COLORS.wall, Enum.Material.Brick)
 		box(folder, "Lintel", Vector3.new(x - half, TILE_TOP + ROOM.DoorHeight, min), Vector3.new(x + half, top, max), COLORS.wall, Enum.Material.Brick)
-		-- Pitch black, so nobody in the lobby can see what is through there.
-		-- You walk straight through it.
-		box(folder, "Veil", Vector3.new(x - half, TILE_TOP, z - 0.1), Vector3.new(x + half, TILE_TOP + ROOM.DoorHeight, z + 0.1), COLORS.veil, Enum.Material.SmoothPlastic, {
-			CanCollide = false,
+		-- The doors' backs, as seen from the cave. Solid: nobody walks through.
+		box(folder, "DoorBack", Vector3.new(x - half, TILE_TOP, z - 0.1), Vector3.new(x + half, TILE_TOP + ROOM.DoorHeight, z + 0.5), COLORS.door, Enum.Material.WoodPlanks, {
 			CanQuery = false,
-			CanTouch = false,
-			CastShadow = false,
 		})
 		left = x + half
 	end
@@ -327,27 +326,29 @@ local function buildRoom(map, index, stage, z0)
 	folder.Parent = map
 
 	local z1 = z0 + stage.length
-	local poolStart = z0 + ROOM.StartLanding
+	local poolStart = z0 + (stage.startLanding or ROOM.StartLanding)
 	local poolEnd = z1 - ROOM.EndLanding
 	local lights = {}
 	local rng = Random.new(index * 7919)
 	local scenery = Random.new(index * 3571) -- its own seed, so trees don't change the trail
 
-	-- Stage 1 starts behind the lobby's building, through one doorway per
-	-- difficulty, onto an island as wide as the passage.
+	-- Stage 1 starts behind the lobby's building, in a cave that opens onto
+	-- an island as wide as the passage.
+	local cave
 	if index == 1 then
-		local doorXs = {}
-		for _, x in ROOM.EntranceDoors do
-			table.insert(doorXs, x)
-		end
-		buildDoorWall(folder, z0, doorXs)
+		buildDoorWall(folder, z0, ROOM.EntranceDoors)
+		cave = CaveBuilder.build(folder, z0)
 	end
+	local landingStart = if cave then cave.zEnd else z0
 	local startHalf = if index == 1 then HALF_WIDTH else FOREST.IslandHalfWidth
 	local islands = {
-		{ halfX = startHalf, z0 = z0, z1 = poolStart },
+		{ halfX = startHalf, z0 = landingStart, z1 = poolStart },
 		{ halfX = FOREST.IslandHalfWidth, z0 = poolEnd, z1 = z1 },
 	}
-	Forest.island(folder, "StartLanding", z0, poolStart, startHalf, scenery)
+	if cave then
+		table.insert(islands, { halfX = cave.halfWidth, z0 = z0, z1 = cave.zEnd }) -- no trees through its rock
+	end
+	Forest.island(folder, "StartLanding", landingStart, poolStart, startHalf, scenery)
 	Forest.island(folder, "EndLanding", poolEnd, z1, FOREST.IslandHalfWidth, scenery)
 	Forest.signpost(folder, startHalf - 4, poolStart - 2.5, Vector3.new(0, 0, -1), "STAGE " .. index, stage.name)
 
@@ -417,6 +418,7 @@ local function buildRoom(map, index, stage, z0)
 		shell = shell,
 		checkpointPad = checkpointPad,
 		checkpointCFrame = CFrame.lookAt(standAt, standAt + Vector3.zAxis),
+		cave = cave,
 	}
 end
 
@@ -532,8 +534,6 @@ function MapBuilder.build()
 	local layout = {
 		rooms = {},
 		boards = lobby.boards,
-		runStart = lobby.runStart,
-		doors = lobby.doors,
 		partyDoors = lobby.partyDoors,
 	}
 	local z = 0
@@ -542,6 +542,9 @@ function MapBuilder.build()
 		layout.rooms[index] = room
 		z = room.zEnd
 	end
+	-- Where parties arrive, and the run timer's start across its mouth.
+	layout.cave = layout.rooms[1].cave
+	layout.runStart = layout.cave.runStart
 
 	local exitEnd = z + ROOM.ExitLength
 	layout.exitDoor = buildExit(map, z, exitEnd)

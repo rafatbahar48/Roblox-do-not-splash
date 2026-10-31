@@ -1,4 +1,4 @@
--- The candy look shared by the menus and the HUD. The panels, buttons, pearls
+-- The candy look shared by the menus and the HUD. The panels, buttons, coins
 -- and badges are SpriteCook art (UiArt.luau, from the UI kit in
 -- art/ui/kit/); the lettering is bubbly FredokaOne on top.
 --
@@ -89,6 +89,11 @@ function Candy.art(name, props, height)
 		image[key] = value
 	end
 	return image
+end
+
+-- A part's size in its atlas, in pixels.
+function Candy.artSize(name)
+	return UiArt.size(name)
 end
 
 -- Puts a different part on an image made by Candy.art or Candy.button.
@@ -236,10 +241,10 @@ function Candy.paint(face, color, labelColor, flat)
 	face.Label.TextColor3 = labelColor or (if flat then WHITE else INK)
 end
 
--- A pearl from the kit.
-function Candy.pearl(parent, size, position, anchor)
-	return Candy.art("pearl", {
-		Name = "Pearl",
+-- A coin from the kit.
+function Candy.coin(parent, size, position, anchor)
+	return Candy.art("coin", {
+		Name = "Coin",
 		AnchorPoint = anchor or Vector2.zero,
 		Position = position or UDim2.new(),
 		Size = UDim2.fromOffset(size, size),

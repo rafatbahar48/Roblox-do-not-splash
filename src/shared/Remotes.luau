@@ -13,13 +13,13 @@ local NAMES = {
 	"UseBoost", -- client -> server: boost id
 	"BoostStarted", -- server -> client: boost id, duration
 	"Caught", -- server -> client: where it struck, what it heard ("splash", ...), how loud you were, its anchor
-	"PartySetup", -- server -> client: party door number to set up a party on, or nil to close the pop-up
-	"CreateParty", -- client -> server: party door number, size, difficulty name, friends only
+	"PartySetup", -- server -> client: party door number to set up a party on and its mode (Config.Doors), or nil to close the pop-up
+	"CreateParty", -- client -> server: party door number, size, difficulty name (ignored where the door decides), friends only
 	"LeaveParty", -- client -> server: leave your party, or cancel setting one up
-	"PartyStatus", -- server -> client: { count, size, difficulty, leavesAt, owner } for your party, or nil
+	"PartyStatus", -- server -> client: { count, size, difficulty, practice, leavesAt, owner } for your party, or nil
 	"CameraLook", -- client -> server: which way your camera points, across the ground (unit Vector3)
 	"SaveSetting", -- client -> server: setting id, value (see Config.Settings)
-	"DeathChoice", -- client -> server: "revive" or "bleed", after being caught
+	"DeathChoice", -- client -> server: "revive", "bleed", "lobby", or "buying" (a Robux revive is on its way), after being caught
 }
 
 local folder

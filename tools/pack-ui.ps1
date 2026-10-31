@@ -76,7 +76,8 @@ public static class UiPack {
 "@
 
 $parts = "$Root\art\ui\kit\parts"
-# name, atlas, scale, 9-slice borders in source pixels (left, top, right, bottom) or $null
+# name, atlas, scale, 9-slice borders in source pixels (left, top, right, bottom) or $null,
+# and $true to keep every bit of it (icons with loose sparkles or pearls)
 $specs = @(
     @("window", "panels", 0.56, @(440, 190, 160, 80)),
     @("ribbon", "panels", 0.5, $null),
@@ -91,9 +92,9 @@ $specs = @(
     @("plus", "panels", 0.5, $null),
     @("toggle_on", "panels", 0.5, $null),
     @("toggle_off", "panels", 0.5, $null),
-    @("pearl_counter", "panels", 0.45, @(190, 100, 160, 100)),
+    @("coin_counter", "panels", 0.22, @(420, 220, 345, 220)),
     @("plus_mint", "panels", 0.5, $null),
-    @("pearl", "panels", 0.5, $null),
+    @("coin", "panels", 0.085, $null),
     @("tile", "panels", 0.45, @(70, 70, 70, 70)),
     @("well", "panels", 0.35, $null),
     @("dock_shop", "icons", 0.6, $null),
@@ -109,7 +110,17 @@ $specs = @(
     @("stat_wave", "icons", 0.55, $null),
     @("action_pebble", "icons", 0.8, $null),
     @("action_updraft", "icons", 0.8, $null),
-    @("action_hush", "icons", 0.8, $null)
+    @("action_hush", "icons", 0.8, $null),
+    @("robux_coins_small", "icons", 0.6, $null, $true),
+    @("robux_coins_jar", "icons", 0.6, $null, $true),
+    @("robux_coins_chest", "icons", 0.6, $null, $true),
+    @("robux_coins_hoard", "icons", 0.6, $null, $true),
+    @("robux_self_revive", "icons", 0.6, $null, $true),
+    @("robux_double_coins", "icons", 0.6, $null, $true),
+    @("robux_pockets", "icons", 0.6, $null, $true),
+    @("robux_kit", "icons", 0.6, $null, $true),
+    @("sunburst", "icons", 0.5, $null, $true),
+    @("sparkle", "icons", 0.2, $null, $true)
 )
 
 $MAX = 1024
@@ -125,7 +136,7 @@ foreach ($atlasName in @("panels", "icons")) {
         $copy = New-Object System.Drawing.Bitmap($src)
         $src.Dispose()
         Write-Host $s[0]
-        [UiPack]::KeepLargest($copy, 24)
+        if (-not $s[4]) { [UiPack]::KeepLargest($copy, 24) }
         $w = [int][math]::Round($copy.Width * $s[2]); $h = [int][math]::Round($copy.Height * $s[2])
         $scaled = [UiPack]::Scale($copy, $w, $h)
         $copy.Dispose()
