@@ -130,7 +130,9 @@ $specs = @(
     @("icon_frostbite", "event", 0.12, $null, $true),
     @("icon_santa_hat", "event", 0.13, $null, $true),
     @("christmas_bundle", "event", 0.42, $null, $true),
-    @("ribbon_red", "event", 0.125, $null, $true)
+    @("ribbon_red", "event", 0.125, $null, $true),
+    # Boosts added after the icons atlas filled up
+    @("action_grapple", "boosts", 0.8, $null)
 )
 
 $MAX = 1024
@@ -138,7 +140,7 @@ $PAD = 4
 $placed = @{}
 $lines = New-Object System.Collections.Generic.List[string]
 
-foreach ($atlasName in @("panels", "icons", "event")) {
+foreach ($atlasName in @("panels", "icons", "event", "boosts")) {
     $items = @()
     foreach ($s in $specs) {
         if ($s[1] -ne $atlasName) { continue }
@@ -152,8 +154,8 @@ foreach ($atlasName in @("panels", "icons", "event")) {
         $copy.Dispose()
         $items += ,@($s[0], $scaled, $s[2], $s[3])
     }
-    # Shelf packing, tallest first.
-    $items = $items | Sort-Object { $_[1].Height } -Descending
+    # Shelf packing, tallest first. (Sorting one item would unwrap it.)
+    if ($items.Count -gt 1) { $items = $items | Sort-Object { $_[1].Height } -Descending }
     $x = 0; $y = 0; $shelf = 0
     $spots = @()
     foreach ($it in $items) {

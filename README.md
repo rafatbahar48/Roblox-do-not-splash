@@ -2,12 +2,13 @@
 
 A Roblox horror obby. Cross a drowned forest at night by jumping from stump to stump over black water. Something very tall walks in that water, out among the trees, and it hunts by sound.
 
-- **Falling in** makes a big splash, and wading keeps making noise. If it reaches you in the water, you're gone.
+- **Falling in** makes a big splash, and wading keeps making noise. The water comes up to your waist, so you can wade back to a platform and climb out, if it doesn't reach you first. If it reaches you in the water, you're gone.
 - **The creature**, one for the whole forest, watches from out in the thick fog, barely visible, while you stay out of the water. Touch the water and it comes out of the fog ahead of you, where your camera points, runs straight at you (much faster than you can wade), round you, closing in, and grabs you. If it gets you, it turns you round to face it: its gaping, toothed mouth up close, then a dead TV channel. Get out of the water and go quiet in time and it loses you. A pebble's splash draws it off to look.
 - **Landing hard** (dropping off a tall broken trunk) and **creaky boards** make noise too.
 - **Pebbles** (3 per life): throw one into the water to draw it away before you cross.
 - **Stepping stones to watch for:** creaky boards (pale old planks on posts), floating moss (pale green mats that go under a second after you step on them), drifting rafts and narrow broken trunks.
 - **7 stages**, each a stretch of the forest from one island to the next, with a checkpoint on the far island. Each one has a hidden shell to collect. After the last stage, walk through the exit to escape.
+- **Stage 1, The First Steps**, is an open moonlit swamp rather than a trail: a gentle S-curve of wide, low cut stumps and rough plank rafts resting just above still, black water, with muddy islands and banks, cattails, lily pads and dead trees round it, and a log archway at the end with a glowing **STAGE COMPLETE** sign over its checkpoint. The other stages will be rebuilt the same way, with **grapple hooks** over gaps too far to jump from stage 3 on.
 - **Easy, Normal and Hard:** harder modes make you louder and the creature faster.
 - **The lobby** is a big open courtyard at night, under the stars, in front of the old brick building the stages are in: lit windows, the game's sign in neon, lamp posts, string lights, grass beds with palms and benches. It is colourful on purpose, so the forest feels darker after it. Nothing in the lobby shows what waits inside: the building hides the forest, and its doors stay shut. The east wall has the record boards (most escapes and the fastest escape on each difficulty) and the shop (G): a snowy log cottage with Christmas lights, a striped awning over its counter, a wreath and a snowman, made in Meshy, with a SHOP sign from SpriteCook.
 - **Christmas in the lobby** (`Config.Christmas`, on for now): snow over the courtyard with a path shovelled to the doors, snow on every roof, wall, bench and lamp, falling snow, decorated Christmas trees in the beds (a big one with presents under it), wreaths on the doors, frozen puddles, and "Haunted Sleigh Bells" instead of the music box. **Snowball fights:** grab snowballs from a pile (G, up to 10) and throw them (E, R2 or the snowball button). A hit splats snow in their face and tells you both; it never moves anyone, so nobody gets knocked off a party pad. Snowballs only work in the lobby. Set `Config.Christmas = false` after the holidays to bring the palms back.
@@ -15,13 +16,13 @@ A Roblox horror obby. Cross a drowned forest at night by jumping from stump to s
 - **The cave:** every party starts in a cave behind the building, with room to walk about and a supply stall (G) for last-minute shopping. It is gloomy but never too dark, lit by torches, lanterns and glowing crystals, with water dripping and wind blowing in through its wide mouth onto the forest. A few seconds after you arrive, something out there steps on a stick, growls two seconds later, and a note says it is your last chance to grab supplies (with a button to the shop). Practice runs skip that.
 - **Run timer:** starts when you walk out of the cave's mouth and stops at the exit. A run counts for the easiest difficulty played during it. Your best time on each difficulty is saved.
 - **Coins:** earned for each stage cleared, each shell found and each escape. Spend them in the **Shop** (the dock's shop button, the + on your coins, or B).
-- **The HUD:** your stage top left, coins bottom left (top left on touch screens, clear of the thumbstick), the run timer top middle, difficulty top right. In the lobby and the cave, big **Shop** and **Bag** buttons (what you own, to wear or take off) sit on the left, and on the right the **Christmas** button (with a LIMITED ribbon and how long is left), **2x Coins** (the Passes tab) and **Join** (Roblox's prompt to join the game's community, with a one-time coin reward; it goes away once paid), then **Stats** (escapes, fastest escape, stages cleared, times caught, shells found, runs started, time played), **Settings** (music, night sounds, sound effects, camera shake, field of view) and **Invite** (Roblox's invite-friends prompt). Out in the forest they make way for the noise meter on the left and round pebble, Updraft and Hush buttons bottom right, which work on touch screens too. On touch screens Shop and Bag sit side by side, the right-hand buttons make two rows near the top and the round buttons sit left of the jump button; on small screens (phones, small windows) the whole HUD and the party banner shrink to fit.
+- **The HUD:** your stage top left, coins bottom left (top left on touch screens, clear of the thumbstick), the run timer top middle, difficulty top right. In the lobby and the cave, big **Shop** and **Bag** buttons (what you own, to wear or take off) sit on the left, and on the right the **Christmas** button (with a LIMITED ribbon and how long is left), **2x Coins** (the Passes tab) and **Join** (Roblox's prompt to join the game's community, with a one-time coin reward; it goes away once paid), then **Stats** (escapes, fastest escape, stages cleared, times caught, shells found, runs started, time played), **Settings** (music, night sounds, sound effects, camera shake, field of view) and **Invite** (Roblox's invite-friends prompt). Out in the forest they make way for the noise meter on the left and round pebble, Updraft, Hush and Grapple buttons bottom right, which work on touch screens too (Grapple also shows near a hook, with a + to buy one there and then). On touch screens Shop and Bag sit side by side, the right-hand buttons make two rows near the top and the round buttons sit left of the jump button; on small screens (phones, small windows) the whole HUD and the party banner shrink to fit.
 - **The Christmas Bundle** (until New Year, UTC): a limited Robux bundle with the exclusive **Frostbite** skin (ice) and **Santa Hat**, 1,000 coins and 3 Self-Revives. Its window has a countdown and its own SpriteCook art. The skin and hat aren't sold for coins: in the shop they point to the bundle, and once it's over they only show to those who have them.
 - **Robux shop:** two more tabs in the shop. **Robux**: coin packs (Handful, Jar, Chest, Sunken Hoard), the Night Kit bundle (coins, Updrafts, Hushes and 2 Self-Revives), Self-Revives (1 or 3, kept until you need them) and 5-packs of Updraft and Hush. **Passes**: **2× Coins** (double coins from stages, shells and escapes) and **Deep Pockets** (5 pebbles a life and up to 15 of each boost). The + on your coins opens the Robux tab. What each one gives is in `src/shared/RobuxCatalog.luau`.
 - **Getting caught:** its face up close, then a dead TV channel with what gave you away. The static stays until you choose: **Revive** (a Self-Revive if you have one, else 50 coins, else a Self-Revive bought with Robux) puts you back on the last dry ground you stood on, silent for a moment, with your run still going; **Bleed out** sends you to your last checkpoint, or the lobby if you have none; **Back to lobby** ends the run. Not choosing bleeds out after 30 seconds (`Config.Revive`).
 - **Music and sound:** a music box in the lobby, an ominous bed in the forest and chase music while it hunts you, fading into each other; crickets at night; splashes, creaky boards, pebbles, your own feet in the water, the creature's footsteps and growl from where it is, a heartbeat while you are hunted, its roar and the TV static when it gets you, and chimes for stages, shells, escapes and purchases. All from Roblox's licensed libraries (APM Music and ProSoundEffects), set in `Config.Sounds`.
 - **The menus and buttons are SpriteCook art**, from the UI kit "Still Water lobby menus" (see below); the code only places them and writes the words and numbers.
-- **Shop:** 6 skins, 6 accessories, and 2 boosts. Every item has a big card with the thing itself in 3D: skins and accessories on **you** (your own avatar, turning; head things close up), and everything else as its 3D model, spinning and bobbing. Each stands in front of a spinning sunburst in its rarity colour (Common mint, Rare sky, Epic pink, Legendary lemon), with twinkling sparkles and a glint now and then. The boosts, which you carry and use: **Updraft** (Q / L1 / Fly button) lifts you and lets you glide for 2 seconds, and **Hush** (F / Y / Hush button) makes you completely silent for 5 seconds.
+- **Shop:** 6 skins, 6 accessories, and 3 boosts. Every item has a big card with the thing itself in 3D: skins and accessories on **you** (your own avatar, turning; head things close up), and everything else as its 3D model, spinning and bobbing. Each stands in front of a spinning sunburst in its rarity colour (Common mint, Rare sky, Epic pink, Legendary lemon), with twinkling sparkles and a glint now and then. The boosts, which you carry and use: **Updraft** (Q / L1 / Fly button) lifts you and lets you glide for 2 seconds, **Hush** (F / Y / Hush button) makes you completely silent for 5 seconds, and the **Grapple** (G / X / Grapple button, near a hook) swings you on a rope over a gap too far to jump, onto the platform under the hook. With no grapple, the button buys one for coins and swings at once.
 - Your progress, shells, escapes, difficulty, coins, items, stats and settings are saved.
 
 The whole map is built by script when the server starts, so almost everything lives in the Luau files under `src/`. The exceptions are the 3D models made in Meshy (`art/models/`), which are imported into the place:
@@ -51,10 +52,10 @@ Or skip the live sync: run `rojo build -o StillWater.rbxl` and open the file in 
 
 The panels, buttons, toggles, tiles and icons come from a SpriteCook UI kit. Each part is a PNG in `art/ui/kit/parts/` (logged with its SpriteCook asset id in `art/spritecook-assets.json`); `concept-a.png` and `sheet-1.png` are the concept and the sheet they were cut from.
 
-Roblox only shows uploaded images, so the parts are packed into atlases, `art/ui/kit/atlas-panels.png`, `atlas-icons.png` and `atlas-event.png` (seasonal art; each at most 1024x1024), and `src/shared/UiArtParts.luau` says where each part sits and how it stretches. To change a part:
+Roblox only shows uploaded images, so the parts are packed into atlases, `art/ui/kit/atlas-panels.png`, `atlas-icons.png`, `atlas-event.png` (seasonal art) and `atlas-boosts.png` (boost buttons added after the icons atlas filled up; each at most 1024x1024), and `src/shared/UiArtParts.luau` says where each part sits and how it stretches. To change a part:
 
 1. Replace its PNG in `art/ui/kit/parts/`.
-2. Run `powershell -ExecutionPolicy Bypass -File tools/pack-ui.ps1` to repack both atlases and rewrite `UiArtParts.luau`.
+2. Run `powershell -ExecutionPolicy Bypass -File tools/pack-ui.ps1` to repack the atlases and rewrite `UiArtParts.luau`.
 3. Upload the atlases that changed in Studio (pick the file in an ImageLabel's **Image** property, or use the Asset Manager) and paste their new ids into `src/shared/UiArt.luau`.
 
 ### Before publishing
@@ -68,12 +69,16 @@ Roblox only shows uploaded images, so the parts are packed into atlases, `art/ui
 
 | What | Where |
 | --- | --- |
-| Stages: length, gaps, stepping stone mix, flickering lanterns | `src/shared/Stages.luau`. Add an entry to add a stage. |
+| Stages: length, gaps, stepping stone mix, flickering lanterns; which are open swamps, and their width, platform height and side paths | `src/shared/Stages.luau`. Add an entry to add a stage. |
+| How a swamp stage's platforms are laid out: the winding route, side paths with a drop and a far gap, where the shell goes | `src/server/Swamp.luau` |
+| The grapple: range, hook height, how far a far gap is, the drop at the start of a side path | `Config.Grapple`, `Config.Boosts.grapple` |
+| The grapple's hooks, rope and swing | `src/server/Grapple.luau`, `src/client/Grapple.luau`; the hooks' look in `src/server/Forest.luau` |
+| How deep you stand when you fall in, and not swimming | `Config.Room.WadeDepth`, `src/client/Wading.luau` |
 | How wide the forest is, trees, islands, lanterns | `Config.Forest` |
 | Noise amounts, creature speed and hearing, pebbles, difficulty modes | `src/shared/Config.luau` |
 | Name and tagline on the lobby sign | `Config.GameName`, `Config.Tagline` |
-| How each stretch is laid out, lighting, fog and colour grading | `src/server/MapBuilder.luau` |
-| What trees, stumps, islands, lanterns and signposts look like | `src/server/Forest.luau` |
+| How each stretch is laid out, the water, a swamp's islands, banks and plants, lighting, the moon, fog and colour grading | `src/server/MapBuilder.luau` |
+| What trees, stumps, rafts, islands, cattails, lily pads, algae, lanterns, grapple hooks, signposts and the STAGE COMPLETE doorway look like | `src/server/Forest.luau` |
 | Lobby: size (`Config.Room.LobbyWidth`, `LobbyLength`), the building, doors and party doors, signs, record wall, lamps and string lights, where each prop stands, spawn | `src/server/LobbyBuilder.luau` |
 | Christmas on or off; how many snowballs a pile gives, how many you carry, how far and fast they fly | `Config.Christmas`, `Config.Snowballs` |
 | What the Christmas trees, presents, wreaths and snowball piles look like | `src/server/Christmas.luau` (where they go: `src/server/LobbyBuilder.luau`) |
@@ -138,10 +143,11 @@ src/
     Remotes.luau         RemoteEvents
   server/              ServerScriptService.Server
     Main.server.luau     starts everything
-    MapBuilder.luau      builds the forest stages and the way out; lighting
+    MapBuilder.luau      builds the forest stages and the way out; water and lighting
+    Swamp.luau           lays out a swamp stage's platforms, side paths and far gaps
     CaveBuilder.luau     the cave a party arrives in, at the start of stage 1
     Christmas.luau       Christmas trees, presents, wreaths, snow and snowball piles for the lobby
-    Forest.luau          trees, stumps, islands, lanterns, signposts
+    Forest.luau          trees, stumps, rafts, islands, plants, lanterns, hooks, signposts, doorways
     LobbyBuilder.luau    builds the night courtyard lobby
     Parts.luau           part-building helpers both builders use
     Parties.luau         the lobby's doors: parties, countdowns, private servers, practice
@@ -154,6 +160,7 @@ src/
     Snowballs.luau       snowball fights in the Christmas lobby
     Progress.luau        checkpoints, shells, escapes, run timer, coins, items, saving, spawning
     Shop.luau            buying, wearing and using items (all checks on the server)
+    Grapple.luau         checks a grapple's hook is in reach; the rope
     Purchases.luau       Robux purchases (each granted once) and who owns which pass
     Cosmetics.luau       puts skins and accessories on characters
     Effects.luau         splash rings and sounds (in sound groups the settings turn off)
@@ -174,11 +181,13 @@ src/
     ChristmasBundle.luau the Christmas Bundle's window and countdown
     Cave.luau            the cave's drips, wind and torches; the scare and note when you arrive
     Snow.luau            falling snow in the Christmas lobby, and snow in your face when hit
-    Boosts.luau          boost input (Q / F / the HUD's buttons) and Updraft flight
+    Boosts.luau          boost input (Q / F / G / the HUD's buttons) and Updraft flight
+    Grapple.luau         the hook in reach, lit up, and the swing over to it
+    Wading.luau          stands you waist-deep in the water instead of swimming
     LurkerVisuals.luau   poses the creature model (or a body of parts) as it walks
     Fear.luau            vignette, heartbeat, faltering lights, shake
     DeathScene.luau      the death scene: its face up close, TV static, "what it heard", revive or bleed out
-    Mood.luau            warm lobby and exit lighting, the cave's gloom, cold forest fog, drifting mist
+    Mood.luau            warm lobby and exit lighting, the cave's gloom, cold moonlit forest fog, drifting mist
     Throw.luau           throw input (E / R2 / the HUD's pebble or snowball button)
     CameraReport.luau    tells the server which way your camera points (for where the creature appears)
 tools/

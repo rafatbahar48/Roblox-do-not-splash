@@ -1,11 +1,14 @@
 -- The pieces the drowned forest is built from (MapBuilder.luau): dead trees,
--- stumps and the other stepping stones, islands, fallen logs, reeds, lanterns
--- and signposts. All anchored parts, except the trees near the trail: those
+-- stumps and the other stepping stones, islands, fallen logs, reeds and
+-- cattails, lily pads and algae, lanterns, grapple hooks, signposts and the
+-- STAGE COMPLETE doorway. All anchored parts, except the muddy islands
+-- (Roblox terrain) and the trees near the trail: those
 -- are the Meshy tree models in ServerStorage.ForestProps, when the place has
 -- them (each standing on its own pivot, at the bottom of its roots). y values
 -- are the water floor (FLOOR_Y), the surface (SURFACE_Y) and the top of an
 -- island (TILE_TOP).
 
+local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
 
@@ -31,7 +34,6 @@ local C = {
 	mossMat = Color3.fromRGB(104, 118, 62), -- the floating moss that sinks: paler, so you can tell
 	grass = Color3.fromRGB(42, 60, 40),
 	mud = Color3.fromRGB(40, 34, 30),
-	reed = Color3.fromRGB(84, 92, 58),
 	rock = Color3.fromRGB(76, 80, 82),
 	boards = Color3.fromRGB(150, 128, 96), -- the creaky boards: lighter than everything else
 	raft = Color3.fromRGB(116, 86, 56),
@@ -40,6 +42,16 @@ local C = {
 	warm = Color3.fromRGB(255, 196, 120),
 	sign = Color3.fromRGB(96, 78, 60),
 	signText = Color3.fromRGB(232, 224, 204),
+	lily = Color3.fromRGB(46, 82, 40),
+	flower = Color3.fromRGB(236, 222, 230),
+	algae = Color3.fromRGB(38, 54, 30),
+	cattail = Color3.fromRGB(92, 58, 34),
+	reedStem = Color3.fromRGB(58, 66, 40), -- plain, so thin stems don't look spotted
+	doorGlow = Color3.fromRGB(255, 150, 60), -- the STAGE COMPLETE doorway's amber
+	doorText = Color3.fromRGB(255, 182, 96),
+	rust = Color3.fromRGB(96, 62, 44),
+	hookLamp = Color3.fromRGB(120, 160, 90), -- pale green: not a lantern
+	hookLight = Color3.fromRGB(200, 255, 160),
 }
 Forest.COLORS = C
 
@@ -154,7 +166,66 @@ function Forest.reeds(folder, x, z, rng)
 	for _ = 1, rng:NextInteger(4, 7) do
 		local at = Vector3.new(x + rng:NextNumber(-1.2, 1.2), FLOOR_Y + 1, z + rng:NextNumber(-1.2, 1.2))
 		local top = at + Vector3.new(rng:NextNumber(-0.5, 0.5), rng:NextNumber(5, 7.5), rng:NextNumber(-0.5, 0.5))
-		stick(folder, "Reed", at, top, 0.14, C.reed, Enum.Material.Grass, DECOR)
+		stick(folder, "Reed", at, top, 0.14, C.reedStem, Enum.Material.SmoothPlastic, DECOR)
+	end
+end
+
+-- Cattails: reeds with brown heads, poking out of the water round (x, z).
+function Forest.cattails(folder, x, z, rng)
+	for _ = 1, rng:NextInteger(4, 8) do
+		local at = Vector3.new(x + rng:NextNumber(-1.5, 1.5), FLOOR_Y + 1, z + rng:NextNumber(-1.5, 1.5))
+		local top = at + Vector3.new(rng:NextNumber(-0.4, 0.4), rng:NextNumber(6, 8.5), rng:NextNumber(-0.4, 0.4))
+		stick(folder, "Reed", at, top, 0.12, C.reedStem, Enum.Material.SmoothPlastic, DECOR)
+		if rng:NextNumber() < 0.7 then
+			local up = (top - at).Unit
+			rod(folder, "Cattail", top - up * 1.4, top - up * 0.3, 0.32, C.cattail, Enum.Material.Fabric, DECOR)
+		end
+	end
+end
+
+-- A loose clump of lily pads floating round (x, z), now and then with a
+-- pale flower.
+function Forest.lilyPads(folder, x, z, rng)
+	for i = 1, rng:NextInteger(3, 6) do
+		local px, pz = x + rng:NextNumber(-2.5, 2.5), z + rng:NextNumber(-2.5, 2.5)
+		local color = C.lily:Lerp(C.moss, rng:NextNumber(0, 0.5))
+		column(folder, "LilyPad", px, pz, SURFACE_Y, SURFACE_Y + 0.06, rng:NextNumber(0.9, 1.8), color, Enum.Material.SmoothPlastic, DECOR)
+		if i == 1 and rng:NextNumber() < 0.5 then
+			block(folder, "Flower", Vector3.new(0.35, 0.3, 0.35), CFrame.new(px, SURFACE_Y + 0.2, pz), C.flower, Enum.Material.SmoothPlastic, DECOR)
+		end
+	end
+end
+
+-- Green scum lying on the still water round (x, z).
+function Forest.algae(folder, x, z, rng)
+	-- Lots of small overlapping scraps, so the patch has a ragged edge.
+	for _ = 1, rng:NextInteger(5, 9) do
+		local at = CFrame.new(x + rng:NextNumber(-2.5, 2.5), SURFACE_Y + 0.03, z + rng:NextNumber(-2.5, 2.5)) * CFrame.Angles(0, rng:NextNumber(0, math.pi), 0)
+		block(folder, "Algae", Vector3.new(rng:NextNumber(0.8, 2.4), 0.04, rng:NextNumber(0.6, 1.8)), at, C.algae, Enum.Material.SmoothPlastic, {
+			CanCollide = false,
+			CanQuery = false,
+			CanTouch = false,
+			CastShadow = false,
+			Transparency = 0.5,
+		})
+	end
+end
+
+-- A low muddy island of Roblox terrain at (x, z), about radius across and
+-- rising height out of the water, lumpy round its edge; big ones have a
+-- grassy top. The terrain water must be filled first (MapBuilder.luau).
+function Forest.mudIsland(x, z, radius, height, rng)
+	local terrain = workspace.Terrain
+	terrain:FillBall(Vector3.new(x, SURFACE_Y + height - radius, z), radius, Enum.Material.Mud)
+	for _ = 1, 3 do
+		local angle = rng:NextNumber(0, math.pi * 2)
+		local lump = radius * rng:NextNumber(0.45, 0.7)
+		local at = Vector3.new(x + math.cos(angle) * radius * 0.6, 0, z + math.sin(angle) * radius * 0.6)
+		terrain:FillBall(Vector3.new(at.X, SURFACE_Y + height * rng:NextNumber(0.3, 0.8) - lump, at.Z), lump, Enum.Material.Mud)
+	end
+	if radius >= 6 then
+		local cap = radius * 0.6
+		terrain:FillBall(Vector3.new(x, SURFACE_Y + height + 0.15 - cap, z), cap, Enum.Material.LeafyGrass)
 	end
 end
 
@@ -188,9 +259,40 @@ function Forest.island(folder, name, z0, z1, halfX, rng)
 	return top
 end
 
+-- A rough raft of planks resting low on the water, turned any which way,
+-- for a swamp (kind "deck"). Its spec size is the circle the jumps are
+-- measured to; the planks make a square a little smaller. Returns the
+-- middle plank.
+local function deck(folder, spec, top, rng)
+	local side = spec.size * 0.8
+	local turn = CFrame.new(spec.x, top, spec.z) * CFrame.Angles(0, rng:NextNumber(0, math.pi), 0)
+	local count = 5
+	local width = side / count
+	local middle
+	for i = 1, count do
+		local offset = (i - (count + 1) / 2) * width
+		local length = side + rng:NextNumber(-0.6, 0.4)
+		local at = turn * CFrame.new(offset, -0.25 + rng:NextNumber(-0.04, 0.02), rng:NextNumber(-0.3, 0.3)) * CFrame.Angles(0, rng:NextNumber(-0.03, 0.03), 0)
+		local plank = block(folder, "Deck", Vector3.new(width - 0.1, 0.5, length), at, C.raft:Lerp(C.barkDark, rng:NextNumber(0, 0.35)), Enum.Material.Wood)
+		if i == math.ceil(count / 2) then
+			middle = plank
+		end
+	end
+	for _, across in { -side * 0.32, side * 0.32 } do
+		block(folder, "Beam", Vector3.new(side + 0.4, 0.4, 0.6), turn * CFrame.new(0, -0.7, across), C.barkDark, Enum.Material.Wood, DECOR)
+	end
+	if rng:NextNumber() < 0.6 then
+		local at = turn * CFrame.new(rng:NextNumber(-0.25, 0.25) * side, 0.02, rng:NextNumber(-0.25, 0.25) * side)
+		block(folder, "Moss", Vector3.new(side * 0.35, 0.05, side * 0.25), at, C.moss, Enum.Material.Grass, DECOR)
+	end
+	return middle
+end
+
 -- One stepping stone, from its spec { kind, size, x, z, raise } (see
 -- MapBuilder.luau). Returns the part you stand on; moving ones (moss mats
--- and rafts) are a single part, so they carry nothing with them.
+-- and rafts) are a single part, so they carry nothing with them. A swamp's
+-- are "stump" (a cut stump, however wide) and "deck" (a raft of planks
+-- that stays put).
 function Forest.steppingStone(folder, spec, rng)
 	local top = TILE_TOP + spec.raise
 	local size = spec.size
@@ -211,9 +313,12 @@ function Forest.steppingStone(folder, spec, rng)
 			column(folder, "Post", px, pz, FLOOR_Y, top - 0.6, 0.5, C.stump, Enum.Material.Wood, DECOR)
 		end
 		return boards
+	elseif spec.kind == "deck" then
+		return deck(folder, spec, top, rng)
 	end
 
-	-- Stumps, mounds and broken trunks are round, as wide as the spec.
+	-- Stumps, mounds and broken trunks are round, as wide as the spec. A
+	-- swamp's stumps are always stumps, however wide.
 	local stump
 	if spec.kind == "normal" and size > 6.5 then
 		stump = column(folder, "Tile", x, z, BASE_Y, top, size, C.grass, Enum.Material.Grass)
@@ -226,11 +331,19 @@ function Forest.steppingStone(folder, spec, rng)
 	local pillar = spec.kind == "pillar"
 	stump = column(folder, if pillar then "Pillar" else "Tile", x, z, BASE_Y, top, size, if pillar then C.bark else C.stump, Enum.Material.Wood)
 	column(folder, "Cut", x, z, top - 0.1, top + 0.02, size * 0.84, C.cut, Enum.Material.Wood, DECOR)
+	-- Moss clinging round the waterline.
 	for i = 1, 3 do
 		local angle = i * 2.1 + rng:NextNumber(-0.5, 0.5)
 		local out = Vector3.new(math.cos(angle), 0, math.sin(angle))
-		local at = Vector3.new(x, SURFACE_Y + 0.4, z) + out * size * 0.45
-		block(folder, "Moss", Vector3.new(size * 0.35, 0.5, size * 0.35), CFrame.new(at), C.moss, Enum.Material.Grass, DECOR)
+		local along = Vector3.new(-out.Z, 0, out.X)
+		local at = Vector3.new(x, SURFACE_Y + 0.12, z) + out * size * 0.5
+		block(folder, "Moss", Vector3.new(0.35, 0.3, size * rng:NextNumber(0.3, 0.5)), CFrame.lookAt(at, at + along), C.moss, Enum.Material.Grass, DECOR)
+	end
+	if spec.kind == "stump" and rng:NextNumber() < 0.6 then
+		-- Moss creeping over the cut top from one edge.
+		local angle = rng:NextNumber(0, math.pi * 2)
+		local at = Vector3.new(x, top + 0.03, z) + Vector3.new(math.cos(angle), 0, math.sin(angle)) * size * 0.3
+		block(folder, "Moss", Vector3.new(size * 0.3, 0.06, size * 0.22), CFrame.new(at) * CFrame.Angles(0, -angle, 0), C.moss, Enum.Material.Grass, DECOR)
 	end
 	if pillar then
 		-- A jagged broken top, round the edge so it doesn't get in the way.
@@ -260,6 +373,138 @@ function Forest.lantern(folder, x, z, rng, facing)
 	light.Shadows = true
 	light.Parent = glass
 	return glass
+end
+
+-- A hook for the grapple (Config.Grapple) over platform `to`, across a gap
+-- too far to jump from platform `from` (specs, see MapBuilder.luau): an old
+-- iron ring hanging from the arm of a tall crooked post in the water past
+-- the platform, with a pale lamp on the post so it shows through the fog.
+-- Returns the hook: an invisible part in the middle of the ring, tagged
+-- GrappleHook, whose LandAt attribute is the middle of the platform's top
+-- (and From, the middle of the top of the one before the gap).
+-- client/Grapple.luau lights it up while it's in reach.
+function Forest.grappleHook(folder, from, to, rng)
+	local model = Instance.new("Model")
+	model.Name = "GrappleHook"
+	model.Parent = folder
+
+	local top = TILE_TOP + to.raise
+	local ring = Vector3.new(to.x, top + Config.Grapple.HookHeight, to.z)
+	local across = Vector3.new(to.x - from.x, 0, to.z - from.z).Unit
+	local side = Vector3.new(-across.Z, 0, across.X) * (if rng:NextNumber() < 0.5 then -1 else 1)
+
+	-- The post, in the water past the platform and a little to one side,
+	-- leaning in over it, and its arm out over the middle.
+	local foot = Vector3.new(to.x, FLOOR_Y, to.z) + across * (to.size / 2 + 2.2) + side * 1.6
+	local head = Vector3.new(to.x, ring.Y + 2.4, to.z) + across * (to.size / 2 + 1.2) + side * 1.2
+	rod(model, "Post", foot, head, 1, C.bark, Enum.Material.Wood)
+	local armEnd = ring + Vector3.new(0, 1.9, 0)
+	rod(model, "Arm", head - Vector3.new(0, 0.5, 0), armEnd, 0.6, C.barkDark, Enum.Material.Wood, DECOR)
+	stick(model, "Chain", armEnd, ring + Vector3.new(0, 0.8, 0), 0.16, C.iron, Enum.Material.Metal, DECOR)
+
+	-- The ring, facing the way you come from.
+	local segments, radius = 10, 0.8
+	for i = 0, segments - 1 do
+		local angle = i / segments * math.pi * 2
+		local at = ring + (side * math.cos(angle) + Vector3.yAxis * math.sin(angle)) * radius
+		local tangent = side * -math.sin(angle) + Vector3.yAxis * math.cos(angle)
+		local length = radius * 2 * math.pi / segments * 1.15
+		block(model, "Ring", Vector3.new(0.22, 0.22, length), CFrame.lookAt(at, at + tangent), C.rust, Enum.Material.CorrodedMetal, DECOR)
+	end
+
+	local lamp = block(model, "Lamp", Vector3.new(0.5, 0.7, 0.5), CFrame.new(head - Vector3.new(0, 1.6, 0) - across * 0.7), C.hookLamp, Enum.Material.Neon, DECOR)
+	local light = Instance.new("PointLight")
+	light.Color = C.hookLight
+	light.Range = 12
+	light.Brightness = 0.8
+	light.Parent = lamp
+
+	local hook = block(model, "Hook", Vector3.new(1.6, 1.6, 0.4), CFrame.lookAt(ring, ring + across), C.rust, nil, {
+		Transparency = 1,
+		CanCollide = false,
+		CanQuery = false,
+		CanTouch = false,
+		CastShadow = false,
+	})
+	hook:SetAttribute("LandAt", Vector3.new(to.x, top, to.z))
+	hook:SetAttribute("From", Vector3.new(from.x, TILE_TOP + from.raise, from.z))
+	local rope = Instance.new("Attachment")
+	rope.Name = "Rope"
+	rope.Parent = hook
+	CollectionService:AddTag(hook, "GrappleHook")
+	model.PrimaryPart = hook
+	return hook
+end
+
+-- The STAGE COMPLETE doorway at the end of a swamp stage, on its end island
+-- at x = 0, z, facing back down the stage: an archway of rough logs with
+-- its sign on top, a warm amber glow filling the opening and a lantern on
+-- either side. Walking through it crosses the stage's checkpoint
+-- (MapBuilder.luau).
+function Forest.stageDoor(folder, z, rng)
+	local model = Instance.new("Model")
+	model.Name = "StageDoor"
+	model.Parent = folder
+	local base = TILE_TOP
+	local half, height = 4.6, 8.5 -- the opening
+
+	for _, side in { -1, 1 } do
+		local foot = Vector3.new(side * (half + 0.6), base - 1, z)
+		rod(model, "Post", foot, Vector3.new(side * (half + 0.5), base + height + 0.6, z + rng:NextNumber(-0.2, 0.2)), 1.2, C.bark, Enum.Material.Wood)
+	end
+	rod(model, "Lintel", Vector3.new(-half - 1.8, base + height + 0.1, z), Vector3.new(half + 1.8, base + height + 0.5, z), 1.1, C.bark, Enum.Material.Wood)
+
+	local signAt = Vector3.new(0, base + height + 1.9, z - 0.15)
+	local sign = block(model, "Sign", Vector3.new(8.4, 2, 0.3), CFrame.lookAt(signAt, signAt - Vector3.zAxis) * CFrame.Angles(0, 0, math.rad(rng:NextNumber(-2.5, 2.5))), C.sign, Enum.Material.WoodPlanks)
+	local gui = Instance.new("SurfaceGui")
+	gui.Face = Enum.NormalId.Front
+	gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+	gui.PixelsPerStud = 40
+	gui.LightInfluence = 0 -- the letters glow
+	local label = Instance.new("TextLabel")
+	label.BackgroundTransparency = 1
+	label.Position = UDim2.fromScale(0.04, 0.1)
+	label.Size = UDim2.fromScale(0.92, 0.8)
+	label.Font = Enum.Font.Creepster
+	label.TextScaled = true
+	label.TextColor3 = C.doorText
+	label.TextStrokeColor3 = Color3.fromRGB(40, 16, 6)
+	label.TextStrokeTransparency = 0.2
+	label.Text = "STAGE COMPLETE"
+	label.Parent = gui
+	gui.Parent = sign
+
+	-- The glow: amber strips just inside the posts and lintel, and a haze
+	-- filling the opening.
+	for _, side in { -1, 1 } do
+		block(model, "Glow", Vector3.new(0.2, height - 0.4, 0.2), CFrame.new(side * (half - 0.1), base + (height - 0.4) / 2, z), C.doorGlow, Enum.Material.Neon, DECOR)
+	end
+	block(model, "Glow", Vector3.new(half * 2 - 0.2, 0.2, 0.2), CFrame.new(0, base + height - 0.5, z), C.doorGlow, Enum.Material.Neon, DECOR)
+	local haze = block(model, "Haze", Vector3.new(half * 2 - 0.4, height - 0.6, 0.1), CFrame.new(0, base + (height - 0.6) / 2, z), C.doorGlow, Enum.Material.Neon, {
+		CanCollide = false,
+		CanQuery = false,
+		CanTouch = false,
+		CastShadow = false,
+		Transparency = 0.86,
+	})
+	local light = Instance.new("PointLight")
+	light.Color = C.doorGlow
+	light.Range = 20
+	light.Brightness = 1.6
+	light.Parent = haze
+
+	for _, side in { -1, 1 } do
+		local hang = Vector3.new(side * (half + 1.6), base + 6, z - 0.7)
+		stick(model, "LanternArm", Vector3.new(side * (half + 0.6), base + 6.4, z), hang + Vector3.new(0, 0.4, 0), 0.25, C.stump, Enum.Material.Wood, DECOR)
+		block(model, "LanternCap", Vector3.new(0.8, 0.25, 0.8), CFrame.new(hang + Vector3.new(0, 0.2, 0)), C.iron, Enum.Material.Metal, DECOR)
+		local glass = block(model, "Lantern", Vector3.new(0.6, 0.85, 0.6), CFrame.new(hang - Vector3.new(0, 0.3, 0)), C.lantern, Enum.Material.Neon, DECOR)
+		local lamp = Instance.new("PointLight")
+		lamp.Color = C.warm
+		lamp.Range = 16
+		lamp.Brightness = 1
+		lamp.Parent = glass
+	end
+	return model
 end
 
 -- A wooden signpost on an island at (x, z), its board facing along facing.

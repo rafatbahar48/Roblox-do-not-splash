@@ -367,8 +367,6 @@ local function buildGround(folder)
 	box(folder, "Ground", Vector3.new(-400, y0, -500), Vector3.new(400, y1, Z0), outside, outsideMaterial, grass)
 	box(folder, "Ground", Vector3.new(-400, y0, Z0), Vector3.new(-HALF - 20, y1, 0), outside, outsideMaterial, grass)
 	box(folder, "Ground", Vector3.new(HALF, y0, Z0), Vector3.new(400, y1, 0), outside, outsideMaterial, grass)
-	box(folder, "Ground", Vector3.new(-400, y0, 0), Vector3.new(-STAGE_HALF - 2, y1, 400), C.ground, Enum.Material.LeafyGrass, grass)
-	box(folder, "Ground", Vector3.new(STAGE_HALF + 2, y0, 0), Vector3.new(400, y1, 400), C.ground, Enum.Material.LeafyGrass, grass)
 
 	if XMAS then
 		-- Snow over the courtyard, either side of the path, stopping short

@@ -56,4 +56,5 @@ return {
 	icon_santa_hat = { atlas = "event", x = 841, y = 0, w = 117, h = 99, slice = nil },
 	christmas_bundle = { atlas = "event", x = 0, y = 0, w = 402, h = 362, slice = nil },
 	ribbon_red = { atlas = "event", x = 0, y = 366, w = 243, h = 96, slice = nil },
+	action_grapple = { atlas = "boosts", x = 0, y = 0, w = 194, h = 194, slice = nil },
 }

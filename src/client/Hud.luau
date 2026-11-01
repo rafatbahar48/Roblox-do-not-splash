@@ -12,9 +12,10 @@
 --                 is paid), and Stats, Settings and Invite (not out in the
 --                 forest: in the lobby, the cave and the way out); on touch
 --                 screens in two rows near the top, clear of the jump button
---   bottom right  pebble, Updraft and Hush buttons (only out in the forest);
---                 in the Christmas lobby, the snowball button. On touch
---                 screens they sit left of the jump button.
+--   bottom right  pebble, Updraft, Hush and Grapple buttons (only out in
+--                 the forest; Grapple also while a hook is in reach, to buy
+--                 one there and then); in the Christmas lobby, the snowball
+--                 button. On touch screens they sit left of the jump button.
 --
 -- plus short notifications and the escape screen. On small screens it all
 -- shrinks to fit (ScreenFit.luau).
@@ -35,6 +36,7 @@ local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Stages = require(ReplicatedStorage.Shared.Stages)
 local Zones = require(ReplicatedStorage.Shared.Zones)
 local Boosts = require(script.Parent.Boosts)
+local Grapple = require(script.Parent.Grapple)
 local SettingsUi = require(script.Parent.SettingsUi)
 local Sounds = require(script.Parent.Sounds)
 local ChristmasBundle = require(script.Parent.ChristmasBundle)
@@ -457,6 +459,7 @@ function Hud.start()
 	for _, boost in {
 		{ id = "updraft", art = "action_updraft", name = "Updraft", key = "Q", position = UDim2.new(1, -130, 1, -6) },
 		{ id = "hush", art = "action_hush", name = "Hush", key = "F", position = UDim2.new(1, -12, 1, -130) },
+		{ id = "grapple", art = "action_grapple", name = "Grapple", key = "G", position = UDim2.new(1, -130, 1, -130) },
 	} do
 		local face, count = actionButton(actions, boost.art, boost.name, boost.key, 88, boost.position)
 		face.Activated:Connect(function()
@@ -574,11 +577,14 @@ function Hud.start()
 		coinsPill.Size = UDim2.fromOffset(math.max(180, 66 + textWidth(coins, 28) + 66), 64)
 	end
 
+	-- A boost's button shows while you carry any. The grapple's also shows
+	-- while a hook is in reach, with a + on it when you have none to buy one.
+	local hookInReach = false
 	local function updateBoosts()
 		for id, button in boostButtons do
 			local count = player:GetAttribute("Boost_" .. id) or 0
-			button.face.Visible = count > 0
-			button.count.Label.Text = tostring(count)
+			button.face.Visible = count > 0 or (id == "grapple" and hookInReach)
+			button.count.Label.Text = if count > 0 then tostring(count) else "+"
 		end
 	end
 
@@ -666,6 +672,7 @@ function Hud.start()
 	player:GetAttributeChangedSignal("Coins"):Connect(updateCoins)
 	player:GetAttributeChangedSignal("Boost_updraft"):Connect(updateBoosts)
 	player:GetAttributeChangedSignal("Boost_hush"):Connect(updateBoosts)
+	player:GetAttributeChangedSignal("Boost_grapple"):Connect(updateBoosts)
 	player:GetAttributeChangedSignal("Hushed"):Connect(updateHushed)
 	updateStage()
 	updatePebbles()
@@ -692,6 +699,11 @@ function Hud.start()
 		snowActions.Visible = Config.Christmas and zone == "lobby"
 		if actions.Visible or snowActions.Visible then
 			placeActions()
+		end
+		local reach = inStages and Grapple.target() ~= nil
+		if reach ~= hookInReach then
+			hookInReach = reach
+			updateBoosts()
 		end
 
 		local target = (player:GetAttribute("Noise") or 0) / Config.Noise.Max

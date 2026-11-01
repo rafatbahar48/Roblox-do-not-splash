@@ -201,6 +201,15 @@ Catalog.items = {
 		blurb = "Make no sound at all for 5 seconds. Press F or tap Hush.",
 		swatch = Color3.fromRGB(180, 160, 255),
 	},
+	{
+		id = "grapple",
+		kind = "boost",
+		rarity = "Epic",
+		name = "Grapple",
+		price = 35,
+		blurb = "Swing across a gap too far to jump, to the platform under a hook. Press G or tap Grapple near one.",
+		swatch = Color3.fromRGB(150, 210, 255),
+	},
 }
 
 Catalog.byId = {}

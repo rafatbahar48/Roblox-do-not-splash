@@ -10,6 +10,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Perks = require(ReplicatedStorage.Shared.Perks)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Cosmetics = require(script.Parent.Cosmetics)
+local Grapple = require(script.Parent.Grapple)
 local Noise = require(script.Parent.Noise)
 local Progress = require(script.Parent.Progress)
 
@@ -98,12 +99,17 @@ function Shop.equip(player, slot, itemId)
 	return true
 end
 
--- Spends one boost. Hush is handled here; the client flies for Updraft.
-function Shop.useBoost(player, boostId)
+-- Spends one boost. Hush is handled here; the client flies for Updraft and
+-- swings for the grapple, to target: a hook in reach (Grapple.luau).
+function Shop.useBoost(player, boostId, target)
 	local profile = Progress.getProfile(player)
 	local item = type(boostId) == "string" and Catalog.byId[boostId]
 	local settings = item and item.kind == "boost" and Config.Boosts[item.id]
 	if not profile or not settings or profile.boosts[item.id] <= 0 or not isAlive(player) then
+		return false
+	end
+	local hook = if item.id == "grapple" then Grapple.check(player, target) else nil
+	if item.id == "grapple" and not hook then
 		return false
 	end
 	local ready = boostReady[player] or {}
@@ -118,8 +124,10 @@ function Shop.useBoost(player, boostId)
 	Progress.sync(player)
 	if item.id == "hush" then
 		Noise.hush(player, settings.duration)
+	elseif hook then
+		Grapple.rope(player, hook, settings.duration)
 	end
-	Remotes.BoostStarted:FireClient(player, item.id, settings.duration)
+	Remotes.BoostStarted:FireClient(player, item.id, settings.duration, hook)
 	return true
 end
 
@@ -134,9 +142,9 @@ function Shop.init()
 			Shop.equip(player, slot, itemId)
 		end
 	end)
-	Remotes.UseBoost.OnServerEvent:Connect(function(player, boostId)
+	Remotes.UseBoost.OnServerEvent:Connect(function(player, boostId, target)
 		if allowRequest(player) then
-			Shop.useBoost(player, boostId)
+			Shop.useBoost(player, boostId, target)
 		end
 	end)
 	Players.PlayerRemoving:Connect(function(player)

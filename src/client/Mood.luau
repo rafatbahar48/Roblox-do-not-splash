@@ -1,6 +1,6 @@
 -- Lighting by where you are: a warm, colourful night in the courtyard and on
--- the way out, cold blue fog in the drowned forest, with mist drifting low
--- over the water round you, and in the cave between them, gloom you can
+-- the way out, cold moonlit fog in the drowned forest, with mist drifting
+-- low over the water round you, and in the cave between them, gloom you can
 -- still see by. The contrast is the point: the forest feels darker for
 -- having just left somewhere safe.
 --
@@ -27,14 +27,19 @@ local SAFE = {
 	-- Midnight under an open sky: moonlight, a purple-blue fill so the neon
 	-- and lamps stand out, and a soft haze far off.
 	lighting = {
-		ClockTime = 0,
 		Brightness = 0.9,
+		ExposureCompensation = 0,
 		Ambient = Color3.fromRGB(56, 54, 90),
 		OutdoorAmbient = Color3.fromRGB(62, 62, 104),
 		EnvironmentDiffuseScale = 0.25,
-		FogStart = 160,
-		FogEnd = 700,
-		FogColor = Color3.fromRGB(24, 24, 52),
+	},
+	fog = {
+		Density = 0.2,
+		Offset = 0,
+		Color = Color3.fromRGB(40, 40, 76),
+		Decay = Color3.fromRGB(26, 26, 54),
+		Glare = 0,
+		Haze = 0.5,
 	},
 	grade = {
 		Saturation = 0.18,
@@ -54,14 +59,19 @@ local SAFE = {
 -- haze that swallows the forest past its mouth.
 local CAVE = {
 	lighting = {
-		ClockTime = 0,
 		Brightness = 1.2,
+		ExposureCompensation = 0,
 		Ambient = Color3.fromRGB(66, 62, 78),
 		OutdoorAmbient = Color3.fromRGB(70, 76, 98),
 		EnvironmentDiffuseScale = 0.3,
-		FogStart = 16,
-		FogEnd = 110,
-		FogColor = Color3.fromRGB(28, 32, 44),
+	},
+	fog = {
+		Density = 0.45,
+		Offset = 0,
+		Color = Color3.fromRGB(62, 66, 72),
+		Decay = Color3.fromRGB(40, 42, 50),
+		Glare = 0,
+		Haze = 1,
 	},
 	grade = {
 		Saturation = -0.08,
@@ -117,6 +127,7 @@ function Mood.start()
 	-- What each part of SAFE applies to. A missing effect is left out.
 	local targets = {
 		lighting = Lighting,
+		fog = Lighting:WaitForChild("Fog", 10),
 		grade = Lighting:WaitForChild("Grade", 10),
 		bloom = Lighting:WaitForChild("Glow", 10),
 	}

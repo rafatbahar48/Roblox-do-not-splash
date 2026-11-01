@@ -1,9 +1,10 @@
 -- Builds the whole map from Config and Stages when the server starts: the
 -- lobby (LobbyBuilder.luau), then behind its building a drowned forest at
--- night: black still water, dead trees and fog, with one stretch per stage
--- along +Z and the way out at the end. Each stretch runs from an island,
--- across a trail of stepping stones, to an island with its checkpoint.
--- Stage 1 starts in the cave behind the building (CaveBuilder.luau).
+-- dusk: murky water, dead trees and fog, with one stretch per stage along +Z
+-- and the way out at the end. Each stretch runs from an island to an island
+-- with its checkpoint: across a trail of stepping stones, or, for a swamp
+-- stage, across an open swamp of scattered platforms (Swamp.luau). Stage 1
+-- starts in the cave behind the building (CaveBuilder.luau).
 -- Returns a layout table the other server modules use to find stages.
 
 local Lighting = game:GetService("Lighting")
@@ -15,6 +16,7 @@ local CaveBuilder = require(script.Parent.CaveBuilder)
 local Forest = require(script.Parent.Forest)
 local LobbyBuilder = require(script.Parent.LobbyBuilder)
 local Parts = require(script.Parent.Parts)
+local Swamp = require(script.Parent.Swamp)
 
 local block, box = Parts.block, Parts.box
 
@@ -30,7 +32,9 @@ local COLORS = {
 	wall = Color3.fromRGB(70, 62, 74), -- the back of the lobby's building
 	door = Color3.fromRGB(52, 38, 30), -- the backs of its doors
 	floor = Color3.fromRGB(30, 28, 26),
-	water = Color3.fromRGB(14, 20, 26),
+	water = Color3.fromRGB(16, 24, 20), -- greenish black
+	bank = Color3.fromRGB(46, 40, 32), -- the terrain mud of islands and banks
+	bankGrass = Color3.fromRGB(42, 52, 36),
 	checkpoint = Color3.fromRGB(70, 150, 112),
 	shell = Color3.fromRGB(255, 186, 200),
 	stone = Color3.fromRGB(96, 98, 104),
@@ -227,33 +231,40 @@ local function buildTile(folder, spec, stage, rng)
 	return part
 end
 
--- Distance from point p to the segment a-b, on the ground plane.
-local function distanceToSegment(px, pz, ax, az, bx, bz)
-	local dx, dz = bx - ax, bz - az
-	local lengthSquared = dx * dx + dz * dz
-	local t = if lengthSquared > 0 then math.clamp(((px - ax) * dx + (pz - az) * dz) / lengthSquared, 0, 1) else 0
-	local cx, cz = ax + dx * t - px, az + dz * t - pz
-	return math.sqrt(cx * cx + cz * cz)
-end
-
--- True if a tree at (x, z) would stand on or between the stepping stones.
-local function inTheWay(specs, x, z)
-	for i, spec in specs do
+-- True if a tree at (x, z) would stand on a platform or in the way of a
+-- jump between two (links: pairs of platforms), with pad studs to spare.
+local function inTheWay(platforms, links, x, z, pad)
+	pad = pad or 0
+	for _, spec in platforms do
 		local dx, dz = x - spec.x, z - spec.z
-		if math.sqrt(dx * dx + dz * dz) < spec.size / 2 + (if spec.kind == "raft" then Config.Raft.Range + 3 else 3) then
+		if math.sqrt(dx * dx + dz * dz) < spec.size / 2 + pad + (if spec.kind == "raft" then Config.Raft.Range + 3 else 3) then
 			return true
 		end
-		local nextSpec = specs[i + 1]
-		if nextSpec and distanceToSegment(x, z, spec.x, spec.z, nextSpec.x, nextSpec.z) < 3.5 then
+	end
+	for _, pair in links do
+		local a, b = pair[1], pair[2]
+		if Swamp.distanceToSegment(x, z, a.x, a.z, b.x, b.z) < 3.5 + pad then
 			return true
 		end
 	end
 	return false
 end
 
--- Dead trees across the stretch z0..z1: thick near the trail, thinning out
--- into the fog, never on the islands or in the way of a jump.
-local function plantTrees(folder, specs, z0, z1, islands, rng)
+-- The jumps along a trail of stepping stones, for inTheWay.
+local function trailLinks(specs)
+	local links = {}
+	for i = 1, #specs - 1 do
+		table.insert(links, { specs[i], specs[i + 1] })
+	end
+	return links
+end
+
+-- Dead trees across the stretch z0..z1: thick out to roamHalf either side,
+-- thinning out into the fog beyond, never on the islands (or clearings) or,
+-- within nearHalf of the middle, in the way of a jump. open (if given)
+-- makes it a pond instead: only that share of the trees within nearHalf,
+-- and those well clear of the jumps.
+local function plantTrees(folder, platforms, links, z0, z1, islands, rng, nearHalf, roamHalf, open)
 	local height = FOREST.TreeHeight
 	local function plant(x, z, far)
 		for _, island in islands do
@@ -261,42 +272,60 @@ local function plantTrees(folder, specs, z0, z1, islands, rng)
 				return
 			end
 		end
-		if math.abs(x) < HALF_WIDTH + 4 and inTheWay(specs, x, z) then
+		if math.abs(x) < nearHalf + 4 and inTheWay(platforms, links, x, z, if open then 3 else 0) then
 			return
 		end
 		Forest.deadTree(folder, x, z, rng:NextNumber(height[1], height[2]), rng, far)
 	end
 	local spacing = FOREST.TreeSpacing
 	for z = z0 + spacing / 2, z1, spacing do
-		for x = -FOREST.CreatureHalfWidth, FOREST.CreatureHalfWidth, spacing do
-			if rng:NextNumber() < 0.7 then
+		for x = -roamHalf, roamHalf, spacing do
+			local chance = if open and math.abs(x) < nearHalf then open else 0.7
+			if rng:NextNumber() < chance then
 				plant(x + rng:NextNumber(-spacing, spacing) * 0.45, z + rng:NextNumber(-spacing, spacing) * 0.45, false)
 			end
 		end
 	end
+	-- Far off, scattered rather than in rows (the water mirrors them).
 	local farSpacing = spacing * 1.8
 	for z = z0 + farSpacing / 2, z1, farSpacing do
 		for _, side in { -1, 1 } do
-			for x = FOREST.CreatureHalfWidth + farSpacing / 2, FOREST.SceneryHalfWidth, farSpacing do
-				plant(side * (x + rng:NextNumber(-4, 4)), z + rng:NextNumber(-5, 5), true)
+			for x = roamHalf + farSpacing / 2, FOREST.SceneryHalfWidth, farSpacing do
+				plant(side * (x + rng:NextNumber(-0.45, 0.45) * farSpacing), z + rng:NextNumber(-0.45, 0.45) * farSpacing, true)
 			end
 		end
 	end
 end
 
--- A few fallen logs and clumps of reeds off to the sides of the trail.
-local function scatterDebris(folder, specs, z0, z1, rng)
+-- A few fallen logs and clumps of reeds in the water. Logs lie logBand[1]
+-- to logBand[2] from the middle, out of the way of every jump and, in a
+-- swamp, never a step across a far gap (guarded: its ends). Reeds go
+-- anywhere out to wadeHalf that isn't in the way.
+local function scatterDebris(folder, platforms, links, z0, z1, rng, logBand, wadeHalf, guarded)
 	for _ = 1, math.floor((z1 - z0) / 25) do
 		local side = if rng:NextNumber() < 0.5 then -1 else 1
-		local x, z = side * rng:NextNumber(HALF_WIDTH + 6, FOREST.HalfWidth - 4), rng:NextNumber(z0 + 8, z1 - 8)
+		local x, z = side * rng:NextNumber(logBand[1], logBand[2]), rng:NextNumber(z0 + 8, z1 - 8)
 		local angle = rng:NextNumber(0, math.pi)
 		local half = Vector3.new(math.cos(angle), 0, math.sin(angle)) * rng:NextNumber(4, 7)
 		local center = Vector3.new(x, SURFACE_Y, z)
-		Forest.fallenLog(folder, center - half, center + half, rng)
+		local clear = true
+		for _, point in { center - half, center, center + half } do
+			if inTheWay(platforms, links, point.X, point.Z) then
+				clear = false
+			end
+			for _, spec in guarded or {} do
+				if Vector2.new(point.X - spec.x, point.Z - spec.z).Magnitude < spec.size / 2 + Config.MaxJump + 2 then
+					clear = false
+				end
+			end
+		end
+		if clear then
+			Forest.fallenLog(folder, center - half, center + half, rng)
+		end
 	end
 	for _ = 1, math.floor((z1 - z0) / 8) do
-		local x, z = rng:NextNumber(-FOREST.HalfWidth, FOREST.HalfWidth), rng:NextNumber(z0, z1)
-		if not inTheWay(specs, x, z) then
+		local x, z = rng:NextNumber(-wadeHalf, wadeHalf), rng:NextNumber(z0, z1)
+		if not inTheWay(platforms, links, x, z) then
 			Forest.reeds(folder, x, z, rng)
 		end
 	end
@@ -317,6 +346,108 @@ local function hangLanterns(folder, specs, z0, z1, lights, rng)
 			table.insert(lights, Forest.lantern(folder, x, nearest.z, rng, Vector3.new(-side, 0, 0)))
 			side = -side
 		end
+	end
+end
+
+-- What makes a swamp stage look like a swamp round its platforms: low muddy
+-- islands out in the water, a shore of muddy banks wandering in and out
+-- just past where you can wade (so it can't be walked along), mud round
+-- the edges of the start and end islands, and cattails, lily pads and
+-- algae, all clear of the platforms and the jumps between them (links) and
+-- out of reach of a far gap's ends (guarded).
+local function dressSwamp(folder, platforms, links, guarded, poolStart, poolEnd, ends, wadeHalf, rng)
+	local mounds = {}
+	local function clearOf(x, z, radius)
+		for _, spec in platforms do
+			if Vector2.new(x - spec.x, z - spec.z).Magnitude < spec.size / 2 + radius + 4 then
+				return false
+			end
+		end
+		for _, spec in guarded do
+			if Vector2.new(x - spec.x, z - spec.z).Magnitude < spec.size / 2 + radius + Config.MaxJump + 2 then
+				return false
+			end
+		end
+		for _, pair in links do
+			if Swamp.distanceToSegment(x, z, pair[1].x, pair[1].z, pair[2].x, pair[2].z) < radius + 3 then
+				return false
+			end
+		end
+		for _, mound in mounds do
+			if Vector2.new(x - mound.x, z - mound.z).Magnitude < radius + mound.radius + 3 then
+				return false
+			end
+		end
+		return true
+	end
+
+	-- Islands, some with a dead tree.
+	local wanted = math.floor((poolEnd - poolStart) / 30) + 2
+	for _ = 1, wanted * 10 do
+		if #mounds >= wanted then
+			break
+		end
+		local radius = rng:NextNumber(3.5, 8)
+		local x, z = rng:NextNumber(-wadeHalf + radius, wadeHalf - radius), rng:NextNumber(poolStart + radius, poolEnd - radius)
+		if clearOf(x, z, radius) then
+			Forest.mudIsland(x, z, radius, rng:NextNumber(0.4, 1.1), rng)
+			table.insert(mounds, { x = x, z = z, radius = radius })
+			if radius > 5 and rng:NextNumber() < 0.7 then
+				Forest.deadTree(folder, x + rng:NextNumber(-1, 1), z + rng:NextNumber(-1, 1), rng:NextNumber(FOREST.TreeHeight[1], FOREST.TreeHeight[2]), rng, false)
+			end
+			if rng:NextNumber() < 0.6 then
+				Forest.cattails(folder, x + radius * 0.8, z, rng)
+			end
+		end
+	end
+
+	-- The shore: banks whose inner edge wanders from just past the wading
+	-- edge to a few studs further out.
+	for z = poolStart - 10, poolEnd + 10, 8 do
+		for _, side in { -1, 1 } do
+			local radius = rng:NextNumber(6, 11)
+			Forest.mudIsland(side * (wadeHalf + 0.5 + radius + rng:NextNumber(0, 6)), z, radius, rng:NextNumber(0.3, 1.2), rng)
+		end
+	end
+
+	-- Mud lapping round the start and end islands' sides and the edges
+	-- facing the water, so they don't end in straight lines.
+	for _, island in ends do
+		for z = island.z0 + 2, island.z1 - 2, 5 do
+			for _, side in { -1, 1 } do
+				local radius = rng:NextNumber(3, 4.5)
+				Forest.mudIsland(side * (island.halfX + 0.5), z, radius, 0.9, rng)
+			end
+		end
+		for x = -island.halfX + 2, island.halfX - 2, 5 do
+			Forest.mudIsland(x, island.edge, 2, 0.9, rng)
+		end
+	end
+
+	-- Plants and scum on the water.
+	for _, plant in { { Forest.cattails, 14 }, { Forest.lilyPads, 10 }, { Forest.algae, 14 } } do
+		for _ = 1, math.floor((poolEnd - poolStart) / plant[2]) do
+			local x, z = rng:NextNumber(-wadeHalf, wadeHalf), rng:NextNumber(poolStart, poolEnd)
+			if clearOf(x, z, 1) then
+				plant[1](folder, x, z, rng)
+			end
+		end
+	end
+end
+
+-- Lanterns along a swamp's winding route, beside every third platform,
+-- swapping sides, out of the way of the jumps.
+local function hangRouteLanterns(folder, route, links, lights, rng)
+	local side = 1
+	for i = 2, #route - 1, 3 do
+		local spec = route[i]
+		local ahead, behind = route[i + 1], route[i - 1]
+		local across = Vector3.new(ahead.z - behind.z, 0, behind.x - ahead.x).Unit * side
+		local at = Vector3.new(spec.x, 0, spec.z) + across * (spec.size / 2 + 2.5)
+		if not inTheWay({}, links, at.X, at.Z) then
+			table.insert(lights, Forest.lantern(folder, at.X, at.Z, rng, -across))
+		end
+		side = -side
 	end
 end
 
@@ -352,11 +483,34 @@ local function buildRoom(map, index, stage, z0)
 	Forest.island(folder, "EndLanding", poolEnd, z1, FOREST.IslandHalfWidth, scenery)
 	Forest.signpost(folder, startHalf - 4, poolStart - 2.5, Vector3.new(0, 0, -1), "STAGE " .. index, stage.name)
 
-	local specs = generateTiles(rng, stage, poolStart, poolEnd)
-	local shellSpec, shellPosition = placeShell(rng, specs)
-	local trail = table.clone(specs)
-	if shellSpec then
-		table.insert(specs, shellSpec)
+	-- A trail of stepping stones, or an open swamp of platforms.
+	local swamp = stage.layout == "swamp"
+	local nearHalf = if swamp then stage.halfWidth else HALF_WIDTH -- where the platforms are
+	local wadeHalf = if swamp then stage.halfWidth + 8 else FOREST.HalfWidth
+	local roamHalf = math.max(FOREST.CreatureHalfWidth, wadeHalf + 16)
+	local specs, trail, links, hooks, guarded, shellPosition
+	if swamp then
+		local layout = Swamp.layout(index * 7919, stage, {
+			poolStart = poolStart,
+			poolEnd = poolEnd,
+			startHalf = startHalf,
+			endHalf = FOREST.IslandHalfWidth,
+			raise = (stage.platformHeight or ROOM.TileHeight) - ROOM.TileHeight,
+		})
+		specs, trail, links, hooks, guarded = layout.platforms, layout.route, layout.links, layout.hooks, layout.guarded
+		if layout.shell then
+			shellPosition = Vector3.new(layout.shell.x, TILE_TOP + layout.shell.raise + 1.5, layout.shell.z)
+		end
+	else
+		specs = generateTiles(rng, stage, poolStart, poolEnd)
+		local shellSpec
+		shellSpec, shellPosition = placeShell(rng, specs)
+		trail = table.clone(specs)
+		if shellSpec then
+			table.insert(specs, shellSpec)
+		end
+		links = trailLinks(specs)
+		hooks = {}
 	end
 
 	local tileFolder = Instance.new("Folder")
@@ -382,22 +536,55 @@ local function buildRoom(map, index, stage, z0)
 		glow.Parent = shell
 	end
 
+	-- The checkpoint: a glowing pad, or at the end of a swamp stage the
+	-- STAGE COMPLETE doorway, over an unseen pad right across the island.
 	local padZ = z1 - ROOM.EndLanding / 2
-	local checkpointPad = block(folder, "Checkpoint", Vector3.new(8, 0.2, 4), CFrame.new(0, TILE_TOP + 0.1, padZ), COLORS.checkpoint, Enum.Material.Neon, {
+	local padWidth = if swamp then FOREST.IslandHalfWidth * 2 else 8
+	local checkpointPad = block(folder, "Checkpoint", Vector3.new(padWidth, 0.2, 4), CFrame.new(0, TILE_TOP + 0.1, padZ), COLORS.checkpoint, Enum.Material.Neon, {
 		CanCollide = false,
 		CanQuery = false,
-		Transparency = 0.35,
+		Transparency = if swamp then 1 else 0.35,
 	})
 	checkpointPad:SetAttribute("Checkpoint", index)
+	if swamp then
+		Forest.stageDoor(folder, padZ, scenery)
+	end
 
-	hangLanterns(folder, trail, poolStart, poolEnd, lights, scenery)
-	plantTrees(folder, specs, z0, z1, islands, scenery)
-	scatterDebris(folder, specs, poolStart, poolEnd, scenery)
+	for _, hook in hooks do
+		Forest.grappleHook(folder, hook.from, hook.to, scenery)
+	end
 
-	-- Players can wade out so far and no further.
+	if swamp then
+		hangRouteLanterns(folder, trail, links, lights, scenery)
+		dressSwamp(folder, specs, links, guarded, poolStart, poolEnd, {
+			{ halfX = startHalf, z0 = landingStart, z1 = poolStart, edge = poolStart },
+			{ halfX = FOREST.IslandHalfWidth, z0 = poolEnd, z1 = z1, edge = poolEnd },
+		}, wadeHalf, scenery)
+	else
+		hangLanterns(folder, trail, poolStart, poolEnd, lights, scenery)
+	end
+	if swamp then
+		-- Clearings at each end, so the first platforms and the doorway are
+		-- in plain sight.
+		table.insert(islands, { halfX = 12, z0 = poolStart, z1 = poolStart + 14 })
+		table.insert(islands, { halfX = 14, z0 = poolEnd - 26, z1 = poolEnd })
+	end
+	plantTrees(folder, specs, links, z0, z1, islands, scenery, nearHalf, roamHalf, if swamp then 0.35 else nil)
+	local logBand = if swamp then { 0, wadeHalf - 4 } else { HALF_WIDTH + 6, FOREST.HalfWidth - 4 }
+	scatterDebris(folder, specs, links, poolStart, poolEnd, scenery, logBand, wadeHalf, guarded)
+
+	-- Players can wade out so far and no further. A swamp wider or narrower
+	-- than the stages either side is closed off at its ends too.
 	for _, side in { -1, 1 } do
-		local x = side * FOREST.HalfWidth
+		local x = side * wadeHalf
 		box(folder, "Edge", Vector3.new(math.min(x, x + side), BASE_Y, z0), Vector3.new(math.max(x, x + side), SURFACE_Y + 40, z1), COLORS.floor, nil, BARRIER)
+		if wadeHalf ~= FOREST.HalfWidth then
+			local inner = side * math.min(wadeHalf, FOREST.HalfWidth)
+			local outer = side * (math.max(wadeHalf, FOREST.HalfWidth) + 1)
+			for _, z in { z0, z1 - 1 } do
+				box(folder, "Edge", Vector3.new(math.min(inner, outer), BASE_Y, z), Vector3.new(math.max(inner, outer), SURFACE_Y + 40, z + 1), COLORS.floor, nil, BARRIER)
+			end
+		end
 	end
 
 	local standAt = Vector3.new(0, TILE_TOP + 3, padZ)
@@ -411,8 +598,8 @@ local function buildRoom(map, index, stage, z0)
 		poolEnd = poolEnd,
 		surfaceY = SURFACE_Y,
 		floorY = FLOOR_Y,
-		halfWidth = FOREST.HalfWidth, -- how far players can wade
-		roamHalfWidth = FOREST.CreatureHalfWidth, -- how far the creature can go
+		halfWidth = wadeHalf, -- how far players can wade
+		roamHalfWidth = roamHalf, -- how far the creature can go
 		tiles = tiles,
 		lights = lights,
 		shell = shell,
@@ -448,21 +635,46 @@ local function buildExit(map, z0, z1)
 	-- Nobody wanders off past it.
 	box(folder, "Edge", Vector3.new(-FOREST.HalfWidth, BASE_Y, z1 + 4), Vector3.new(FOREST.HalfWidth, SURFACE_Y + 40, z1 + 5), COLORS.floor, nil, BARRIER)
 
-	plantTrees(folder, {}, z1 + 6, z1 + 80, {}, rng)
+	plantTrees(folder, {}, {}, z1 + 6, z1 + 80, {}, rng, HALF_WIDTH, FOREST.CreatureHalfWidth)
 	return door
 end
 
--- The black water and the mud under it, under the whole forest.
+local LAKE_REACH = FOREST.SceneryHalfWidth + 20 -- how far the water goes either side
+
+-- The water under the whole forest: Roblox's own terrain water, nearly
+-- black, still, and mirroring the moon, so what wades in it is mostly legs
+-- and a pair of eyes. Two terrain cells deep (a single cell shows seams);
+-- the bottom you stand on is a part (buildLake). Filled before the stages,
+-- so their muddy islands (Forest.mudIsland) can rise out of it.
+local function fillWater(zEnd)
+	local terrain = workspace.Terrain
+	local bottom = FLOOR_Y - 4
+	terrain:FillBlock(
+		CFrame.new(0, (bottom + SURFACE_Y) / 2, zEnd / 2),
+		Vector3.new(LAKE_REACH * 2, SURFACE_Y - bottom, zEnd),
+		Enum.Material.Water
+	)
+	terrain.WaterColor = COLORS.water
+	terrain.WaterTransparency = 0.05
+	terrain.WaterReflectance = 0.8
+	terrain.WaterWaveSize = 0.02
+	terrain.WaterWaveSpeed = 2
+	terrain:SetMaterialColor(Enum.Material.Mud, COLORS.bank)
+	terrain:SetMaterialColor(Enum.Material.LeafyGrass, COLORS.bankGrass)
+end
+
+-- The bottom of the water: waist-deep where you stand if you fall in
+-- (Config.Room.WadeDepth), with the creature's feet further down. An
+-- invisible part at the surface, named Water, is what pebbles land on
+-- (Pebbles.luau).
 local function buildLake(map, zEnd)
 	local folder = Instance.new("Folder")
 	folder.Name = "Lake"
 	folder.Parent = map
-	local reach = FOREST.SceneryHalfWidth + 20
-	box(folder, "LakeFloor", Vector3.new(-reach, BASE_Y, 0), Vector3.new(reach, FLOOR_Y, zEnd), COLORS.floor, Enum.Material.Mud)
+	local reach = LAKE_REACH
+	box(folder, "LakeFloor", Vector3.new(-reach, BASE_Y, 0), Vector3.new(reach, SURFACE_Y - ROOM.WadeDepth, zEnd), COLORS.floor, Enum.Material.Mud)
 	box(folder, "Water", Vector3.new(-reach, FLOOR_Y, 0), Vector3.new(reach, SURFACE_Y, zEnd), COLORS.water, Enum.Material.Glass, {
-		-- Black and still: what wades in it is mostly legs and a pair of eyes.
-		Transparency = 0.06,
-		Reflectance = 0.2,
+		Transparency = 1,
 		CanCollide = false,
 		CanTouch = false,
 		CastShadow = false,
@@ -471,33 +683,49 @@ end
 
 local function setupLighting()
 	for _, child in Lighting:GetChildren() do
-		-- An Atmosphere overrides fog (and at night only fades things to
-		-- black), and the fog is most of the mood. Template post effects are
-		-- replaced by ours below.
+		-- Template atmospheres and post effects are replaced by ours below.
 		if child:IsA("Atmosphere") or child:IsA("PostEffect") then
 			child:Destroy()
 		end
 	end
-	-- A cold moonlit night in thick blue-grey fog: you see the trees round
-	-- you and the lanterns' glow, and everything further off is gone, so
-	-- whatever is out there is only a shape when it is already close.
-	-- client/Mood.luau adds mist drifting over the water round you.
+	-- Midnight in the swamp: a big moon low over the trees ahead (the
+	-- latitude swings it round to the far end of the stages), blue-grey
+	-- light you can still see the platforms by, and a fog the trees round
+	-- you show through and everything further off is lost in, so whatever
+	-- is out there is only a shape when it is already close. client/Mood.luau
+	-- adds mist drifting over the water round you, and lighter, warmer
+	-- light in the courtyard.
 	Lighting.ClockTime = 0
-	Lighting.Brightness = 1.6
-	Lighting.Ambient = Color3.fromRGB(46, 54, 70)
-	Lighting.OutdoorAmbient = Color3.fromRGB(84, 98, 126)
-	Lighting.EnvironmentDiffuseScale = 0.3
-	Lighting.EnvironmentSpecularScale = 0.7 -- the water and wet wood catch the moon
-	Lighting.FogColor = Color3.fromRGB(34, 42, 56)
-	Lighting.FogStart = 5
-	Lighting.FogEnd = 70
+	Lighting.GeographicLatitude = 78
+	Lighting.Brightness = 2.5
+	Lighting.Ambient = Color3.fromRGB(58, 66, 86)
+	Lighting.OutdoorAmbient = Color3.fromRGB(92, 106, 132)
+	Lighting.EnvironmentDiffuseScale = 0.35
+	Lighting.EnvironmentSpecularScale = 0.9 -- the water and wet wood catch the moon
+	Lighting.ExposureCompensation = 0.3
 	Lighting.GlobalShadows = true
 
-	-- Cold, washed-out colours, and a soft glow around anything neon.
-	-- Named so client/Mood.luau can warm it up in the lobby.
+	local sky = Lighting:FindFirstChildOfClass("Sky") or Instance.new("Sky")
+	sky.MoonAngularSize = 18
+	sky.StarCount = 2500
+	sky.Parent = Lighting
+
+	-- The fog. Named so client/Mood.luau can thin it in the lobby and cave.
+	local fog = Instance.new("Atmosphere")
+	fog.Name = "Fog"
+	fog.Density = 0.42
+	fog.Offset = 0.05
+	fog.Color = Color3.fromRGB(116, 136, 164)
+	fog.Decay = Color3.fromRGB(70, 88, 112)
+	fog.Glare = 0
+	fog.Haze = 1.2
+	fog.Parent = Lighting
+
+	-- Cold, a little washed out, and a soft glow around anything neon. Named
+	-- so client/Mood.luau can warm it up in the lobby.
 	local grade = Instance.new("ColorCorrectionEffect")
 	grade.Name = "Grade"
-	grade.Saturation = -0.25
+	grade.Saturation = -0.2
 	grade.Contrast = 0.12
 	grade.TintColor = Color3.fromRGB(206, 220, 240)
 	grade.Parent = Lighting
@@ -530,6 +758,13 @@ function MapBuilder.build()
 
 	local lobby = LobbyBuilder.build(map)
 
+	local stagesEnd = 0
+	for _, stage in Stages do
+		stagesEnd += stage.length
+	end
+	local lakeEnd = stagesEnd + ROOM.ExitLength + 90
+	fillWater(lakeEnd)
+
 	-- Stages
 	local layout = {
 		rooms = {},
@@ -549,7 +784,7 @@ function MapBuilder.build()
 
 	local exitEnd = z + ROOM.ExitLength
 	layout.exitDoor = buildExit(map, z, exitEnd)
-	buildLake(map, exitEnd + 90)
+	buildLake(map, lakeEnd)
 
 	map.Parent = workspace
 

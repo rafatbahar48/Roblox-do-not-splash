@@ -16,17 +16,38 @@
 -- sinkDelay seconds before a moss mat goes under
 -- flicker   whether the lanterns cut out now and then
 --
+-- A stage with layout = "swamp" is an open swamp instead of one trail
+-- (server/Swamp.luau): low platforms over wide water with a natural muddy
+-- shoreline, a route you can always jump winding across it, and side paths
+-- off it. It uses gap and tileSize as above, and:
+-- mix       how often each kind of platform appears: stump (a wide cut
+--           stump) or deck (a rough raft of planks), both resting low on
+--           the water
+-- halfWidth how far either side of the middle its platforms go
+-- platformHeight  how far its platforms stand above the water
+-- branches  how many side paths; each starts with a drop off a tall stump
+--           you can't climb back up, then crosses a gap too far to jump,
+--           under a hook for the grapple (Config.Grapple). The first one's
+--           far side has the shell
+-- scatter   platforms dotted round the rest of the swamp, per 1000 square
+--           studs; some are a jump from the others, some only a wade
+--
 -- One creature stalks the whole forest (server/Lurkers.luau).
 
 return {
 	{
-		name = "The Shallows",
-		length = 130, -- 90 of forest, and the cave before it
+		-- The first steps: a gentle curve of wide, low stumps and rafts, short
+		-- jumps, and no grapple needed.
+		name = "The First Steps",
+		layout = "swamp",
+		length = 165, -- 103 of swamp, and the cave before it
 		startLanding = 50,
-		gap = { 3, 4 },
+		halfWidth = 34,
+		platformHeight = 0.8,
+		gap = { 2.5, 3.5 },
 		tileSize = { 7, 9 },
-		shift = 4,
-		mix = { normal = 1 },
+		mix = { stump = 7, deck = 3 },
+		branches = 0,
 	},
 	{
 		name = "Old Boards",

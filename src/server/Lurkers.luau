@@ -14,12 +14,17 @@ function Lurkers.init(layout)
 	folder.Name = "Lurkers"
 	folder.Parent = workspace
 
-	-- Where it can go: the water of every stage, end to end.
+	-- Where it can go: the water of every stage, end to end, as wide as the
+	-- widest (a swamp stage's).
 	local first, last = layout.rooms[1], layout.rooms[#layout.rooms]
+	local roamHalfWidth = 0
+	for _, room in layout.rooms do
+		roamHalfWidth = math.max(roamHalfWidth, room.roamHalfWidth)
+	end
 	local area = {
 		poolStart = first.poolStart,
 		poolEnd = last.poolEnd,
-		roamHalfWidth = first.roamHalfWidth,
+		roamHalfWidth = roamHalfWidth,
 		floorY = first.floorY,
 		surfaceY = first.surfaceY,
 		roomAt = layout.roomAt,

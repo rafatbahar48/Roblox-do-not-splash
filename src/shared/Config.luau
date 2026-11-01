@@ -142,6 +142,23 @@ Config.Boosts = {
 		duration = 5, -- seconds of making no noise at all
 		cooldown = 1,
 	},
+	grapple = {
+		duration = 0.9, -- seconds the swing over to the hook's platform takes
+		cooldown = 0.5,
+	},
+}
+
+-- The grapple's hooks, over gaps too far to jump in the swamp stages
+-- (server/Swamp.luau, server/Grapple.luau, client/Grapple.luau).
+Config.Grapple = {
+	Range = 26, -- how far from a hook's ring you can throw the line
+	HookHeight = 10, -- how high over its platform the ring hangs
+	FarGap = { 10, 12 }, -- the gap a hook is for, edge to edge
+	-- The shell's side path starts with a drop off a stump this much taller
+	-- than the rest, this far (edge to edge) from the next platform: a jump
+	-- you can make down, but not back up.
+	Drop = 4,
+	DropGap = 9,
 }
 
 Config.Raft = {
@@ -160,7 +177,8 @@ Config.Room = {
 	SurfaceY = 100, -- height of the water surface; keeps the map clear of any baseplate
 	Width = 40, -- the band the stepping stones are laid in
 	Height = 18, -- how tall stage 1's doorway wall is behind the lobby
-	PoolDepth = 4,
+	PoolDepth = 4, -- where the creature walks
+	WadeDepth = 2.6, -- where you stand if you fall in: about waist-deep
 	TileHeight = 1.5, -- how far tiles and landings stand above the water
 	StartLanding = 10,
 	EndLanding = 12,

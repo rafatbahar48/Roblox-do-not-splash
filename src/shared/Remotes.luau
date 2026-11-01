@@ -10,8 +10,8 @@ local NAMES = {
 	"Notify", -- server -> client: kind, text
 	"BuyItem", -- client -> server: item id
 	"EquipItem", -- client -> server: slot ("skin" or "accessory"), item id or nil to take it off
-	"UseBoost", -- client -> server: boost id
-	"BoostStarted", -- server -> client: boost id, duration
+	"UseBoost", -- client -> server: boost id, and for the grapple the hook to swing to
+	"BoostStarted", -- server -> client: boost id, duration, and for the grapple its hook
 	"Caught", -- server -> client: where it struck, what it heard ("splash", ...), how loud you were, its anchor
 	"PartySetup", -- server -> client: party door number to set up a party on and its mode (Config.Doors), or nil to close the pop-up
 	"CreateParty", -- client -> server: party door number, size, difficulty name (ignored where the door decides), friends only
