@@ -5,16 +5,19 @@
 --                 clear of the thumbstick
 --   top middle    the run timer, and "IT HEARD YOU" while something hunts you
 --   top right     the difficulty buttons
---   left          big Shop and Bag buttons, or out in the forest the noise
---                 meter
+--   left          big Shop and Bag buttons (side by side on touch screens,
+--                 above the thumbstick), or out in the forest the noise meter
 --   right         the Christmas Bundle (LIMITED, with how long is left),
 --                 2x Coins and Join (the game's community, until its reward
 --                 is paid), and Stats, Settings and Invite (not out in the
---                 forest: in the lobby, the cave and the way out)
+--                 forest: in the lobby, the cave and the way out); on touch
+--                 screens in two rows near the top, clear of the jump button
 --   bottom right  pebble, Updraft and Hush buttons (only out in the forest);
---                 in the Christmas lobby, the snowball button
+--                 in the Christmas lobby, the snowball button. On touch
+--                 screens they sit left of the jump button.
 --
--- plus short notifications and the escape screen.
+-- plus short notifications and the escape screen. On small screens it all
+-- shrinks to fit (ScreenFit.luau).
 
 local GroupService = game:GetService("GroupService")
 local Players = game:GetService("Players")
@@ -35,6 +38,7 @@ local Boosts = require(script.Parent.Boosts)
 local SettingsUi = require(script.Parent.SettingsUi)
 local Sounds = require(script.Parent.Sounds)
 local ChristmasBundle = require(script.Parent.ChristmasBundle)
+local ScreenFit = require(script.Parent.ScreenFit)
 local ShopUi = require(script.Parent.ShopUi)
 local StatsUi = require(script.Parent.StatsUi)
 local Throw = require(script.Parent.Throw)
@@ -50,6 +54,10 @@ local MARGIN = 16
 local SIDE_BUTTON = 112 -- Shop and Bag, on the left
 local GRID_BUTTON = 92 -- the buttons on the right
 local GRID_GAP = 12
+-- On touch screens (small, and pointed at with fingers) the buttons are drawn
+-- smaller, and the coins, difficulty, timer and noise meter a little smaller.
+local TOUCH_BUTTONS = 0.75
+local TOUCH_BARS = 0.85
 
 local Hud = {}
 
@@ -132,16 +140,28 @@ function Hud.start()
 		Parent = gui,
 	})
 
+	-- Everything else but the escape screen (which fits itself) shrinks on
+	-- small screens.
+	local fit, fitScale = ScreenFit.frame(gui)
+
 	-- Bottom left: coins (top left on touch screens); top left: the stage ----
 
 	local touch = UserInputService.TouchEnabled
+	-- Shrinks a thing towards its anchor point on touch screens.
+	local function shrinkOnTouch(object, scale)
+		if touch then
+			create("UIScale", { Scale = scale, Parent = object })
+		end
+	end
+
 	local coinsPill = Candy.art("coin_counter", {
 		Name = "Coins",
 		AnchorPoint = Vector2.new(0, if touch then 0 else 1),
 		Position = if touch then UDim2.fromOffset(MARGIN, 10) else UDim2.new(0, MARGIN, 1, -MARGIN),
 		Size = UDim2.fromOffset(200, 64),
-		Parent = gui,
+		Parent = fit,
 	}, 64)
+	shrinkOnTouch(coinsPill, TOUCH_BARS)
 	local coinsLabel = text({
 		Name = "Count",
 		Position = UDim2.fromOffset(66, 6),
@@ -167,10 +187,10 @@ function Hud.start()
 
 	local stagePill = Candy.art("button_white", {
 		Name = "Stage",
-		Position = UDim2.fromOffset(MARGIN, if touch then 82 else 12),
+		Position = UDim2.fromOffset(MARGIN, if touch then 72 else 12),
 		Size = UDim2.fromOffset(0, 40),
 		AutomaticSize = Enum.AutomaticSize.X,
-		Parent = gui,
+		Parent = fit,
 	}, 40)
 	create("UIPadding", { PaddingLeft = UDim.new(0, 18), PaddingRight = UDim.new(0, 18), PaddingBottom = UDim.new(0, 4), Parent = stagePill })
 	create("UIListLayout", {
@@ -186,12 +206,13 @@ function Hud.start()
 
 	-- Top middle: run timer and the warning ------------------------------------
 
-	local timerPill = Candy.raised(gui, {
+	local timerPill = Candy.raised(fit, {
 		name = "Timer",
 		anchor = Vector2.new(0.5, 0),
 		position = UDim2.new(0.5, 0, 0, 12),
 		size = UDim2.fromOffset(160, 59),
 	})
+	shrinkOnTouch(timerPill.Parent, TOUCH_BARS)
 	local runTimer = text({ Size = UDim2.fromScale(1, 1), Font = Enum.Font.RobotoMono, TextSize = 26, Text = "", Parent = timerPill })
 
 	local warning = create("CanvasGroup", {
@@ -201,19 +222,20 @@ function Hud.start()
 		Size = UDim2.fromOffset(250, 58),
 		BackgroundTransparency = 1,
 		GroupTransparency = 1,
-		Parent = gui,
+		Parent = fit,
 	})
 	local warningBody = Candy.raised(warning, { size = UDim2.fromScale(1, 1), color = Candy.PINK, lip = 6 })
 	text({ Position = UDim2.fromScale(0.1, 0.22), Size = UDim2.fromScale(0.8, 0.56), Text = "IT HEARD YOU", Parent = warningBody })
 
 	-- Top right: difficulty ------------------------------------------------------
 
-	local difficultyBar = Candy.raised(gui, {
+	local difficultyBar = Candy.raised(fit, {
 		name = "Difficulty",
 		anchor = Vector2.new(1, 0),
 		position = UDim2.new(1, -MARGIN, 0, 12),
 		size = UDim2.fromOffset(3 * 88 + 16, 64),
 	})
+	shrinkOnTouch(difficultyBar.Parent, TOUCH_BARS)
 	local difficultyButtons = {}
 	for name, difficulty in Config.Difficulties do
 		local face = Candy.button(difficultyBar, {
@@ -231,12 +253,13 @@ function Hud.start()
 
 	-- Left: the noise meter ------------------------------------------------------
 
-	local noisePanel = Candy.raised(gui, {
+	local noisePanel = Candy.raised(fit, {
 		name = "Noise",
 		anchor = Vector2.new(0, 0.5),
 		position = UDim2.new(0, MARGIN, 0.5, 0),
 		size = UDim2.fromOffset(76, 176),
 	})
+	shrinkOnTouch(noisePanel.Parent, TOUCH_BARS)
 	local segments = {}
 	for i = 1, SEGMENTS do
 		-- Segments loud enough to be grabbed at are pink.
@@ -264,21 +287,26 @@ function Hud.start()
 	})
 
 	-- Left: Shop and Bag, big ----------------------------------------------------
+	-- On touch screens side by side under the stage, so a thumb on the
+	-- thumbstick doesn't open them.
 
 	local leftDock = create("Frame", {
 		Name = "LeftDock",
-		AnchorPoint = Vector2.new(0, 0.5),
-		Position = UDim2.new(0, MARGIN, 0.5, 0),
-		Size = UDim2.fromOffset(SIDE_BUTTON, SIDE_BUTTON * 2 + 14),
+		AnchorPoint = Vector2.new(0, if touch then 0 else 0.5),
+		Position = if touch then UDim2.fromOffset(MARGIN, 124) else UDim2.new(0, MARGIN, 0.5, 0),
+		Size = if touch
+			then UDim2.fromOffset(SIDE_BUTTON * 2 + 14, SIDE_BUTTON)
+			else UDim2.fromOffset(SIDE_BUTTON, SIDE_BUTTON * 2 + 14),
 		BackgroundTransparency = 1,
-		Parent = gui,
+		Parent = fit,
 	}, {
 		create("UIListLayout", {
-			FillDirection = Enum.FillDirection.Vertical,
+			FillDirection = if touch then Enum.FillDirection.Horizontal else Enum.FillDirection.Vertical,
 			Padding = UDim.new(0, 14),
 			SortOrder = Enum.SortOrder.LayoutOrder,
 		}),
 	})
+	shrinkOnTouch(leftDock, TOUCH_BUTTONS)
 	local shopButton = pictureButton(leftDock, "dock_shop", "Shop", SIDE_BUTTON, { LayoutOrder = 1 })
 	shopButton.Activated:Connect(function()
 		ShopUi.open("shop")
@@ -292,30 +320,37 @@ function Hud.start()
 	end)
 
 	-- Right: the Christmas Bundle, 2x Coins and Join, then Stats, Settings, Invite
+	-- Two columns, or on touch screens two rows from near the top, so the grid
+	-- stays clear of the jump button.
 
 	local step = GRID_BUTTON + GRID_GAP
 	local rightDock = create("Frame", {
 		Name = "RightDock",
-		AnchorPoint = Vector2.new(1, 0.5),
-		Position = UDim2.new(1, -MARGIN, 0.5, if touch then -60 else 0),
-		Size = UDim2.fromOffset(GRID_BUTTON * 2 + GRID_GAP, step * 3 + 30),
+		AnchorPoint = Vector2.new(1, if touch then 0 else 0.5),
+		Position = if touch then UDim2.new(1, -MARGIN, 0, 100) else UDim2.new(1, -MARGIN, 0.5, 0),
+		Size = if touch
+			then UDim2.fromOffset(step * 3 - GRID_GAP, step * 2 + 30)
+			else UDim2.fromOffset(step * 2 - GRID_GAP, step * 3 + 30),
 		BackgroundTransparency = 1,
-		Parent = gui,
+		Parent = fit,
 	})
-	local function gridButton(art, name, column, row, open)
-		local face = pictureButton(rightDock, art, name, GRID_BUTTON, { Position = UDim2.fromOffset(column * step, row * step) })
+	shrinkOnTouch(rightDock, TOUCH_BUTTONS)
+	local function gridButton(art, name, open)
+		local face = pictureButton(rightDock, art, name, GRID_BUTTON)
 		face.Activated:Connect(open)
 		return face
 	end
-	gridButton("dock_stats", "Stats", 1, 0, StatsUi.toggle)
-	gridButton("dock_settings", "Settings", 1, 1, SettingsUi.toggle)
-	gridButton("dock_invite", "Invite", 1, 2, inviteFriends)
-	local christmasButton = gridButton("button_christmas", "Christmas", 0, 0, ChristmasBundle.open)
-	local doubleButton = gridButton("button_double_coins", "2x Coins", 0, 1, function()
+	local menuButtons = {
+		gridButton("dock_stats", "Stats", StatsUi.toggle),
+		gridButton("dock_settings", "Settings", SettingsUi.toggle),
+		gridButton("dock_invite", "Invite", inviteFriends),
+	}
+	local christmasButton = gridButton("button_christmas", "Christmas", ChristmasBundle.open)
+	local doubleButton = gridButton("button_double_coins", "2x Coins", function()
 		ShopUi.open("shop", "pass")
 	end)
 	-- The coins it pays, on a lemon tag across its corner.
-	local joinButton = gridButton("dock_community", "Join", 0, 2, joinCommunity)
+	local joinButton = gridButton("dock_community", "Join", joinCommunity)
 	local rewardTag = Candy.badge(joinButton, "+" .. Config.Community.Reward, 30, UDim2.new(1, 8, 0, -6), Vector2.new(1, 0), Candy.LEMON)
 	rewardTag.Size = UDim2.fromOffset(58, 30)
 	local function updateJoin()
@@ -346,11 +381,21 @@ function Hud.start()
 	local function updateChristmas()
 		local onSale = ChristmasBundle.onSale()
 		christmasButton.Visible = onSale
-		-- 2x Coins sits under the time left, or in its place once it's gone,
-		-- and Join under 2x Coins.
-		local doubleY = if onSale then step + 30 else 0
-		doubleButton.Position = UDim2.fromOffset(0, doubleY)
-		joinButton.Position = UDim2.fromOffset(0, doubleY + step)
+		-- 2x Coins and Join follow the bundle, or take its place once it's
+		-- gone; while it's on sale, what comes under it leaves room for the
+		-- time left.
+		local timeLeftRoom = if onSale then 30 else 0
+		for i, face in { christmasButton, doubleButton, joinButton } do
+			local slot = if onSale then i - 1 else i - 2
+			face.Position = if touch
+				then UDim2.fromOffset(slot * step, 0)
+				else UDim2.fromOffset(0, slot * step + (if slot > 0 then timeLeftRoom else 0))
+		end
+		for i, face in menuButtons do
+			face.Position = if touch
+				then UDim2.fromOffset((i - 1) * step, step + timeLeftRoom)
+				else UDim2.fromOffset(step, (i - 1) * step)
+		end
 		local left = ChristmasBundle.timeLeft()
 		timeLeftText.Text = if left then ChristmasBundle.shortTime(left) else ""
 	end
@@ -363,17 +408,17 @@ function Hud.start()
 	end)
 
 	-- Bottom right: pebble and boost buttons -------------------------------------
+	-- On touch screens left of the jump button (placeActions, below).
 
-	-- Lifted clear of the jump button on touch screens.
-	local actionsLift = if UserInputService.TouchEnabled then 150 else 0
 	local actions = create("Frame", {
 		Name = "Actions",
 		AnchorPoint = Vector2.new(1, 1),
-		Position = UDim2.new(1, -24, 1, -24 - actionsLift),
+		Position = UDim2.new(1, -24, 1, -24),
 		Size = UDim2.fromOffset(250, 250),
 		BackgroundTransparency = 1,
-		Parent = gui,
+		Parent = fit,
 	})
+	shrinkOnTouch(actions, TOUCH_BUTTONS)
 	-- A round picture button with its key on the top left and how many you
 	-- have on the top right. Returns the face and its count badge.
 	local function actionButton(parent, art, name, key, size, position)
@@ -391,12 +436,13 @@ function Hud.start()
 	local snowActions = create("Frame", {
 		Name = "SnowActions",
 		AnchorPoint = Vector2.new(1, 1),
-		Position = UDim2.new(1, -24, 1, -24 - actionsLift),
+		Position = UDim2.new(1, -24, 1, -24),
 		Size = UDim2.fromOffset(112, 112),
 		BackgroundTransparency = 1,
 		Visible = false,
-		Parent = gui,
+		Parent = fit,
 	})
+	shrinkOnTouch(snowActions, TOUCH_BUTTONS)
 	local snowButton, snowCount = actionButton(snowActions, "action_snowball", "Snowball", "E", 112, UDim2.fromScale(1, 1))
 	snowButton.Activated:Connect(Throw.fromButton)
 
@@ -412,6 +458,31 @@ function Hud.start()
 		boostButtons[boost.id] = { face = face, count = count }
 	end
 
+	-- Roblox's jump button, while it's on screen (touch screens only).
+	local function jumpButton()
+		local touchGui = gui.Parent and gui.Parent:FindFirstChild("TouchGui")
+		local frame = touchGui and touchGui.Enabled and touchGui:FindFirstChild("TouchControlFrame")
+		local button = frame and frame.Visible and frame:FindFirstChild("JumpButton")
+		return if button and button.Visible then button else nil
+	end
+
+	-- In the corner, or left of the jump button with their bottoms lined up.
+	-- The jump button keeps its size on small screens, so this is measured
+	-- on screen, then turned back into the fit frame's unshrunk pixels.
+	local function placeActions()
+		local right, bottom = 24, 24
+		local jump = jumpButton()
+		if jump then
+			local scale = fitScale.Scale
+			local corner = fit.AbsolutePosition + fit.AbsoluteSize
+			right = (corner.X - jump.AbsolutePosition.X) / scale + GRID_GAP
+			bottom = (corner.Y - jump.AbsolutePosition.Y - jump.AbsoluteSize.Y) / scale
+		end
+		local position = UDim2.new(1, -right, 1, -bottom)
+		actions.Position = position
+		snowActions.Position = position
+	end
+
 	-- Notifications --------------------------------------------------------------
 
 	local toast = create("CanvasGroup", {
@@ -421,7 +492,7 @@ function Hud.start()
 		Size = UDim2.fromOffset(300, 58),
 		BackgroundTransparency = 1,
 		GroupTransparency = 1,
-		Parent = gui,
+		Parent = fit,
 	})
 	local toastBody = Candy.raised(toast, { size = UDim2.fromScale(1, 1), lip = 6 })
 	local toastText = text({ Position = UDim2.fromOffset(18, 0), Size = UDim2.new(1, -36, 1, 0), TextSize = 20, Text = "", Parent = toastBody })
@@ -612,6 +683,9 @@ function Hud.start()
 		leftDock.Visible = not inStages
 		rightDock.Visible = not inStages
 		snowActions.Visible = Config.Christmas and zone == "lobby"
+		if actions.Visible or snowActions.Visible then
+			placeActions()
+		end
 
 		local target = (player:GetAttribute("Noise") or 0) / Config.Noise.Max
 		shown += (target - shown) * math.min(1, dt * 10)
