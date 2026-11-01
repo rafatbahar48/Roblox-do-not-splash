@@ -129,15 +129,22 @@ function Hud.start()
 		ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
 	})
 
-	-- Red wash behind everything while something is hunting you.
+	-- Red wash behind everything while something is hunting you. On a screen
+	-- of its own that ignores the safe area, so it reaches into a phone's
+	-- notch strips too.
 	local danger = create("Frame", {
 		Name = "Danger",
 		BackgroundColor3 = RED,
 		BackgroundTransparency = 1,
 		BorderSizePixel = 0,
-		Position = UDim2.fromOffset(0, -60),
-		Size = UDim2.new(1, 0, 1, 60),
-		Parent = gui,
+		Size = UDim2.fromScale(1, 1),
+		Parent = create("ScreenGui", {
+			Name = "Danger",
+			ResetOnSpawn = false,
+			DisplayOrder = 1,
+			ScreenInsets = Enum.ScreenInsets.None,
+			Parent = player:WaitForChild("PlayerGui"),
+		}),
 	})
 
 	-- Everything else but the escape screen (which fits itself) shrinks on

@@ -577,7 +577,7 @@ local function build()
 		ResetOnSpawn = false,
 		DisplayOrder = 5,
 		Enabled = false,
-		IgnoreGuiInset = true,
+		ScreenInsets = Enum.ScreenInsets.None, -- the whole screen, notch strips too
 		ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
 	})
 	-- Dim the world behind; clicking it closes the window.

@@ -174,7 +174,7 @@ end
 local function build()
 	local gui = create("ScreenGui", {
 		Name = "DeathScene",
-		IgnoreGuiInset = true,
+		ScreenInsets = Enum.ScreenInsets.None, -- the whole screen, notch strips too
 		ResetOnSpawn = false,
 		DisplayOrder = 10, -- over the HUD and the shop
 		ZIndexBehavior = Enum.ZIndexBehavior.Sibling,

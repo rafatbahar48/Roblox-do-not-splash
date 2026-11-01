@@ -166,7 +166,7 @@ function Fear.start()
 
 	local gui = Instance.new("ScreenGui")
 	gui.Name = "Fear"
-	gui.IgnoreGuiInset = true
+	gui.ScreenInsets = Enum.ScreenInsets.None -- over the whole screen, notch strips too
 	gui.ResetOnSpawn = false
 	gui.DisplayOrder = 1
 	makeEdge(gui, 0, UDim2.fromScale(0, 0), UDim2.fromScale(0.22, 1))
