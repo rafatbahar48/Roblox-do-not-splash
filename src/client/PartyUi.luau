@@ -11,10 +11,12 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
 
 local Candy = require(ReplicatedStorage.Shared.Candy)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local ScreenFit = require(script.Parent.ScreenFit)
 
 local player = Players.LocalPlayer
 
@@ -187,10 +189,14 @@ local function buildPopup()
 end
 
 local function buildBanner()
-	local body = Candy.raised(gui, {
+	-- Shrinks with the HUD on small screens. On touch screens, where the HUD's
+	-- buttons fill the top corners, it sits at the bottom, between the
+	-- thumbstick and the jump button.
+	local touch = UserInputService.TouchEnabled
+	local body = Candy.raised(ScreenFit.frame(gui), {
 		name = "PartyBanner",
-		anchor = Vector2.new(0.5, 0),
-		position = UDim2.new(0.5, 0, 0, 132),
+		anchor = Vector2.new(0.5, if touch then 1 else 0),
+		position = if touch then UDim2.new(0.5, 0, 1, -16) else UDim2.new(0.5, 0, 0, 132),
 		size = UDim2.fromOffset(440, 70),
 		lip = 6,
 	})
