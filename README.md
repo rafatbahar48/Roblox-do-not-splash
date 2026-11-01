@@ -8,7 +8,7 @@ A Roblox horror obby. Cross a drowned forest at night by jumping from stump to s
 - **Pebbles** (3 per life): throw one into the water to draw it away before you cross.
 - **Stepping stones to watch for:** creaky boards (pale old planks on posts), floating moss (pale green mats that go under a second after you step on them), drifting rafts and narrow broken trunks.
 - **7 stages**, each a stretch of the forest from one island to the next, with a checkpoint on the far island. Each one has a hidden shell to collect. After the last stage, walk through the exit to escape.
-- **Stage 1, The First Steps**, is an open moonlit swamp rather than a trail: a gentle S-curve of wide, low cut stumps and rough plank rafts resting just above still, black water, with muddy islands and banks, cattails, lily pads and dead trees round it, and a log archway at the end with a glowing **STAGE COMPLETE** sign over its checkpoint. The other stages will be rebuilt the same way, with **grapple hooks** over gaps too far to jump from stage 3 on.
+- **Stage 1, The First Steps**, is a big open moonlit swamp rather than a trail, in fog: you see the platforms and trees round you, further off fades into blue, and the end stays hidden: 3D cut stumps, plank rafts, log rafts, fallen logs to walk along and small grassy islands (some with a lantern or a dead tree) are strewn all over it at uneven distances, so there's no one clear path. The way through zigzags right across the swamp and back, so the far end stays hidden round the bends; ways off it lead nowhere or back onto it a little further on (never across a bend), and some platforms you can only wade to. It all sits low over black water with the moonlight glinting across its ripples, among cattails, lily pads and dead trees, with muddy islands and banks round it, and a log archway at the end with a glowing **STAGE COMPLETE** sign over its checkpoint, which only lights up as you get near. The jumps are uneven and get longer stage by stage, towards the furthest you can jump. **Stage 2, Deeper Waters**, is bigger and built the same way: three sweeps with tighter bends, longer jumps and more logs and little stumps, in thicker fog and darker light, with one optional **grapple shortcut**, a hook from a stump out in a bend over a gap too far to jump. The other stages will be rebuilt the same way, with grapple hooks you need from stage 3 on.
 - **Easy, Normal and Hard:** harder modes make you louder and the creature faster.
 - **The lobby** is a big open courtyard at night, under the stars, in front of the old brick building the stages are in: lit windows, the game's sign in neon, lamp posts, string lights, grass beds with palms and benches. It is colourful on purpose, so the forest feels darker after it. Nothing in the lobby shows what waits inside: the building hides the forest, and its doors stay shut. The east wall has the record boards (most escapes and the fastest escape on each difficulty) and the shop (G): a snowy log cottage with Christmas lights, a striped awning over its counter, a wreath and a snowman, made in Meshy, with a SHOP sign from SpriteCook.
 - **Christmas in the lobby** (`Config.Christmas`, on for now): snow over the courtyard with a path shovelled to the doors, snow on every roof, wall, bench and lamp, falling snow, decorated Christmas trees in the beds (a big one with presents under it), wreaths on the doors, frozen puddles, and "Haunted Sleigh Bells" instead of the music box. **Snowball fights:** grab snowballs from a pile (G, up to 10) and throw them (E, R2 or the snowball button). A hit splats snow in their face and tells you both; it never moves anyone, so nobody gets knocked off a party pad. Snowballs only work in the lobby. Set `Config.Christmas = false` after the holidays to bring the palms back.
@@ -29,6 +29,7 @@ The whole map is built by script when the server starts, so almost everything li
 
 - **The lobby's props** live in `ServerStorage.LobbyProps`. The lobby uses `CottageShop` (the shop, from `art/models/lobby/cottage_shop.glb`), `PottedPalm` and `Planter` (`FloatHut` isn't used any more), places each one it finds and skips any that are missing.
 - **The forest's trees** near the trail are the models in `ServerStorage.ForestProps` (`GnarledTree` and `BrokenTrunk`, from `art/models/dead-tree3.glb` and `dead-tree2.glb`, each standing on its own pivot at the bottom of its roots). Each is planted at a random size and turn, with an invisible post round its trunk. Far off in the fog, or without the models, trees are built from parts.
+- **The swamp's platforms** are the models in `ServerStorage.SwampProps`: `StumpA` and `StumpB` (cut stumps), `PlankRaft`, `LogRaft` and `FallenLog`, made in Meshy from the pictures in `art/meshy-refs/swamp/` (the models and previews in `art/models/swamp/`), one MeshPart each, standing upright. Each is stretched to its platform's size, and you stand on an unseen flat top of exactly that size, so jumps measure the same either way. A stump's `TopShare` attribute says how much of its width its cut top is (its roots spread wider). Without them, the platforms are built from parts.
 - **The shop's 3D models** live in `ReplicatedStorage.ShopModels`, one per thing sold that isn't worn (coin packs, Night Kit, Self-Revive, passes, Updraft and Hush), named like its icon art (`robux_coins_chest`, `action_hush`, ...). They were made in Meshy from three-quarter drawings of the shop's SpriteCook icons (`art/meshy-refs/shop-3q-*.png`; the models in `art/models/shop/`, previews beside them; `art/models/import/shop/` has copies for Import 3D). `robux_coins_jar` is put together in Studio, because Meshy can't make clear glass: the Meshy coin heap (`coins_heap.glb`) inside see-through glass parts with a lilac lid, its coins as the model's primary part. Without a model, its card shows its icon bobbing instead.
 - **The creature** is the model in `ReplicatedStorage.Creatures` (now `Creature`, from `art/models/flesh-creature-rigged.glb`: remeshed to about 10,000 triangles and rigged in Meshy, scaled to 18 studs, facing -Z). Each client poses its bones as it walks, so any model with Meshy's humanoid skeleton works. Attributes on the model say whether it has its own mouth (`OwnMouth`), whether to add glowing eyes (`Eyes`), and how the death scene frames its mouth (`CloseUpDistance`, `CloseUpHeight`, `CloseUpAim`). Without a model, a body built from parts stands in. The earlier stilt wader is still in `art/models/stilt-wader-rigged.glb`.
 
@@ -69,8 +70,10 @@ Roblox only shows uploaded images, so the parts are packed into atlases, `art/ui
 
 | What | Where |
 | --- | --- |
-| Stages: length, gaps, stepping stone mix, flickering lanterns; which are open swamps, and their width, platform height and side paths | `src/shared/Stages.luau`. Add an entry to add a stage. |
-| How a swamp stage's platforms are laid out: the winding route, side paths with a drop and a far gap, where the shell goes | `src/server/Swamp.luau` |
+| Stages: length, gaps, stepping stone mix, flickering lanterns; which are open swamps, and their width, platform height, turns, bends and zigzag, the mix of runs (stumps, rafts, logs, islands), how thickly platforms are strewn round the route, side paths, grapple shortcuts and gloom (thicker fog, darker light) | `src/shared/Stages.luau`. Add an entry to add a stage. |
+| How a swamp stage's platforms are laid out: the winding route and its runs of stumps, rafts, logs and islands, the platforms strewn round it (and why none cuts across a bend), side paths with a drop and a far gap, shortcuts across a bend, where the shell goes | `src/server/Swamp.luau` |
+| How much a stage's gloom thickens the fog and darkens the light | `forest` in `src/client/Mood.luau` |
+| How near you must be before a stage's doorway lights up | `DOOR_LIT`, `DOOR_DARK` in `src/client/Mood.luau` |
 | The grapple: range, hook height, how far a far gap is, the drop at the start of a side path | `Config.Grapple`, `Config.Boosts.grapple` |
 | The grapple's hooks, rope and swing | `src/server/Grapple.luau`, `src/client/Grapple.luau`; the hooks' look in `src/server/Forest.luau` |
 | How deep you stand when you fall in, and not swimming | `Config.Room.WadeDepth`, `src/client/Wading.luau` |
@@ -78,7 +81,7 @@ Roblox only shows uploaded images, so the parts are packed into atlases, `art/ui
 | Noise amounts, creature speed and hearing, pebbles, difficulty modes | `src/shared/Config.luau` |
 | Name and tagline on the lobby sign | `Config.GameName`, `Config.Tagline` |
 | How each stretch is laid out, the water, a swamp's islands, banks and plants, lighting, the moon, fog and colour grading | `src/server/MapBuilder.luau` |
-| What trees, stumps, rafts, islands, cattails, lily pads, algae, lanterns, grapple hooks, signposts and the STAGE COMPLETE doorway look like | `src/server/Forest.luau` |
+| What trees, stumps, plank and log rafts and their ropes, fallen logs, islands, cattails, lily pads, algae, lanterns, grapple hooks, signposts and the STAGE COMPLETE doorway look like | `src/server/Forest.luau` |
 | Lobby: size (`Config.Room.LobbyWidth`, `LobbyLength`), the building, doors and party doors, signs, record wall, lamps and string lights, where each prop stands, spawn | `src/server/LobbyBuilder.luau` |
 | Christmas on or off; how many snowballs a pile gives, how many you carry, how far and fast they fly | `Config.Christmas`, `Config.Snowballs` |
 | What the Christmas trees, presents, wreaths and snowball piles look like | `src/server/Christmas.luau` (where they go: `src/server/LobbyBuilder.luau`) |
@@ -136,7 +139,7 @@ src/
     SkinLook.luau        how a skin recolours a character
     AccessoryLook.luau   how accessories are built onto a character
     Format.luau          time formatting
-    Zones.luau           which part of the map a point is in (lobby, cave, forest, exit)
+    Zones.luau           which part of the map a point is in (lobby, cave, forest, exit), and which stage
     Candy.luau           the menus' building blocks (kit windows, panels, buttons, lettering)
     UiArt.luau           which part of which uploaded atlas each picture is
     UiArtParts.luau      where each part sits in its atlas (made by tools/pack-ui.ps1)
@@ -144,10 +147,10 @@ src/
   server/              ServerScriptService.Server
     Main.server.luau     starts everything
     MapBuilder.luau      builds the forest stages and the way out; water and lighting
-    Swamp.luau           lays out a swamp stage's platforms, side paths and far gaps
+    Swamp.luau           lays out a swamp stage's winding route, side paths and shortcuts
     CaveBuilder.luau     the cave a party arrives in, at the start of stage 1
     Christmas.luau       Christmas trees, presents, wreaths, snow and snowball piles for the lobby
-    Forest.luau          trees, stumps, rafts, islands, plants, lanterns, hooks, signposts, doorways
+    Forest.luau          trees, stumps, rafts, logs, islands, plants, lanterns, hooks, signposts, doorways
     LobbyBuilder.luau    builds the night courtyard lobby
     Parts.luau           part-building helpers both builders use
     Parties.luau         the lobby's doors: parties, countdowns, private servers, practice
@@ -187,7 +190,7 @@ src/
     LurkerVisuals.luau   poses the creature model (or a body of parts) as it walks
     Fear.luau            vignette, heartbeat, faltering lights, shake
     DeathScene.luau      the death scene: its face up close, TV static, "what it heard", revive or bleed out
-    Mood.luau            warm lobby and exit lighting, the cave's gloom, cold moonlit forest fog, drifting mist
+    Mood.luau            warm lobby and exit lighting, the cave's gloom, cold moonlit forest fog, drifting mist, doorways lighting up as you near them
     Throw.luau           throw input (E / R2 / the HUD's pebble or snowball button)
     CameraReport.luau    tells the server which way your camera points (for where the creature appears)
 tools/

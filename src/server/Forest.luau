@@ -47,6 +47,7 @@ local C = {
 	algae = Color3.fromRGB(38, 54, 30),
 	cattail = Color3.fromRGB(92, 58, 34),
 	reedStem = Color3.fromRGB(58, 66, 40), -- plain, so thin stems don't look spotted
+	rope = Color3.fromRGB(120, 98, 66),
 	doorGlow = Color3.fromRGB(255, 150, 60), -- the STAGE COMPLETE doorway's amber
 	doorText = Color3.fromRGB(255, 182, 96),
 	rust = Color3.fromRGB(96, 62, 44),
@@ -259,6 +260,76 @@ function Forest.island(folder, name, z0, z1, halfX, rng)
 	return top
 end
 
+-- What you stand on when the look is lumpy (logs): an unseen flat top, so
+-- landing and walking are as steady as on planks.
+local function walkway(folder, size, cframe)
+	return block(folder, "Walkway", size, cframe, C.raft, Enum.Material.Wood, {
+		Transparency = 1,
+		CastShadow = false,
+	})
+end
+
+-- The swamp's platforms in 3D: Meshy models (art/models/swamp) kept in
+-- ServerStorage.SwampProps, one MeshPart each, standing as they were made.
+-- They are only the look: you stand on an unseen top the spec's exact size,
+-- so every jump measures the same. A stump's TopShare attribute says how
+-- much of its width its flat top is (its roots spread wider). Without the
+-- models, platforms are built from parts.
+local SWAMP_MODELS = {
+	stump = { "StumpA", "StumpB" },
+	deck = { "PlankRaft" },
+	logRaft = { "LogRaft" },
+	log = { "FallenLog" },
+}
+local swampModels
+
+-- A copy of one of kind's models to place, or nil.
+local function swampModel(kind, rng)
+	if not swampModels then
+		swampModels = {}
+		local props = ServerStorage:FindFirstChild("SwampProps")
+		for name, models in SWAMP_MODELS do
+			swampModels[name] = {}
+			for _, modelName in models do
+				local found = props and props:FindFirstChild(modelName)
+				local mesh = found and (if found:IsA("MeshPart") then found else found:FindFirstChildWhichIsA("MeshPart", true))
+				if mesh then
+					table.insert(swampModels[name], mesh)
+				end
+			end
+		end
+		if not props then
+			warn("[Forest] No platform models in ServerStorage.SwampProps; building the platforms from parts")
+		end
+	end
+	local models = swampModels[kind]
+	if not models or #models == 0 then
+		return nil
+	end
+	local mesh = models[rng:NextInteger(1, #models)]:Clone()
+	mesh.Anchored = true
+	mesh.CanCollide = false
+	mesh.CanQuery = false
+	mesh.CanTouch = false
+	return mesh
+end
+
+-- A raft model (deck or logRaft) stretched to a side by side square, its top
+-- at turn (the raft's middle, turned its way). Returns its flat top, or nil
+-- without a model.
+local function raftModel(folder, kind, side, turn, rng)
+	local mesh = swampModel(kind, rng)
+	if not mesh then
+		return nil
+	end
+	local size = mesh.Size
+	local height = size.Y * side * 2 / (size.X + size.Z)
+	mesh.Size = Vector3.new(side, height, side)
+	mesh.CFrame = turn * CFrame.new(0, 0.05 - height / 2, 0)
+	mesh.Parent = folder
+	return walkway(folder, Vector3.new(side, 0.2, side), turn * CFrame.new(0, -0.1, 0))
+end
+
 -- A rough raft of planks resting low on the water, turned any which way,
 -- for a swamp (kind "deck"). Its spec size is the circle the jumps are
 -- measured to; the planks make a square a little smaller. Returns the
@@ -266,6 +337,10 @@ end
 local function deck(folder, spec, top, rng)
 	local side = spec.size * 0.8
 	local turn = CFrame.new(spec.x, top, spec.z) * CFrame.Angles(0, rng:NextNumber(0, math.pi), 0)
+	local modelTop = raftModel(folder, "deck", side, turn, rng)
+	if modelTop then
+		return modelTop
+	end
 	local count = 5
 	local width = side / count
 	local middle
@@ -288,11 +363,87 @@ local function deck(folder, spec, top, rng)
 	return middle
 end
 
+-- A raft of logs lashed together with rope, resting low on the water, for a
+-- swamp (kind "logRaft"). Like a deck, the logs make a square a little
+-- smaller than its spec size. Returns its flat top.
+local function logRaft(folder, spec, top, rng)
+	local side = spec.size * 0.8
+	local turn = CFrame.new(spec.x, top, spec.z) * CFrame.Angles(0, rng:NextNumber(0, math.pi), 0)
+	local modelTop = raftModel(folder, "logRaft", side, turn, rng)
+	if modelTop then
+		return modelTop
+	end
+	local count = 5
+	local thick = side / count
+	for i = 1, count do
+		local offset = (i - (count + 1) / 2) * thick
+		local length = side + rng:NextNumber(-0.5, 0.6)
+		local a = turn * Vector3.new(offset, -thick / 2, -length / 2)
+		local b = turn * Vector3.new(offset, -thick / 2, length / 2)
+		rod(folder, "RaftLog", a, b, thick * 0.96, C.raft:Lerp(C.bark, rng:NextNumber(0.2, 0.6)), Enum.Material.Wood, DECOR)
+	end
+	for _, across in { -side * 0.33, side * 0.33 } do
+		block(folder, "Lashing", Vector3.new(side + 0.1, thick * 0.3, 0.3), turn * CFrame.new(0, -thick * 0.08, across), C.rope, Enum.Material.Fabric, DECOR)
+	end
+	return walkway(folder, Vector3.new(side, 0.2, side), turn * CFrame.new(0, -0.1, 0))
+end
+
+-- A fallen log lying half sunk along spec.dir, to walk along (kind "log"):
+-- its spec size is its length. Returns its flat top.
+local function walkLog(folder, spec, top, rng)
+	local diameter = 2.4 -- Swamp.luau's LOG_WIDTH
+	local center = Vector3.new(spec.x, top - diameter / 2, spec.z)
+	local along = Vector3.new(spec.dir.X, 0, spec.dir.Y)
+	local half = along * spec.size / 2
+	local walkTop = CFrame.lookAt(Vector3.new(spec.x, top - 0.1, spec.z), Vector3.new(spec.x, top - 0.1, spec.z) + along)
+	local mesh = swampModel("log", rng)
+	if mesh then
+		-- Stretched to the log's length and thickness along its longer side;
+		-- its branch stub sticks up, so it stands that much taller.
+		local size = mesh.Size
+		local alongX = size.X >= size.Z
+		local height = diameter * size.Y / (if alongX then size.Z else size.X)
+		mesh.Size = if alongX then Vector3.new(spec.size, height, diameter) else Vector3.new(diameter, height, spec.size)
+		local flip = if rng:NextNumber() < 0.5 then -1 else 1
+		local right = if alongX then along * flip else Vector3.new(along.Z, 0, -along.X) * flip
+		mesh.CFrame = CFrame.fromMatrix(Vector3.new(spec.x, top - diameter + height / 2, spec.z), right, Vector3.yAxis)
+		mesh.Parent = folder
+		return walkway(folder, Vector3.new(1.8, 0.2, spec.size), walkTop)
+	end
+	rod(folder, "FallenLog", center - half, center + half, diameter, C.stump, Enum.Material.Wood, DECOR)
+	-- A snapped-off branch near one end, and moss along the top.
+	local stubAt = center + half * rng:NextNumber(0.4, 0.8) + Vector3.new(0, diameter * 0.3, 0)
+	local out = Vector3.new(-along.Z, 0.6, along.X) * (if rng:NextNumber() < 0.5 then -1 else 1)
+	stick(folder, "Branch", stubAt, stubAt + out.Unit * rng:NextNumber(1.5, 2.5), 0.35, C.barkDark, Enum.Material.Wood, DECOR)
+	local mossAt = center + Vector3.new(0, diameter * 0.47, 0) - half * 0.3
+	block(folder, "Moss", Vector3.new(diameter * 0.45, 0.12, spec.size * 0.4), CFrame.lookAt(mossAt, mossAt + along), C.moss, Enum.Material.Grass, DECOR)
+	return walkway(folder, Vector3.new(1.8, 0.2, spec.size), walkTop)
+end
+
+-- A rope sagging between two neighbouring rafts (a and b specs), just over
+-- the water: tying the route together, as old swamp crossings are.
+function Forest.rope(folder, a, b)
+	local from, to = Vector3.new(a.x, 0, a.z), Vector3.new(b.x, 0, b.z)
+	local across = (to - from).Unit
+	local y = TILE_TOP + math.min(a.raise, b.raise) - 0.25
+	local p0 = from + across * (a.size * 0.38) + Vector3.new(0, y, 0)
+	local p1 = to - across * (b.size * 0.38) + Vector3.new(0, y, 0)
+	local segments = 4
+	local last = p0
+	for i = 1, segments do
+		local t = i / segments
+		local point = p0:Lerp(p1, t) - Vector3.new(0, math.sin(t * math.pi) * 0.5, 0)
+		stick(folder, "Rope", last, point, 0.12, C.rope, Enum.Material.Fabric, DECOR)
+		last = point
+	end
+end
+
 -- One stepping stone, from its spec { kind, size, x, z, raise } (see
 -- MapBuilder.luau). Returns the part you stand on; moving ones (moss mats
 -- and rafts) are a single part, so they carry nothing with them. A swamp's
--- are "stump" (a cut stump, however wide) and "deck" (a raft of planks
--- that stays put).
+-- are "stump" (a cut stump, however wide), "deck" and "logRaft" (rafts of
+-- planks or logs that stay put), "log" (a fallen log) and "mound"; all but
+-- mounds are the 3D models in ServerStorage.SwampProps when it has them.
 function Forest.steppingStone(folder, spec, rng)
 	local top = TILE_TOP + spec.raise
 	local size = spec.size
@@ -315,12 +466,28 @@ function Forest.steppingStone(folder, spec, rng)
 		return boards
 	elseif spec.kind == "deck" then
 		return deck(folder, spec, top, rng)
+	elseif spec.kind == "logRaft" then
+		return logRaft(folder, spec, top, rng)
+	elseif spec.kind == "log" then
+		return walkLog(folder, spec, top, rng)
+	elseif spec.kind == "stump" then
+		local mesh = swampModel("stump", rng)
+		if mesh then
+			-- Its flat top as wide as the stump, and deep enough to stand on
+			-- the bottom; its roots spread out under the water.
+			local scale = size / ((mesh:GetAttribute("TopShare") or 0.6) * math.max(mesh.Size.X, mesh.Size.Z))
+			local height = math.max(mesh.Size.Y * scale, top - FLOOR_Y + 1)
+			mesh.Size = Vector3.new(mesh.Size.X * scale, height, mesh.Size.Z * scale)
+			mesh.CFrame = CFrame.new(x, top + 0.05 - height / 2, z) * CFrame.Angles(0, rng:NextNumber(0, math.pi * 2), 0)
+			mesh.Parent = folder
+			return column(folder, "Tile", x, z, BASE_Y, top, size, C.stump, Enum.Material.Wood, { Transparency = 1, CastShadow = false })
+		end
 	end
 
 	-- Stumps, mounds and broken trunks are round, as wide as the spec. A
 	-- swamp's stumps are always stumps, however wide.
 	local stump
-	if spec.kind == "normal" and size > 6.5 then
+	if (spec.kind == "normal" and size > 6.5) or spec.kind == "mound" then
 		stump = column(folder, "Tile", x, z, BASE_Y, top, size, C.grass, Enum.Material.Grass)
 		column(folder, "Mud", x, z, BASE_Y, SURFACE_Y + 0.4, size + 1.2, C.mud, Enum.Material.Mud, DECOR)
 		if rng:NextNumber() < 0.6 then
@@ -381,9 +548,10 @@ end
 -- the platform, with a pale lamp on the post so it shows through the fog.
 -- Returns the hook: an invisible part in the middle of the ring, tagged
 -- GrappleHook, whose LandAt attribute is the middle of the platform's top
--- (and From, the middle of the top of the one before the gap).
+-- (and From, the middle of the top of the one before the gap). leanFrom (1
+-- or -1, or random) is which side of the way across the post leans in from.
 -- client/Grapple.luau lights it up while it's in reach.
-function Forest.grappleHook(folder, from, to, rng)
+function Forest.grappleHook(folder, from, to, rng, leanFrom)
 	local model = Instance.new("Model")
 	model.Name = "GrappleHook"
 	model.Parent = folder
@@ -391,7 +559,7 @@ function Forest.grappleHook(folder, from, to, rng)
 	local top = TILE_TOP + to.raise
 	local ring = Vector3.new(to.x, top + Config.Grapple.HookHeight, to.z)
 	local across = Vector3.new(to.x - from.x, 0, to.z - from.z).Unit
-	local side = Vector3.new(-across.Z, 0, across.X) * (if rng:NextNumber() < 0.5 then -1 else 1)
+	local side = Vector3.new(-across.Z, 0, across.X) * (leanFrom or (if rng:NextNumber() < 0.5 then -1 else 1))
 
 	-- The post, in the water past the platform and a little to one side,
 	-- leaning in over it, and its arm out over the middle.
@@ -440,7 +608,8 @@ end
 -- at x = 0, z, facing back down the stage: an archway of rough logs with
 -- its sign on top, a warm amber glow filling the opening and a lantern on
 -- either side. Walking through it crosses the stage's checkpoint
--- (MapBuilder.luau).
+-- (MapBuilder.luau). Tagged StageDoor: its glow only shows as you come near
+-- (client/Mood.luau), so it doesn't give the end away through the fog.
 function Forest.stageDoor(folder, z, rng)
 	local model = Instance.new("Model")
 	model.Name = "StageDoor"
@@ -504,6 +673,7 @@ function Forest.stageDoor(folder, z, rng)
 		lamp.Brightness = 1
 		lamp.Parent = glass
 	end
+	CollectionService:AddTag(model, "StageDoor")
 	return model
 end
 

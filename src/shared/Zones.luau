@@ -27,4 +27,16 @@ function Zones.at(position)
 	return "forest"
 end
 
+-- Which stage a point is in (its index in Stages), or nil outside them.
+function Zones.stageAt(position)
+	local start = 0
+	for index, stage in Stages do
+		if position.Z >= start and position.Z < start + stage.length then
+			return index
+		end
+		start += stage.length
+	end
+	return nil
+end
+
 return Zones

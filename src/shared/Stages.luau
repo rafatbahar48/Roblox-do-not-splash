@@ -18,44 +18,78 @@
 --
 -- A stage with layout = "swamp" is an open swamp instead of one trail
 -- (server/Swamp.luau): low platforms over wide water with a natural muddy
--- shoreline, a route you can always jump winding across it, and side paths
--- off it. It uses gap and tileSize as above, and:
--- mix       how often each kind of platform appears: stump (a wide cut
---           stump) or deck (a rough raft of planks), both resting low on
---           the water
+-- shoreline, a route you can always jump winding right across it and back
+-- along a smooth curve, and side paths off it. It uses tileSize as above,
+-- and gap as the range each jump on the route falls in, measured to a
+-- raft's nearest side: raise it stage by stage, keeping the top under
+-- Config.MaxJump (7), the furthest anyone can jump. It also has:
 -- halfWidth how far either side of the middle its platforms go
+-- turns     how many times the route runs along one side and crosses to
+--           the other
+-- bend      how long each run along a side is, as a share of the room
+--           each turn has (0.32 if left out): less makes tighter bends,
+--           which a grapple shortcut can cut across
+-- wobble    how far each jump can veer off the route's smooth curve, in
+--           degrees (30 if left out), so it zigzags
+-- styles    how often each kind of run makes up the route (relative
+--           weights): stumps (a row of little stumps close together), wide
+--           (wide stumps, tileSize), rafts (plank and log rafts, roped
+--           together), logs (a fallen log to walk along), mounds (a little
+--           island to rest on, with a lantern)
 -- platformHeight  how far its platforms stand above the water
 -- branches  how many side paths; each starts with a drop off a tall stump
 --           you can't climb back up, then crosses a gap too far to jump,
 --           under a hook for the grapple (Config.Grapple). The first one's
 --           far side has the shell
--- scatter   platforms dotted round the rest of the swamp, per 1000 square
---           studs; some are a jump from the others, some only a wade
+-- shortcuts how many optional grapple shortcuts: a hook across a bend,
+--           over a gap too far to jump, that skips the long way round
+-- scatter   more platforms strewn all over the swamp, per 1000 square studs
+--           (kinds from styles), so there's no one clear path: most are a
+--           jump from another, making ways off the route that lead nowhere
+--           or back onto it, and some are only a wade
+-- skip      how many route platforms a way across the scattered ones can
+--           skip at most (3 if left out), so none jumps across a bend
+-- gloom     0 to 1: denser fog and darker light while you're in it
+--           (client/Mood.luau); any stage can have it
 --
 -- One creature stalks the whole forest (server/Lurkers.luau).
 
 return {
 	{
-		-- The first steps: a gentle curve of wide, low stumps and rafts, short
-		-- jumps, and no grapple needed.
+		-- The first steps: a big swamp strewn with stumps, rafts and logs,
+		-- the way through winding across it and back, jumps from easy to
+		-- quite far, and no grapple needed.
 		name = "The First Steps",
 		layout = "swamp",
-		length = 165, -- 103 of swamp, and the cave before it
+		length = 230, -- 168 of swamp, and the cave before it
 		startLanding = 50,
-		halfWidth = 34,
+		halfWidth = 50,
 		platformHeight = 0.8,
-		gap = { 2.5, 3.5 },
-		tileSize = { 7, 9 },
-		mix = { stump = 7, deck = 3 },
-		branches = 0,
+		gap = { 3, 5 },
+		tileSize = { 6.5, 8.5 },
+		turns = 2,
+		styles = { wide = 3, rafts = 3, stumps = 2, mounds = 1, logs = 1 },
+		scatter = 5,
+		skip = 6,
 	},
 	{
-		name = "Old Boards",
-		length = 100,
-		gap = { 3.5, 5 },
-		tileSize = { 6, 8 },
-		shift = 6,
-		mix = { normal = 3, creaky = 2 },
+		-- Deeper waters: wider swings, longer gaps, more little stumps and
+		-- logs, denser fog, and one grapple shortcut you don't need.
+		name = "Deeper Waters",
+		layout = "swamp",
+		length = 230,
+		halfWidth = 48,
+		platformHeight = 0.8,
+		gap = { 3.5, 5.8 },
+		tileSize = { 5.5, 8 },
+		turns = 3,
+		bend = 0.18,
+		wobble = 40,
+		styles = { rafts = 4, wide = 2, stumps = 3, logs = 3, mounds = 2 },
+		scatter = 5,
+		skip = 6,
+		shortcuts = 1,
+		gloom = 0.3,
 	},
 	{
 		name = "Soft Moss",
