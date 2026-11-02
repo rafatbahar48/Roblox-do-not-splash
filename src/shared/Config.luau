@@ -6,6 +6,10 @@ Config.GameName = "The Silent Swamp"
 Config.Tagline = "Stay out of the water. It is listening."
 
 Config.DataStoreName = "StillWater_v1"
+-- Raise this to start the fastest-escape boards and everyone's best times
+-- afresh, when the stages change so much that old times can't be beaten
+-- (2: ten stages instead of seven). Escapes are kept.
+Config.BestTimesVersion = 2
 Config.RespawnTime = 6 -- long enough for the death scene and to read what gave you away
 Config.WalkSpeed = 16
 -- How far the camera can pull back from your character: close enough that
@@ -58,6 +62,9 @@ Config.Lurker = {
 	MinCircleTime = 2, -- seconds it runs round you, at least, before it grabs
 	MaxCircleTime = 5, -- seconds of circling before it grabs, however far round it got
 	Margin = 3, -- keeps it off the edges of the forest's water
+	ReactTime = 1.5, -- seconds it stands frozen, staring at you, when it first hears you, before it comes
+	StageSpeed = 0.025, -- how much faster it runs for each stage past the first (a share of HuntSpeed)
+	StageHearing = 1, -- how much louder it hears you for each stage past the first (noise)
 }
 
 -- When it catches you, the static stays up until you choose (client/
@@ -293,6 +300,18 @@ Config.Sounds = {
 	-- The creature, from where it is (client/LurkerVisuals.luau)
 	CreatureSteps = "rbxassetid://9114082550", -- big feet in the water, while it runs
 	CreatureGrowl = "rbxassetid://9113985466", -- a low growl, while it hunts
+	CreaturePanting = "rbxassetid://9113635748", -- heavy snorting breaths, while it runs at you
+	CreatureBreathing = "rbxassetid://9113984054", -- a slow wet breath, now and then while it watches
+	CreatureCreak = "rbxassetid://9126263691", -- its body creaking like old wood
+	CreatureDrip = "rbxassetid://9126181980", -- water dripping off it
+	CreatureStep = "rbxassetid://9125702803", -- each foot squelching down in the mud as it stalks
+	CreatureBranch = "rbxassetid://9119232904", -- a branch snapping under it as it stalks
+	CreatureBubbles = "rbxassetid://9112872437", -- bubbles round it as it glides through the water
+	CreatureSniff = "rbxassetid://9119308485", -- the sharp breath in as it hears you
+	CreatureNeck = "rbxassetid://9113546532", -- the crack as its neck and back twist round to you
+	CreatureSnap = "rbxassetid://9120258724", -- wood snapping as it crashes after you
+	CreatureSnarl = "rbxassetid://9113991846", -- a hissing snarl, now and then in the chase
+	CreatureImpact = "rbxassetid://9113493156", -- the thud as it grabs someone (with the Lunge roar)
 
 	-- The cave where a party arrives (client/Cave.luau)
 	CaveDrips = "rbxassetid://9126190860", -- water dripping, while you are in it

@@ -1,0 +1,10 @@
+{
+  "id": "01a19a48-8f3c-7020-b7e6-b1da4b5494dc",
+  "type": "rigging",
+  "input": "01a19a41-0426-71ff-b54d-6a7c4051102e",
+  "height_meters": 4,
+  "files": [
+    "mire_stalker_rigged.fbx",
+    "mire_stalker_rigged.glb"
+  ]
+}

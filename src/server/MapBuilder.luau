@@ -723,19 +723,25 @@ end
 -- (Config.Room.WadeDepth), with the creature's feet further down. An
 -- invisible part at the surface, named Water, is what pebbles land on
 -- (Pebbles.luau). It mustn't be Glass: Roblox doesn't draw terrain water
--- behind glass, so the water's surface came and went in patches.
+-- behind glass, so the water's surface came and went in patches. Both come
+-- in pieces: Roblox cuts a part down to 2048 studs a side, which left the
+-- first stages with no bottom at all.
 local function buildLake(map, zEnd)
 	local folder = Instance.new("Folder")
 	folder.Name = "Lake"
 	folder.Parent = map
 	local reach = LAKE_REACH
-	box(folder, "LakeFloor", Vector3.new(-reach, BASE_Y, 0), Vector3.new(reach, SURFACE_Y - ROOM.WadeDepth, zEnd), COLORS.floor, Enum.Material.Mud)
-	box(folder, "Water", Vector3.new(-reach, FLOOR_Y, 0), Vector3.new(reach, SURFACE_Y, zEnd), COLORS.water, Enum.Material.SmoothPlastic, {
-		Transparency = 1,
-		CanCollide = false,
-		CanTouch = false,
-		CastShadow = false,
-	})
+	local pieces = math.ceil(zEnd / 1000)
+	for i = 1, pieces do
+		local z0, z1 = zEnd * (i - 1) / pieces, zEnd * i / pieces
+		box(folder, "LakeFloor", Vector3.new(-reach, BASE_Y, z0), Vector3.new(reach, SURFACE_Y - ROOM.WadeDepth, z1), COLORS.floor, Enum.Material.Mud)
+		box(folder, "Water", Vector3.new(-reach, FLOOR_Y, z0), Vector3.new(reach, SURFACE_Y, z1), COLORS.water, Enum.Material.SmoothPlastic, {
+			Transparency = 1,
+			CanCollide = false,
+			CanTouch = false,
+			CastShadow = false,
+		})
+	end
 end
 
 local function setupLighting()

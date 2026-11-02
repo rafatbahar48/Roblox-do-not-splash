@@ -3,18 +3,25 @@
 -- standing still and moving round only to stay that far from the nearest
 -- player. The moment someone is in the water (and it can hear them) it is
 -- out in the fog ahead of them, where their camera points
--- (client/CameraReport.luau), and runs straight at them so they see it
--- coming, round them, closing in, and grabs them. When it grabs you it turns
--- you round to face it (client/DeathScene.luau shows the rest). A pebble's
--- splash draws it off to look; then it goes back to watching.
+-- (client/CameraReport.luau), freezes and stares at them for a moment
+-- (ReactTime), then runs straight at them so they see it coming, round
+-- them, closing in, and grabs them. When it grabs you it turns you round to
+-- face it (client/DeathScene.luau shows the rest). A pebble's splash draws
+-- it off to look; then it goes back to watching. It runs a little faster
+-- and hears a little more in each stage further on (StageSpeed,
+-- StageHearing).
 --
 -- The server only moves an invisible anchor part at its feet, on the bottom
 -- of the water. Each client builds the body and animates it
 -- (client/LurkerVisuals.luau) from the anchor and these attributes:
 --   Room      index of the stage it is in
 --   Alert     true while it is going after something
+--   Reacting  true while it stands frozen, staring, before it comes
 --   Running   true while it runs
+--   Circling  true while it circles someone (it crawls), before it goes in
 --   Lunging   true while it grabs
+--   Focus     where what it is after was last (a Vector3), kept after it
+--             gives up, so its head can stay on the spot
 --   Warp      goes up by one each time it is moved somewhere new in one go,
 --             so clients put its body there instead of sliding it over
 
@@ -46,9 +53,14 @@ local function practising(player)
 	return player:GetAttribute("Practice") == true
 end
 
-local function speedMultiplier(player)
+-- How many stages past the first a player's noise is in (0 in stage 1).
+local function stagesOn(state)
+	return if state.room then math.max(0, state.room.index - 1) else 0
+end
+
+local function speedMultiplier(player, state)
 	local difficulty = Config.Difficulties[player:GetAttribute("Difficulty")] or Config.Difficulties[Config.DefaultDifficulty]
-	return difficulty.lurkerSpeedMultiplier
+	return difficulty.lurkerSpeedMultiplier * (1 + SETTINGS.StageSpeed * stagesOn(state))
 end
 
 local function buildAnchor(parent)
@@ -63,7 +75,9 @@ local function buildAnchor(parent)
 	anchor.CastShadow = false
 	anchor:SetAttribute("Room", 0)
 	anchor:SetAttribute("Alert", false)
+	anchor:SetAttribute("Reacting", false)
 	anchor:SetAttribute("Running", false)
+	anchor:SetAttribute("Circling", false)
 	anchor:SetAttribute("Lunging", false)
 	anchor.Parent = parent
 	return anchor
@@ -150,6 +164,15 @@ function Lurker:setFlag(name, field, value)
 	self.anchor:SetAttribute(name, value)
 end
 
+-- Where what it is after is, for clients to turn its head to: a few times a
+-- second is plenty.
+function Lurker:focusOn(position, now)
+	if now - (self.focusedAt or 0) >= 0.2 then
+		self.focusedAt = now
+		self.anchor:SetAttribute("Focus", position)
+	end
+end
+
 function Lurker:face(direction, dt)
 	direction = flat(direction)
 	if direction.Magnitude < 0.01 then
@@ -176,6 +199,7 @@ function Lurker:lunge(player, state)
 	self.busy = true
 	self.circling = nil
 	self:setFlag("Running", "running", false)
+	self:setFlag("Circling", "crawling", false)
 	local root, humanoid = state.root, state.humanoid
 	task.spawn(function()
 		local rest = self.anchor.CFrame
@@ -225,7 +249,13 @@ function Lurker:appearAhead(state)
 	end
 	local look = state.look or flat(state.root.CFrame.LookVector)
 	look = if look.Magnitude > 0.01 then look.Unit else Vector3.zAxis
-	self.position = self:clampToArea(target + look * SETTINGS.AppearDistance)
+	local spot = self:clampToArea(target + look * SETTINGS.AppearDistance)
+	-- Looking back the way you came, the fog ahead can be past the start of
+	-- the water, which would put it right beside you: it comes from where it is.
+	if flatDistance(spot, target) < SETTINGS.WatchDistance[1] - 10 then
+		return
+	end
+	self.position = spot
 	local toward = flat(target - self.position)
 	self.heading = if toward.Magnitude > 0.01 then toward.Unit else -look
 	self.anchor.CFrame = CFrame.lookAt(self.position, self.position + self.heading)
@@ -273,6 +303,7 @@ function Lurker:listen()
 			if hunted then
 				score += SETTINGS.Stickiness
 			end
+			score += SETTINGS.StageHearing * stagesOn(state)
 			if score > bestScore then
 				best, bestScore = { player = player, state = state }, score
 			end
@@ -333,6 +364,8 @@ function Lurker:step(dt, now)
 		local state = heard.state
 		if heard.player ~= previous then
 			self:appearAhead(state)
+			-- Someone new: it freezes and stares first, then comes.
+			self.reactUntil = now + SETTINGS.ReactTime
 		end
 		local distance = flatDistance(self.position, state.root.Position)
 		if self.circling and self.circling.player ~= heard.player then
@@ -341,34 +374,48 @@ function Lurker:step(dt, now)
 		self.huntingPlayer = heard.player
 		self.goal = nil
 		self:setFlag("Alert", "alert", true)
-		self:setFlag("Running", "running", true)
-		local speed = SETTINGS.HuntSpeed * speedMultiplier(heard.player)
-		local closing = true -- coming straight at them, so it can grab
-		if self.circling or distance <= SETTINGS.CircleRadius then
-			closing = self:circle(state, distance, speed, dt, now)
-			self.circling.player = heard.player
+		self:focusOn(state.root.Position, now)
+		if now < (self.reactUntil or 0) then
+			self:setFlag("Reacting", "reacting", true)
+			self:setFlag("Running", "running", false)
+			self.anchor.CFrame = CFrame.lookAt(self.position, self.position + self.heading)
 		else
-			self:moveToward(state.root.Position, speed, dt)
-		end
-		if closing and ((state.inWater and distance <= SETTINGS.GrabRange) or (not state.inWater and distance <= SETTINGS.LungeRange and state.noise >= SETTINGS.LungeNoise)) then
-			self:lunge(heard.player, state)
-			return
-		end
-	elseif heard and heard.source then
-		-- A pebble: over to the splash to look, then back to watching.
-		local source = heard.source
-		self.circling = nil
-		self.goal = nil
-		self:setFlag("Alert", "alert", true)
-		self:setFlag("Running", "running", false)
-		if self:moveToward(source.position, SETTINGS.StalkSpeed * 1.5, dt) < 2 then
-			source.loudness = 0
+			self:setFlag("Reacting", "reacting", false)
+			self:setFlag("Running", "running", true)
+			local speed = SETTINGS.HuntSpeed * speedMultiplier(heard.player, state)
+			local closing = true -- coming straight at them, so it can grab
+			if self.circling or distance <= SETTINGS.CircleRadius then
+				closing = self:circle(state, distance, speed, dt, now)
+				self.circling.player = heard.player
+			else
+				self:moveToward(state.root.Position, speed, dt)
+			end
+			self:setFlag("Circling", "crawling", not closing)
+			if closing and ((state.inWater and distance <= SETTINGS.GrabRange) or (not state.inWater and distance <= SETTINGS.LungeRange and state.noise >= SETTINGS.LungeNoise)) then
+				self:lunge(heard.player, state)
+				return
+			end
 		end
 	else
 		self.circling = nil
-		self:setFlag("Alert", "alert", false)
-		self:setFlag("Running", "running", false)
-		self:keepWatch(dt)
+		self.reactUntil = nil
+		self:setFlag("Reacting", "reacting", false)
+		self:setFlag("Circling", "crawling", false)
+		if heard and heard.source then
+			-- A pebble: over to the splash to look, then back to watching.
+			local source = heard.source
+			self.goal = nil
+			self:setFlag("Alert", "alert", true)
+			self:setFlag("Running", "running", false)
+			self:focusOn(source.position, now)
+			if self:moveToward(source.position, SETTINGS.StalkSpeed * 1.5, dt) < 2 then
+				source.loudness = 0
+			end
+		else
+			self:setFlag("Alert", "alert", false)
+			self:setFlag("Running", "running", false)
+			self:keepWatch(dt)
+		end
 	end
 
 	-- Which stage it is in, for the lanterns that falter near it (client/Fear.luau).

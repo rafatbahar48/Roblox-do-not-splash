@@ -1,0 +1,15 @@
+{
+  "id": "01a19a41-0426-71ff-b54d-6a7c4051102e",
+  "type": "multi-image-to-3d",
+  "ai_model": "latest",
+  "target_polycount": 18000,
+  "texture": "4k pbr",
+  "files": [
+    "mire_stalker.glb",
+    "mire_stalker.fbx",
+    "texture_base_color.png",
+    "texture_metallic.png",
+    "texture_roughness.png",
+    "texture_normal.png"
+  ]
+}

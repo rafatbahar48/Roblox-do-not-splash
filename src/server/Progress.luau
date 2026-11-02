@@ -37,11 +37,13 @@
 -- It counts for the easiest difficulty played along the way, and the best
 -- time on each difficulty is saved and sent to the record boards
 -- (Leaderboards.luau). Practice runs aren't saved: leave halfway and you
--- start in the lobby next time.
+-- start in the lobby next time. In Studio, a NoSave attribute set on
+-- Workspace keeps a test from saving anything at all.
 
 local DataStoreService = game:GetService("DataStoreService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 
 local Catalog = require(ReplicatedStorage.Shared.Catalog)
 local Config = require(ReplicatedStorage.Shared.Config)
@@ -169,8 +171,10 @@ local function load(player)
 		end
 	end
 
+	-- Best times from before the stages last changed (Config.BestTimesVersion)
+	-- are dropped, like the boards they were on.
 	local bestTimes = {}
-	if type(data.bestTimes) == "table" then
+	if type(data.bestTimes) == "table" and (tonumber(data.bestTimesVersion) or 1) == Config.BestTimesVersion then
 		for name in Config.Difficulties do
 			local seconds = tonumber(data.bestTimes[name])
 			if seconds and seconds == seconds and seconds > 0 then
@@ -216,7 +220,8 @@ local function load(player)
 		inCave = false, -- on a run that started in the cave, so stage 1 restarts there
 		practice = false,
 		partyPractice = false, -- this party's own server is for practice
-		canSave = loaded,
+		-- A Studio test with Workspace's NoSave attribute on leaves saves alone.
+		canSave = loaded and not (RunService:IsStudio() and workspace:GetAttribute("NoSave") == true),
 	}
 end
 
@@ -249,6 +254,7 @@ local function save(player, profile)
 		equipped = { skin = profile.equipped.skin, accessory = profile.equipped.accessory },
 		boosts = profile.boosts,
 		bestTimes = profile.bestTimes,
+		bestTimesVersion = Config.BestTimesVersion,
 		selfRevives = profile.selfRevives,
 		communityRewarded = profile.communityRewarded,
 		runs = profile.runs,

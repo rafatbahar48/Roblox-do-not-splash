@@ -40,8 +40,13 @@ local refreshQueued = false
 
 for _, board in BOARDS do
 	byId[board.id] = board
+	-- The time boards start afresh with each Config.BestTimesVersion.
+	local storeName = Config.DataStoreName .. "_" .. board.id
+	if board.ascending and Config.BestTimesVersion > 1 then
+		storeName ..= "_v" .. Config.BestTimesVersion
+	end
 	local ok, store = pcall(function()
-		return DataStoreService:GetOrderedDataStore(Config.DataStoreName .. "_" .. board.id)
+		return DataStoreService:GetOrderedDataStore(storeName)
 	end)
 	board.store = if ok then store else nil
 end

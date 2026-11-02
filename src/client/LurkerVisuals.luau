@@ -6,16 +6,26 @@
 -- full of fangs splits open (client/DeathScene.luau films it up close).
 --
 -- The body is the Meshy model in ReplicatedStorage.Creatures (the first model
--- there), posed bone by bone. Without one, a body built from parts stands in.
--- Either way the pose is worked out every frame from where its feet step
--- (two-bone IK for legs and arms), so it strides, stops dead, stands and
--- watches, and runs, with no animation files. Ripples spread where its feet
--- go in.
+-- there; now the Mire Stalker, art/models/mire), posed bone by bone. Without
+-- one, a body built from parts stands in. Either way the pose is worked out
+-- every frame from where its feet step (two-bone IK for legs and arms), with
+-- no animation files, so its feet never slide whatever speed the server
+-- moves it at. How it moves depends on what it is doing (gait's modes):
+-- dead still and twitching while it watches, a broken, dragging walk or a
+-- low glide through the water, a frozen stare and a head snap when it hears
+-- you, an explosive sprint, a spider crawl while it circles you, a dead stop
+-- when it loses you, and a one-armed lunge. Its head, back, arms and legs
+-- each keep their own time. Ripples spread where its feet go in, and water
+-- drips from its hands.
 --
 -- Attributes on the model:
 --   OwnMouth  true if it has a mouth of its own (its headfront bone marks it);
---             otherwise one opens up out of its face when it grabs
+--             otherwise one opens up out of its face when it grabs. A Jaw
+--             bone, if it has one, opens it.
 --   Eyes      false to leave off the glowing eyes; its throat glows instead
+--   EyeOffset where the eyes are (a Vector3, studs: to each side, up and
+--             forward of the head joint); EyeSize how big; EyeColor and
+--             EyeAlertColor their glow while it watches and while it hunts
 --   CloseUpDistance, CloseUpHeight, CloseUpAim
 --             where the death scene's camera goes in front of its mouth, how
 --             far above the mouth, and how far above the mouth it looks
@@ -36,8 +46,6 @@ local Sounds = require(script.Parent.Sounds)
 
 local ANIMATE_RANGE = 300 -- past the fog
 local SURFACE_Y = Config.Room.SurfaceY
-local STRIDE_WALK, STRIDE_RUN = 4.5, 8
-local LIFT_WALK, LIFT_RUN = 1.6, 3
 
 -- The part-built body's proportions, in studs. It stands about 22 tall.
 local PARTS = {
@@ -65,6 +73,22 @@ local RIPPLE = Color3.fromRGB(150, 170, 180)
 -- within near studs, gone past far, and how fast they fade in between.
 local STEPS = { volume = 4, near = 10, far = 230, mode = Enum.RollOffMode.Linear }
 local GROWL = { volume = 3.5, near = 4, far = 120, mode = Enum.RollOffMode.LinearSquare }
+-- Its other sounds (see voice), fading evenly from near to far, and how
+-- deep (the pitch; lower sounds bigger). The panting loops while it runs.
+local VOICES = {
+	CreaturePanting = { volume = 3, near = 6, far = 120, pitch = 0.8, looped = true },
+	CreatureBreathing = { volume = 2.5, near = 12, far = 110, pitch = 0.75 },
+	CreatureCreak = { volume = 2, near = 10, far = 100, pitch = 0.8 },
+	CreatureDrip = { volume = 1.2, near = 6, far = 60, pitch = 1 },
+	CreatureStep = { volume = 2.5, near = 10, far = 120, pitch = 0.6 },
+	CreatureBranch = { volume = 2.5, near = 10, far = 140, pitch = 0.85 },
+	CreatureBubbles = { volume = 1.5, near = 8, far = 70, pitch = 0.75 },
+	CreatureSniff = { volume = 3, near = 12, far = 120, pitch = 0.6 },
+	CreatureNeck = { volume = 3, near = 10, far = 110, pitch = 0.85 },
+	CreatureSnap = { volume = 3, near = 10, far = 160, pitch = 0.9 },
+	CreatureSnarl = { volume = 2.5, near = 8, far = 120, pitch = 0.7 },
+	CreatureImpact = { volume = 3, near = 8, far = 100, pitch = 0.8 },
+}
 
 local player = Players.LocalPlayer
 
@@ -139,6 +163,58 @@ local function place(bone, parentWorld, position)
 	local world = rest.Rotation + position
 	bone.Transform = rest:Inverse() * world
 	return world
+end
+
+-- Like aim, then turned round its own length by twist (radians).
+local function aimTwist(bone, parentWorld, direction, twist)
+	local rest = parentWorld * bone.CFrame
+	local world = CFrame.new(rest.Position) * arc(rest.UpVector, direction.Unit) * rest.Rotation * CFrame.Angles(0, twist, 0)
+	bone.Transform = rest:Inverse() * world
+	return world
+end
+
+-- A rotation whose +Y is along a and whose +Z is as near b as it can be.
+local function basis(a, b)
+	local y = a.Unit
+	local z = b - y * b:Dot(y)
+	z = if z.Magnitude > 1e-4 then z.Unit else y:Cross(Vector3.xAxis).Unit
+	return CFrame.fromMatrix(Vector3.zero, y:Cross(z), y, z)
+end
+
+-- Points the head along up and turns it so its face (faceLocal, in its own
+-- space) looks along face. Returns its new world CFrame.
+local function orient(bone, parentWorld, up, face, faceLocal)
+	local rest = parentWorld * bone.CFrame
+	local world = CFrame.new(rest.Position) * basis(up, face) * basis(Vector3.yAxis, faceLocal):Inverse()
+	bone.Transform = rest:Inverse() * world
+	return world
+end
+
+-- Turns vector v round axis by angle (radians).
+local function turned(v, axis, angle)
+	return CFrame.fromAxisAngle(axis, angle):VectorToWorldSpace(v)
+end
+
+-- The same "random" number, 0 to 1, on every screen for the same slot (a
+-- whole number, usually a stretch of server time) and salt: twitches and
+-- pauses agree between players with nothing sent over the network.
+local function synced(slot, salt)
+	local x = math.sin(slot * 12.9898 + salt * 78.233) * 43758.5453
+	return x - math.floor(x)
+end
+
+-- A twitch's strength tau seconds after it starts: a quick snap, then a
+-- slower settle.
+local function twitch(tau)
+	if tau < 0 then
+		return 0
+	end
+	return if tau < 0.07 then tau / 0.07 else math.exp(-(tau - 0.07) * 9)
+end
+
+local function ease(edge0, edge1, value)
+	local t = math.clamp((value - edge0) / (edge1 - edge0), 0, 1)
+	return t * t * (3 - 2 * t)
 end
 
 -- Bodies -----------------------------------------------------------------------
@@ -302,6 +378,7 @@ local function buildSkinned(creature)
 	creature.bones = bones
 	creature.dims = {
 		hipHeight = rest("Hips").Y * 0.9, -- knees a little bent
+		crouchDrop = rest("Hips").Y * 0.12, -- how far its hips sink as it grabs (it bends its back instead)
 		thigh = (rest("LeftLeg") - rest("LeftUpLeg")).Magnitude,
 		shin = (rest("LeftFoot") - rest("LeftLeg")).Magnitude,
 		footSpread = math.abs(rest("LeftFoot").X) * 0.75,
@@ -310,13 +387,19 @@ local function buildSkinned(creature)
 		forearm = (rest("LeftHand") - rest("LeftForeArm")).Magnitude,
 	}
 	local head = bones.Head.WorldCFrame
+	-- Which way its face looks, in the head bone's own space.
+	creature.faceLocal = if bones.headfront then bones.headfront.CFrame.Position else Vector3.new(0, 0, -1)
 	creature.eyeOffsets = {}
 	if template:GetAttribute("Eyes") ~= false then
 		-- The eyes in the texture are small; neon ones on top glow through fog.
+		local offset = template:GetAttribute("EyeOffset")
 		for _, sign in { -1, 1 } do
-			table.insert(creature.eyeOffsets, head:ToObjectSpace(pivot * CFrame.new(sign * 0.3, rest("Head").Y + 1.35, rest("Head").Z - 0.62)))
+			local eye = if typeof(offset) == "Vector3"
+				then CFrame.new(bones.Head.WorldPosition + pivot.Rotation * Vector3.new(sign * offset.X, offset.Y, -offset.Z))
+				else pivot * CFrame.new(sign * 0.3, rest("Head").Y + 1.35, rest("Head").Z - 0.62)
+			table.insert(creature.eyeOffsets, head:ToObjectSpace(eye))
 		end
-		addEyes(creature, 0.26)
+		addEyes(creature, template:GetAttribute("EyeSize") or 0.26)
 	else
 		addThroatGlow(creature)
 	end
@@ -327,6 +410,25 @@ local function buildSkinned(creature)
 		-- The mouth sits low on the face, under the eyes.
 		creature.mouthOffset = head:ToObjectSpace(pivot * CFrame.new(0, rest("Head").Y + 0.7, rest("Head").Z - 1.4))
 		addMaw(creature)
+	end
+	-- Swamp water dripping off its claws whenever its hands are out of it.
+	creature.drips = {}
+	for _, name in { "LeftHand", "RightHand" } do
+		local drip = Instance.new("ParticleEmitter")
+		drip.Name = "Drip"
+		drip.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+		drip.Color = ColorSequence.new(Color3.fromRGB(150, 170, 165))
+		drip.LightEmission = 0.2
+		drip.Size = NumberSequence.new(0.12, 0.05)
+		drip.Transparency = NumberSequence.new(0.3, 0.9)
+		drip.Lifetime = NumberRange.new(0.5, 0.8)
+		drip.Rate = 7
+		drip.Speed = NumberRange.new(0.2, 0.8)
+		drip.SpreadAngle = Vector2.new(20, 20)
+		drip.Acceleration = Vector3.new(0, -60, 0)
+		drip.Enabled = false
+		drip.Parent = bones[name] -- a Bone is an Attachment, so it drips from the hand
+		table.insert(creature.drips, drip)
 	end
 	table.insert(creature.parts, 1, mesh)
 end
@@ -348,6 +450,15 @@ local function build(anchor)
 		limbs = {},
 		eyes = {},
 		lastLift = { 0, 0 },
+		-- How it moves (gait): its mode and when that began, and what is
+		-- eased from frame to frame.
+		mode = "idle",
+		modeSince = os.clock(),
+		stopUntil = 0,
+		retreatUntil = 0,
+		ease = { hips = 0.94, hunch = 30, twist = 0, jaw = 0, raiseL = 7, raiseR = -5, roll = 12 },
+		headFace = nil, -- where its face looks (world), eased toward its target
+		hands = {}, -- last frame's hand places, held while it freezes
 	}
 	creature.model.Name = "CreatureBody"
 	if template then
@@ -362,15 +473,25 @@ end
 local function setAlert(creature)
 	local anchor = creature.anchor
 	creature.alert = anchor:GetAttribute("Alert") == true
+	creature.reacting = anchor:GetAttribute("Reacting") == true
 	creature.running = anchor:GetAttribute("Running") == true
+	creature.circling = anchor:GetAttribute("Circling") == true
 	creature.lunging = anchor:GetAttribute("Lunging") == true
-	local burning = creature.alert or creature.lunging
-	for _, eye in creature.eyes do
-		eye.Color = if burning then EYE_ALERT else EYE_IDLE
+	local focus = anchor:GetAttribute("Focus")
+	if typeof(focus) == "Vector3" then
+		creature.focus = focus
 	end
+	local burning = creature.alert or creature.lunging
+	local idleColor = template and template:GetAttribute("EyeColor") or EYE_IDLE
+	local alertColor = template and template:GetAttribute("EyeAlertColor") or EYE_ALERT
+	for _, eye in creature.eyes do
+		eye.Color = if burning then alertColor else idleColor
+	end
+	creature.glow.Color = alertColor
 	creature.glow.Brightness = if creature.lunging then 1.6 elseif burning then 1.1 else 0.4
-	-- Its feet in the water while it runs, and a growl while it hunts. While
-	-- it only watches from the fog it makes no sound at all.
+	-- Its feet in the water and its panting while it runs, and a growl while
+	-- it hunts, but dead silence the moment it hears you (see voice for the
+	-- rest).
 	local function playIf(sound, on)
 		if sound and on ~= sound.IsPlaying then
 			if on then
@@ -381,8 +502,21 @@ local function setAlert(creature)
 		end
 	end
 	local heard = player:GetAttribute("Practice") ~= true
-	playIf(creature.steps, heard and creature.running and not creature.lunging)
-	playIf(creature.growl, heard and creature.alert and not creature.lunging)
+	local running = heard and creature.running and not creature.lunging
+	playIf(creature.steps, running)
+	playIf(creature.voices and creature.voices.CreaturePanting, running)
+	playIf(creature.growl, heard and creature.alert and not creature.lunging and not creature.reacting)
+end
+
+-- Plays one of its sounds once (not while you're practising), a little
+-- higher or lower each time by vary (0 to 1).
+local function say(creature, name, vary)
+	local sound = creature.voices and creature.voices[name]
+	if sound and player:GetAttribute("Practice") ~= true then
+		sound.PlaybackSpeed = VOICES[name].pitch * (0.9 + 0.2 * vary)
+		sound.TimePosition = 0
+		sound:Play()
+	end
 end
 
 local function ripple(position, size, transparency)
@@ -402,50 +536,192 @@ end
 
 -- Movement ------------------------------------------------------------------------
 
+-- How it carries itself in each mode (see gait): how high its hips are (a
+-- share of standing), how far forward its back bends (degrees), how much its
+-- body turns after what it's after (a share), how its head tips sideways
+-- (degrees), how far its jaw hangs open (degrees), how long a stride is and
+-- how high its feet lift, and how fast its body keeps up with where it is
+-- really going (the anchor; lower lags further behind).
+local MODES = {
+	idle = { hips = 0.94, hunch = 30, twist = 0, roll = 12, jaw = 1, stride = 4.5, lift = 1.4, follow = 6 },
+	walk = { hips = 0.9, hunch = 40, twist = 0.4, roll = 8, jaw = 3, stride = 4.2, lift = 1.5, follow = 3.5 },
+	glide = { hips = 0.66, hunch = 52, twist = 0.25, roll = 4, jaw = 0, stride = 5.5, lift = 0.45, follow = 6 },
+	retreat = { hips = 0.82, hunch = 46, twist = 0, roll = 10, jaw = -3, stride = 4.2, lift = 1.2, follow = 4 },
+	react = { hips = 0.92, hunch = 34, twist = 1, roll = 0, jaw = 18, stride = 4.5, lift = 0, follow = 6 },
+	chase = { hips = 0.84, hunch = 68, twist = 0.3, roll = 0, jaw = 16, stride = 8.5, lift = 3.2, follow = 10 },
+	crawl = { hips = 0.48, hunch = 82, twist = 0.2, roll = -10, jaw = 12, stride = 5, lift = 1.1, follow = 9 },
+	stop = { hips = 0.9, hunch = 34, twist = 0.6, roll = 6, jaw = -4, stride = 4.5, lift = 0, follow = 12 },
+	grab = { hips = 0.86, hunch = 58, twist = 0.6, roll = 26, jaw = 36, stride = 4.5, lift = 0, follow = 14 },
+}
+local STOP_TIME = 2.6 -- seconds it stands stock still after it gives up, listening
+local RETREAT_TIME = 14 -- seconds after that it creeps back low, glancing behind it
+
+-- What it is doing, from the anchor's flags (server/Lurker.luau) and how it
+-- moves:
+--   idle     standing, watching: almost lifeless, long stillnesses, a twitch
+--            now and then, the head slowly turning to look at you
+--   walk     the broken walk: one leg steps, the other drags late, the torso
+--            leaning and lagging behind its feet, stopping mid-step
+--   glide    the water stalk: crouched low, arms out ahead skimming the
+--            water, gliding smoothly (it takes turns with walk)
+--   react    it has heard you: freezes, the head snaps round, holds, the
+--            shoulders rise, the body slowly twists to you, the jaw opens
+--   chase    explosive: back nearly flat, head thrust out, arms flailing,
+--            long uneven strides
+--   crawl    circling you: down on all fours, elbows out, back arched
+--   stop     it lost you: stops dead, arms still swinging, head still on
+--            the spot, the jaw slowly closing, the shoulders sinking
+--   retreat  creeping back to watch: low, arms dragging, glancing behind
+--   grab     one arm lunges for you, claws curling, head tipped, jaw wide
+local function decideMode(creature, now, serverNow)
+	local was = creature.mode
+	local mode
+	if creature.lunging then
+		mode = "grab"
+	elseif creature.reacting then
+		mode = "react"
+	elseif creature.circling then
+		mode = "crawl"
+	elseif creature.running then
+		mode = "chase"
+	else
+		if was == "react" or was == "chase" or was == "crawl" or was == "grab" then
+			creature.stopUntil = now + STOP_TIME
+			creature.retreatUntil = now + STOP_TIME + RETREAT_TIME
+		end
+		if now < creature.stopUntil then
+			mode = "stop"
+		elseif creature.moving > 0.3 then
+			-- Broken walk or water stalk, taking turns every so often.
+			local style = if synced(math.floor(serverNow / 12), 3) < 0.5 then "walk" else "glide"
+			mode = if now < creature.retreatUntil and not creature.alert then "retreat" else style
+		else
+			mode = "idle"
+		end
+	end
+	if mode ~= was then
+		creature.mode, creature.modeSince = mode, now
+		if mode == "react" then
+			-- It was looking elsewhere when it heard you: its body starts
+			-- turned away and comes round after its head.
+			local side = if synced(math.floor(serverNow), 5) < 0.5 then -1 else 1
+			creature.look = turned(creature.look, Vector3.yAxis, side * math.rad(70))
+		end
+	end
+	return mode
+end
+
 -- Follows the anchor and works out where the feet, hips and hands go this
 -- frame, for either body.
 local function gait(creature, dt, now)
 	local dims = creature.dims
+	local serverNow = workspace:GetServerTimeNow()
+	local mode = decideMode(creature, now, serverNow)
+	local style = MODES[mode]
+	local since = now - creature.modeSince
 	local anchorCFrame = creature.anchor.CFrame
-	local follow = 1 - math.exp(-dt * (if creature.lunging then 14 else 8))
+
+	-- Its body follows the anchor, lagging in the broken walk; now and then
+	-- it stops mid-step while the anchor goes on, then lurches after it.
+	local followRate = style.follow
+	local paused = false
+	if mode == "walk" or mode == "retreat" then
+		local slot = math.floor(serverNow / 1.3)
+		paused = synced(slot, 11) < 0.22 and serverNow / 1.3 - slot < 0.45
+		if paused then
+			followRate = 0.3
+		end
+	end
+	local follow = 1 - math.exp(-dt * followRate)
 	local position = creature.pos:Lerp(anchorCFrame.Position, follow)
 	local speed = Vector3.new(position.X - creature.pos.X, 0, position.Z - creature.pos.Z).Magnitude / math.max(dt, 1e-3)
 	creature.speed += (speed - creature.speed) * math.min(1, dt * 5)
 	creature.pos = position
-	local look = creature.look:Lerp(anchorCFrame.LookVector, math.min(1, dt * 5))
+	-- Its hips turn to where it is going: barely while it stands (its head
+	-- does the looking), late while it reacts, fast while it runs.
+	local turnRate = if mode == "idle" then 0.3 elseif mode == "react" then (if since > 0.9 then 3 else 0) else 5
+	local look = creature.look:Lerp(anchorCFrame.LookVector, math.min(1, dt * turnRate))
 	look = Vector3.new(look.X, 0, look.Z)
 	creature.look = if look.Magnitude > 1e-3 then look.Unit else creature.look
 
-	local g = { position = position, forward = creature.look, up = Vector3.yAxis }
+	local g = { position = position, forward = creature.look, up = Vector3.yAxis, mode = mode, since = since, serverNow = serverNow }
 	g.right = g.forward:Cross(Vector3.yAxis).Unit
-	g.running = creature.running and not creature.lunging
+	g.running = mode == "chase" or mode == "crawl"
 	creature.moving += ((if creature.speed > 0.6 then 1 else 0) - creature.moving) * math.min(1, dt * 4)
 	g.moving = creature.moving
-	local stride = if g.running then STRIDE_RUN else STRIDE_WALK
-	creature.phase += dt * math.clamp(creature.speed, 0, 30) / stride * math.pi
+	local stride = style.stride
+	if mode == "chase" then
+		stride *= 1 + 0.25 * math.sin(creature.phase * 0.31) -- strides of uneven length
+	end
+	if not paused then
+		creature.phase += dt * math.clamp(creature.speed, 0, 34) / stride * math.pi
+	end
 	creature.crouch += ((if creature.lunging then 1 else 0) - creature.crouch) * math.min(1, dt * (if creature.lunging then 10 else 3))
 	g.crouch = creature.crouch
 
-	-- Feet: each swings forward lifted, then plants and slides back.
+	-- Eased toward this mode's carriage: snapping in a reaction or a chase,
+	-- settling slowly when it stops.
+	local e = creature.ease
+	local rate = if mode == "stop" then 0.9 elseif mode == "chase" or mode == "crawl" or mode == "grab" then 8 else 3
+	for key, value in { hips = style.hips, hunch = style.hunch, roll = style.roll } do
+		e[key] += (value - e[key]) * math.min(1, dt * rate)
+	end
+
+	-- Feet: each swings forward lifted, then plants and slides back. In the
+	-- broken walk the second leg comes late and drags, barely lifted; on all
+	-- fours they splay wide.
 	g.feet, g.lift = {}, {}
+	local spread = dims.footSpread * (if mode == "crawl" then 1.5 elseif mode == "glide" then 1.2 else 1)
 	for i, sign in { -1, 1 } do
-		local phase = creature.phase + (i - 1) * math.pi
-		local swing = math.sin(phase) * stride / 2 * g.moving
-		local lift = math.max(0, math.cos(phase)) * (if g.running then LIFT_RUN else LIFT_WALK) * g.moving
-		g.feet[i] = position + g.right * sign * dims.footSpread + g.forward * swing + g.up * (dims.ankleHeight + lift)
+		local dragging = i == 2 and (mode == "walk" or mode == "retreat")
+		local phase = creature.phase + (i - 1) * math.pi + (if dragging then 0.9 else 0)
+		local swing = math.sin(phase) * stride / 2 * g.moving * (if dragging then 0.75 else 1)
+		local lift = math.max(0, math.cos(phase)) * style.lift * g.moving * (if dragging then 0.25 else 1)
+		g.feet[i] = position + g.right * sign * spread + g.forward * swing + g.up * (dims.ankleHeight + lift)
 		g.lift[i] = lift
-		-- A ripple each time a foot comes down.
+		-- A ripple each time a foot comes down, and a squelch as it stalks.
 		if creature.lastLift[i] > 0.15 and lift <= 0.15 then
-			ripple(Vector3.new(g.feet[i].X, SURFACE_Y + 0.05, g.feet[i].Z), if g.running then 2.2 else 1.4, if g.running then 0.45 else 0.7)
+			ripple(Vector3.new(g.feet[i].X, SURFACE_Y + 0.05, g.feet[i].Z), if mode == "chase" then 2.2 else 1.4, if mode == "chase" then 0.45 else 0.7)
+			if mode == "walk" or mode == "retreat" then
+				say(creature, "CreatureStep", synced(math.floor(creature.phase), 37))
+			end
 		end
 		creature.lastLift[i] = lift
 	end
 
-	-- Hips bob with each step and drop as it reaches down. Its back hunches
-	-- more when it runs or grabs; when it stands, it sways slowly.
-	local bob = math.cos(creature.phase * 2) * 0.35 * g.moving
-	g.pelvis = position + g.up * (dims.hipHeight + bob - g.crouch * 3.5) + g.forward * (if g.running then 0.8 else 0)
-	g.hunch = math.rad(22 + (if g.running then 18 else 0) + g.crouch * 30) + math.sin(now * 0.7 + creature.phase * 0.1) * 0.03
+	-- Hips: dipping onto the dragged leg in the broken walk, still in the
+	-- glide, bobbing hard in the chase, low and forward on all fours.
+	local bob = if mode == "glide" then 0 elseif mode == "walk" or mode == "retreat" then math.min(0, math.cos(creature.phase)) * 0.5 else math.cos(creature.phase * 2) * 0.35
+	local lean = if mode == "chase" then 1.4 elseif mode == "crawl" then 1 else 0
+	g.pelvis = position + g.up * (dims.hipHeight * e.hips + bob * g.moving - g.crouch * (dims.crouchDrop or 3.5)) + g.forward * lean
+	-- Breathing, uneven, and in long spells of none at all while it stands.
+	local holding = mode == "idle" and synced(math.floor(serverNow / 6), 7) < 0.5
+	local breath = if holding then 0 else math.sin(serverNow * 1.3 + 0.8 * math.sin(serverNow * 0.29)) ^ 3
+	g.breath, g.holding = breath, holding
+	g.hunch = math.rad(e.hunch + breath * 1.5 + g.crouch * 20)
+
+	-- Twitches: a hand flicks, the head jerks, a shoulder hitches; in the
+	-- broken walk, the whole upper body jerks as if yanked on a string.
+	g.twitch = { handL = 0, handR = 0, head = 0, shoulderL = 0, shoulderR = 0, body = 0 }
+	local chances = { idle = 0.1, walk = 0.08, glide = 0.04, retreat = 0.06, stop = 0.12 }
+	local chance = chances[mode]
+	if chance then
+		local slot = math.floor(serverNow / 0.4)
+		for back = 0, 2 do
+			if synced(slot - back, 13) < chance then
+				local kinds = { "handL", "handR", "head", "shoulderL", "shoulderR" }
+				local kind = kinds[1 + math.floor(synced(slot - back, 17) * #kinds)]
+				g.twitch[kind] = math.max(g.twitch[kind], twitch(serverNow - (slot - back) * 0.4))
+			end
+		end
+		if mode == "walk" or mode == "retreat" then
+			local jerk = math.floor(serverNow / 1.1)
+			if synced(jerk, 19) < 0.15 then
+				g.twitch.body = twitch(serverNow - jerk * 1.1)
+			end
+		end
+	end
+
 	g.armSwing = {}
 	for i = 1, 2 do
 		g.armSwing[i] = -math.sin(creature.phase + (i - 1) * math.pi) * 1.6 * g.moving
@@ -453,9 +729,19 @@ local function gait(creature, dt, now)
 	-- How far its hands reach forward: a little when running, all the way to grab.
 	g.reach = math.max(if g.running then 0.6 else 0, g.crouch)
 
-	-- The mouth opens while it grabs (see LurkerVisuals.roar).
+	-- The jaw: this mode's set (slack while it watches, opening as it reacts,
+	-- working while it runs, slowly closing when it stops), wide when it
+	-- grabs or roars (see LurkerVisuals.roar).
 	local wide = creature.lunging and now >= (creature.roarAt or 0) or now < (creature.roarUntil or 0)
 	creature.mawOpen += ((if wide then 1 else 0) - creature.mawOpen) * math.min(1, dt * (if wide then 5 else 3))
+	local jaw = style.jaw
+	if mode == "react" then
+		jaw *= ease(0.7, 1.5, since)
+	elseif mode == "chase" then
+		jaw += 6 * math.sin(serverNow * 7)
+	end
+	e.jaw += (jaw - e.jaw) * math.min(1, dt * (if mode == "stop" then 0.8 else 4))
+	g.jaw = math.max(e.jaw, creature.mawOpen * 38)
 	return g
 end
 
@@ -526,44 +812,231 @@ local function poseParts(creature, g)
 	workspace:BulkMoveTo(creature.parts, list, Enum.BulkMoveMode.FireCFrameChanged)
 end
 
+-- The signed turn (radians) round the vertical from forward to direction.
+local function yawTo(forward, direction)
+	local flatDirection = Vector3.new(direction.X, 0, direction.Z)
+	if flatDirection.Magnitude < 1e-3 then
+		return 0
+	end
+	flatDirection = flatDirection.Unit
+	return math.atan2(forward:Cross(flatDirection).Y, forward:Dot(flatDirection))
+end
+
+-- The nearest player's head, seen from position (within the fog), or nil.
+local function nearestHead(position)
+	local best, bestDistance
+	for _, other in Players:GetPlayers() do
+		local root = other.Character and other.Character:FindFirstChild("HumanoidRootPart")
+		if root then
+			local distance = (root.Position - position).Magnitude
+			if distance < 150 and (not best or distance < bestDistance) then
+				best, bestDistance = root.Position + Vector3.new(0, 1.5, 0), distance
+			end
+		end
+	end
+	return best
+end
+
+-- What its head is turned toward this frame (a world point), and how fast
+-- it turns there.
+local function headTarget(creature, g, chest)
+	local mode, since, forward = g.mode, g.since, g.forward
+	local ahead = chest.Position + forward * 30 - Vector3.yAxis * 8 -- the dead stare, down at the water
+	local focus = creature.focus
+	if mode == "react" then
+		-- Snaps round in a blink, holds dead still, then keeps on you.
+		return focus or ahead, if since < 0.12 then 35 elseif since < 0.45 then 0 else 6
+	elseif mode == "chase" or mode == "crawl" or mode == "grab" then
+		return focus or ahead, 12
+	elseif mode == "stop" then
+		return focus or ahead, 6 -- still on the spot where it lost you
+	elseif mode == "retreat" then
+		local slot = math.floor(g.serverNow / 3)
+		local glancing = focus and synced(slot, 23) < 0.4 and g.serverNow - slot * 3 < 1.5
+		return if glancing then focus else ahead, 2.5
+	elseif mode == "idle" then
+		-- Long stares at nothing; now and then the head slowly comes round
+		-- to look at whoever is nearest, the body never moving.
+		local slot = math.floor(g.serverNow / 5)
+		local watching = synced(slot, 21) < 0.45 and nearestHead(chest.Position)
+		return watching or ahead, 1.2
+	end
+	return if creature.alert and focus then focus else ahead, 4
+end
+
 local function poseSkinned(creature, g)
-	local dims, bones = creature.dims, creature.bones
+	local dims, bones, e = creature.dims, creature.bones, creature.ease
 	local forward, right, up = g.forward, g.right, g.up
+	local mode, since, dt = g.mode, g.since, creature.dt or 1 / 60
 	local meshCFrame = CFrame.lookAt(g.position, g.position + forward) * creature.meshOffset
 
 	local hips = place(bones.Hips, meshCFrame, g.pelvis)
 
-	-- The back curls forward more towards the top, then the neck reaches out.
+	-- The body turns after what it's after (the reaction's slow twist), a
+	-- third at each bone of the back.
+	local target, headRate = headTarget(creature, g, hips)
+	local style = MODES[mode]
+	local twist = math.clamp(yawTo(forward, target - g.pelvis), -math.rad(75), math.rad(75)) * style.twist
+	if mode == "react" then
+		twist *= ease(0.5, 1.4, since)
+	end
+	e.twist += (twist - e.twist) * math.min(1, dt * (if mode == "react" then 4 else 2.5))
+	local jerk = g.twitch.body
+	local bodyTwist = e.twist + math.rad(10) * jerk
+
+	-- The back curls forward more towards the top (and arches on all fours),
+	-- then the neck reaches out: thrust ahead in a chase, hanging low on all
+	-- fours, held up out of the water in the glide.
 	local world = hips
-	for i, name in { "Spine02", "Spine01", "Spine" } do
-		local angle = g.hunch * (0.5 + i * 0.3)
-		world = aim(bones[name], world, up * math.cos(angle) + forward * math.sin(angle))
+	local fractions = if mode == "crawl" then { 0.62, 1, 1.08 } else { 0.45, 0.75, 1 }
+	local hunch = g.hunch + math.rad(8) * jerk
+	for k, name in { "Spine02", "Spine01", "Spine" } do
+		local angle = hunch * fractions[k]
+		local toward = turned(forward, up, bodyTwist * k / 3)
+		world = aimTwist(bones[name], world, up * math.cos(angle) + toward * math.sin(angle), bodyTwist / 3)
 	end
 	local chest = world
-	local neck = aim(bones.neck, chest, up * 0.35 + forward * (0.9 + g.crouch * 0.3) - up * g.crouch * 0.4)
-	local head = aim(bones.Head, neck, up * 0.85 + forward * (0.35 - g.crouch * 0.2))
+	local chestForward = turned(forward, up, bodyTwist)
+	local reach = ({ chase = Vector3.new(0.05, 1.3), crawl = Vector3.new(-0.25, 1), glide = Vector3.new(0.25, 0.9), react = Vector3.new(0.4, 0.85) })[mode]
+		or Vector3.new(0.35, 0.9)
+	local neck = aim(bones.neck, chest, up * reach.X + chestForward * (reach.Y + g.crouch * 0.3) - up * g.crouch * 0.4)
 
+	-- The head: its own speed, never turned more than 100 degrees from the
+	-- body, tipped to one side.
+	local wanted = target - neck.Position
+	local yaw = math.clamp(yawTo(chestForward, wanted), -math.rad(100), math.rad(100))
+	local flatWanted = turned(chestForward, up, yaw)
+	local pitch = math.atan2(wanted.Y, Vector3.new(wanted.X, 0, wanted.Z).Magnitude)
+	local face = (flatWanted * math.cos(pitch) + up * math.sin(pitch)).Unit
+	local current = creature.headFace or face
+	current = current:Lerp(face, math.min(1, dt * headRate))
+	creature.headFace = if current.Magnitude > 1e-3 then current.Unit else face
+	face = turned(creature.headFace, up, math.rad(7) * g.twitch.head)
+	local tilt = ({ chase = Vector3.new(0.55, 0.45), crawl = Vector3.new(0.45, 0.55), glide = Vector3.new(0.8, 0.3) })[mode] or Vector3.new(0.85, 0.35)
+	local headUp = turned(up * tilt.X + chestForward * tilt.Y, face, math.rad(e.roll + 8 * g.twitch.head))
+	local head = orient(bones.Head, neck, headUp, face, creature.faceLocal)
+
+	-- The jaw hinges round the head's own side-to-side axis.
+	if bones.Jaw then
+		local rest = head * bones.Jaw.CFrame
+		local side = face:Cross(head.UpVector)
+		if side.Magnitude > 1e-3 then
+			local opened = CFrame.new(rest.Position) * CFrame.fromAxisAngle(side.Unit, -math.rad(g.jaw)) * rest.Rotation
+			bones.Jaw.Transform = rest:Inverse() * opened
+		end
+	end
+
+	-- Shoulders: uneven when it stands, rising and falling with each step in
+	-- the broken walk, hunched up when it hears you, sinking when it gives up.
+	local raises = {
+		idle = { 7, -5 },
+		walk = { 4 + 9 * math.sin(creature.phase), -3 - 9 * math.sin(creature.phase) },
+		glide = { 0, 0 },
+		retreat = { -6, -8 },
+		react = { 20 * ease(0.35, 0.75, since), 20 * ease(0.35, 0.75, since) },
+		chase = { 8, 8 },
+		crawl = { 16, 16 },
+		stop = { -6, -6 },
+		grab = { 5, 15 },
+	}
+	local raise = raises[mode]
+	local raiseRate = if mode == "stop" then 0.8 elseif mode == "react" then 8 else 4
+	e.raiseL += (raise[1] - e.raiseL) * math.min(1, dt * raiseRate)
+	e.raiseR += (raise[2] - e.raiseR) * math.min(1, dt * raiseRate)
+
+	local armLength = dims.upperArm + dims.forearm
+	local surface = SURFACE_Y
 	for i, sign in { -1, 1 } do
 		local side = if sign < 0 then "Left" else "Right"
-		-- Knees bend backwards.
+		-- Knees bend backwards (and splay outwards on all fours).
 		local upLeg = bones[side .. "UpLeg"]
 		local hip = (hips * upLeg.CFrame).Position
 		local foot = g.feet[i]
-		local knee = solve(hip, foot, dims.thigh, dims.shin, -forward + right * sign * 0.15)
+		local kneeHint = if mode == "crawl" then right * sign * 1.2 - forward * 0.5 else -forward + right * sign * 0.15
+		local knee = solve(hip, foot, dims.thigh, dims.shin, kneeHint)
 		local thigh = aim(upLeg, hips, knee - hip)
 		local shin = aim(bones[side .. "Leg"], thigh, foot - knee)
 		aim(bones[side .. "Foot"], shin, forward * 0.6 - up * (0.8 + g.lift[i] * 0.2))
 
 		local collar = bones[side .. "Shoulder"]
-		collar.Transform = CFrame.identity
-		local shoulderWorld = chest * collar.CFrame
 		local upperArm = bones[side .. "Arm"]
+		local collarRest = chest * collar.CFrame
+		local outward = ((collarRest * upperArm.CFrame).Position - collarRest.Position).Unit
+		local lift = math.rad((if i == 1 then e.raiseL else e.raiseR) + 12 * (if i == 1 then g.twitch.shoulderL else g.twitch.shoulderR))
+		local shoulderWorld = aim(collar, chest, outward * math.cos(lift) + up * math.sin(lift))
 		local shoulder = (shoulderWorld * upperArm.CFrame).Position
-		local hand = handTarget(g, shoulder, sign, i, dims.upperArm + dims.forearm)
-		local elbow = solve(shoulder, hand, dims.upperArm, dims.forearm, -forward + right * sign * 0.6)
+
+		-- Where the hand goes in this mode.
+		local hang = shoulder - up * armLength * 0.97 + chestForward * 0.4 + right * sign * 0.5
+		local hand
+		if mode == "walk" or mode == "retreat" then
+			-- Dragging low, the left further behind.
+			hand = shoulder - up * armLength * 0.95 + chestForward * ((if i == 1 then -0.8 else 0.6) + g.armSwing[i] * 0.5) + right * sign * 0.7
+		elseif mode == "glide" then
+			-- Out ahead, sweeping just over the water.
+			local sweep = math.sin(creature.phase * 0.5 + i * 2) * 0.8
+			hand = g.position + chestForward * (armLength * 0.55 + sweep) + right * sign * 1.2
+			hand = Vector3.new(hand.X, surface + 0.2, hand.Z)
+		elseif mode == "react" then
+			hand = creature.hands[i] or hang -- frozen where they were
+		elseif mode == "chase" then
+			hand = shoulder + chestForward * (g.armSwing[i] * 1.6 + 0.8) - up * armLength * 0.6 + right * sign
+			-- Now and then a claw shoots out at you.
+			local slot = math.floor(g.serverNow / 0.9)
+			if creature.focus and synced(slot, 29) < 0.35 and (synced(slot, 31) < 0.5) == (i == 1) then
+				local out = math.sin(math.clamp((g.serverNow - slot * 0.9) / 0.45, 0, 1) * math.pi)
+				local toward = (creature.focus - shoulder)
+				hand = hand:Lerp(shoulder + (if toward.Magnitude > 1e-3 then toward.Unit else chestForward) * armLength * 0.95, out)
+			end
+		elseif mode == "crawl" then
+			-- Planted on the water with each step, the right reaching further.
+			local phase = creature.phase + (if i == 1 then math.pi else 0)
+			local stride = MODES.crawl.stride
+			hand = g.position + chestForward * (2.2 + (if i == 2 then 0.9 else 0) + math.sin(phase) * stride * 0.45) + right * sign * dims.footSpread * 1.9
+			hand = Vector3.new(hand.X, surface - 0.4 + math.max(0, math.cos(phase)) * 1.4, hand.Z)
+		elseif mode == "stop" then
+			-- Still swinging from the run after the body has stopped dead.
+			local sway = 2.4 * math.exp(-1.5 * since) * math.cos(5 * since + i * 0.9)
+			hand = hang + chestForward * sway
+		elseif mode == "grab" and i == 2 then
+			-- One arm lunges for you, then pulls you in toward its mouth.
+			local victim = creature.focus or (shoulder + chestForward * armLength)
+			local pull = ease(0.7, 1.3, since)
+			hand = victim:Lerp(chest.Position + chestForward * 2 + up * 0.5, pull)
+		else
+			hand = handTarget(g, shoulder, sign, i, armLength):Lerp(hang, if mode == "idle" then 1 else 0)
+		end
+		creature.hands[i] = hand
+
+		local elbowHints = {
+			crawl = right * sign * 1.6 + up * 0.9,
+			chase = -forward * 0.6 + right * sign * 0.7 + up * 0.2,
+			glide = right * sign * 0.9 - forward * 0.3 + up * 0.3,
+		}
+		local elbow = solve(shoulder, hand, dims.upperArm, dims.forearm, elbowHints[mode] or (-forward + right * sign * 0.6))
 		local arm = aim(upperArm, shoulderWorld, elbow - shoulder)
 		local forearm = aim(bones[side .. "ForeArm"], arm, hand - elbow)
-		aim(bones[side .. "Hand"], forearm, (hand - elbow).Unit + forward * 0.3 - up * 0.2)
+		-- The hand: claws curled in as it closes on you, flat on all fours, a
+		-- flick of the wrist now and then.
+		local along = (hand - elbow).Unit
+		local wrist = along + forward * 0.3 - up * 0.2
+		if mode == "grab" and i == 2 then
+			wrist = along * 0.4 - up * 0.8 - forward * 0.3 * ease(0.4, 0.8, since)
+		elseif mode == "crawl" then
+			wrist = forward * 0.5 - up * 0.8
+		end
+		local flick = if i == 1 then g.twitch.handL else g.twitch.handR
+		wrist = turned(wrist, right, math.rad(25) * flick)
+		aim(bones[side .. "Hand"], forearm, wrist)
+
+		-- Water dripping off a hand out of the water; ripples where one skims it.
+		if creature.drips then
+			creature.drips[i].Enabled = hand.Y > surface + 0.6 and mode ~= "idle"
+		end
+		if mode == "glide" and os.clock() - (creature.lastHandRipple or 0) > 0.5 and (math.floor(os.clock() * 2) % 2 == 0) == (i == 1) then
+			creature.lastHandRipple = os.clock()
+			ripple(Vector3.new(hand.X, surface + 0.05, hand.Z), 1, 0.75)
+		end
 	end
 
 	local cframes = { [creature.mesh] = meshCFrame }
@@ -588,13 +1061,67 @@ local function poseSkinned(creature, g)
 	workspace:BulkMoveTo(creature.parts, list, Enum.BulkMoveMode.FireCFrameChanged)
 end
 
+-- Its sounds, used sparingly, at the same moments for everyone (from the
+-- server's clock). Now and then, in each mode (which sound, how many seconds
+-- between chances, and the chance):
+--   idle     a slow wet breath (never while it holds its breath), its body
+--            creaking like old wood, water dripping off it
+--   walk     a branch snapping (and each foot squelching down, in gait)
+--   glide    bubbles round it in the water
+--   chase    wood snapping, a snarl (with the steps, panting and growl)
+--   crawl    hissing snarls
+local CALLS = {
+	idle = { { "CreatureBreathing", 4, 0.45 }, { "CreatureCreak", 5, 0.2 }, { "CreatureDrip", 3, 0.2 } },
+	walk = { { "CreatureBranch", 4, 0.25 }, { "CreatureCreak", 5, 0.15 } },
+	retreat = { { "CreatureBreathing", 5, 0.3 }, { "CreatureBranch", 5, 0.2 } },
+	glide = { { "CreatureBubbles", 2.5, 0.6 } },
+	chase = { { "CreatureSnap", 2.5, 0.35 }, { "CreatureSnarl", 3.5, 0.3 } },
+	crawl = { { "CreatureSnarl", 2.5, 0.45 }, { "CreatureSnap", 3, 0.2 } },
+}
+-- And once each, this many seconds into a mode: when it hears you, dead
+-- silence, a sharp breath in as its shoulders rise, then a crack as its body
+-- twists round to you; when it grabs, the thud (the roar is the server's).
+local CUES = {
+	react = { { "CreatureSniff", 0.35 }, { "CreatureNeck", 0.9 } },
+	grab = { { "CreatureImpact", 0.3 } },
+}
+
+local function voice(creature, g)
+	if not creature.voices then
+		return
+	end
+	if creature.cuedFor ~= creature.modeSince then
+		creature.cuedFor, creature.cued, creature.slots = creature.modeSince, {}, {}
+	end
+	for _, cue in CUES[g.mode] or {} do
+		local name, at = cue[1], cue[2]
+		if g.since >= at and not creature.cued[name] then
+			creature.cued[name] = true
+			if g.since < at + 0.5 then -- not long after, coming back into range
+				say(creature, name, math.random())
+			end
+		end
+	end
+	for k, call in CALLS[g.mode] or {} do
+		local name, every, chance = call[1], call[2], call[3]
+		local slot = math.floor(g.serverNow / every)
+		local last = creature.slots[name]
+		creature.slots[name] = slot
+		if last and slot ~= last and synced(slot, 40 + k) < chance and not (name == "CreatureBreathing" and g.holding) then
+			say(creature, name, synced(slot, 50 + k))
+		end
+	end
+end
+
 local function update(creature, dt, now)
+	creature.dt = dt
 	local g = gait(creature, dt, now)
 	if creature.bones then
 		poseSkinned(creature, g)
 	else
 		poseParts(creature, g)
 	end
+	voice(creature, g)
 end
 
 local function track(anchor)
@@ -615,8 +1142,21 @@ local function track(anchor)
 			sound.RollOffMaxDistance = falloff.far
 		end
 	end
+	creature.voices = {}
+	for name, falloff in VOICES do
+		local sound = if falloff.looped
+			then Sounds.loop(name, falloff.volume, "Effects", anchor)
+			else Sounds.at(name, falloff.volume, anchor)
+		if sound then
+			sound.RollOffMode = Enum.RollOffMode.Linear
+			sound.RollOffMinDistance = falloff.near
+			sound.RollOffMaxDistance = falloff.far
+			sound.PlaybackSpeed = falloff.pitch
+			creature.voices[name] = sound
+		end
+	end
 	setAlert(creature)
-	for _, name in { "Alert", "Running", "Lunging" } do
+	for _, name in { "Alert", "Reacting", "Running", "Circling", "Lunging", "Focus" } do
 		anchor:GetAttributeChangedSignal(name):Connect(function()
 			setAlert(creature)
 		end)
@@ -628,6 +1168,7 @@ local function track(anchor)
 		look = Vector3.new(look.X, 0, look.Z)
 		creature.look = if look.Magnitude > 1e-3 then look.Unit else creature.look
 		creature.speed = 0
+		creature.hands = {} -- held where they were, which is back where it came from
 	end)
 	update(creature, 1 / 60, os.clock())
 end

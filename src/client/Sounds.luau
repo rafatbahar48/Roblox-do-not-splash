@@ -59,6 +59,16 @@ function Sounds.loop(name, volume, group, parent)
 	return sound
 end
 
+-- A sound played once from part each time it's asked to (not playing yet),
+-- or nil if it has no id.
+function Sounds.at(name, volume, part)
+	local sound = make(name, volume, "Effects")
+	if sound then
+		sound.Parent = part
+	end
+	return sound
+end
+
 function Sounds.start()
 	local wading = Sounds.loop("Wading", 0)
 	if not wading then
