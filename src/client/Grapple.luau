@@ -21,22 +21,25 @@ local Grapple = {}
 local swinging = false
 local highlight -- round the hook in reach, if any
 
--- The hook you would swing to now: the nearest in reach, not over the
--- platform you're already on. Nil if there's none.
+-- The hook you would swing to now: of those in reach, not over the
+-- platform you're already on, the one meant to be swung to from where you
+-- stand (the nearest From), so a nearer ring behind you or off to the side
+-- doesn't take you the wrong way. Nil if there's none.
 function Grapple.target()
 	local character = player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart")
 	if not root or swinging then
 		return nil
 	end
-	local best, bestDistance
+	local best, bestStart
 	for _, hook in CollectionService:GetTagged("GrappleHook") do
-		local landAt = hook:GetAttribute("LandAt")
-		if typeof(landAt) == "Vector3" then
+		local landAt, from = hook:GetAttribute("LandAt"), hook:GetAttribute("From")
+		if typeof(landAt) == "Vector3" and typeof(from) == "Vector3" then
 			local distance = (hook.Position - root.Position).Magnitude
 			local across = Vector2.new(landAt.X - root.Position.X, landAt.Z - root.Position.Z).Magnitude
-			if distance <= Config.Grapple.Range and across > 5 and (not best or distance < bestDistance) then
-				best, bestDistance = hook, distance
+			local start = Vector2.new(from.X - root.Position.X, from.Z - root.Position.Z).Magnitude
+			if distance <= Config.Grapple.Range and across > 5 and (not best or start < bestStart) then
+				best, bestStart = hook, start
 			end
 		end
 	end

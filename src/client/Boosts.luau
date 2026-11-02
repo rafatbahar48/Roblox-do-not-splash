@@ -2,7 +2,8 @@
 -- Hush, G (or X) a grapple, to the hook in reach (Grapple.luau); so do the
 -- HUD's boost buttons (Hud.luau), which show while you carry any (the
 -- grapple's also while a hook is in reach: with none, it buys one for coins
--- and swings). The server checks and spends the boost (server/Shop.luau) and
+-- and swings, except at a hook over a stage's route, which is free). The
+-- server checks and spends the boost (server/Shop.luau) and
 -- answers with BoostStarted. Only then does Updraft lift you or the grapple
 -- swing you; Hush happens on the server.
 
@@ -83,7 +84,7 @@ end
 local buying = false
 
 -- Asks the server to use one of boost id, if you carry any. A grapple needs
--- a hook in reach; with none left, it buys one first.
+-- a hook in reach; with none left, it buys one first, unless the hook is free.
 function Boosts.use(id)
 	local carried = player:GetAttribute("Boost_" .. id) or 0
 	if id ~= "grapple" then
@@ -96,7 +97,7 @@ function Boosts.use(id)
 	if not hook then
 		return
 	end
-	if carried > 0 then
+	if carried > 0 or hook:GetAttribute("Free") then
 		Remotes.UseBoost:FireServer(id, hook)
 	elseif not buying then
 		buying = true

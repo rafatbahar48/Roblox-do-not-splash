@@ -42,6 +42,7 @@ local COLORS = {
 	text = Color3.fromRGB(232, 224, 204),
 }
 local BARRIER = { Transparency = 1, CanQuery = false, CastShadow = false }
+local FINAL_DOOR_SCALE = 1.5 -- the last stage's doorway, before the way out
 
 local MapBuilder = {}
 
@@ -198,9 +199,12 @@ local function placeShell(rng, specs)
 	return spec, shellPosition
 end
 
+-- A swamp's rafts can sink or creak too (spec.hazard): Hazards.luau goes by
+-- the TileKind attribute.
 local function buildTile(folder, spec, stage, rng)
 	local part = Forest.steppingStone(folder, spec, rng)
-	if spec.kind == "sinking" then
+	local kind = spec.hazard or spec.kind
+	if kind == "sinking" then
 		part:SetAttribute("SinkDelay", stage.sinkDelay or Config.SinkingTile.DefaultDelay)
 	elseif spec.kind == "raft" then
 		local attachment = Instance.new("Attachment")
@@ -227,7 +231,7 @@ local function buildTile(folder, spec, stage, rng)
 		part:SetAttribute("Period", rng:NextNumber(Config.Raft.MinPeriod, Config.Raft.MaxPeriod))
 		part:SetAttribute("Phase", rng:NextNumber(0, math.pi * 2))
 	end
-	part:SetAttribute("TileKind", spec.kind)
+	part:SetAttribute("TileKind", kind)
 	return part
 end
 
@@ -263,9 +267,10 @@ end
 -- thinning out into the fog beyond, never on the islands (or clearings) or,
 -- within nearHalf of the middle, in the way of a jump. open (if given)
 -- makes it a pond instead: only that share of the trees within nearHalf,
--- and those well clear of the jumps.
-local function plantTrees(folder, platforms, links, z0, z1, islands, rng, nearHalf, roamHalf, open)
-	local height = FOREST.TreeHeight
+-- and those well clear of the jumps. scale (1 if left out) makes the trees
+-- taller.
+local function plantTrees(folder, platforms, links, z0, z1, islands, rng, nearHalf, roamHalf, open, scale)
+	local height = { FOREST.TreeHeight[1] * (scale or 1), FOREST.TreeHeight[2] * (scale or 1) }
 	local function plant(x, z, far)
 		for _, island in islands do
 			if math.abs(x) < island.halfX + 4 and z > island.z0 - 4 and z < island.z1 + 4 then
@@ -438,10 +443,10 @@ local function dressSwamp(folder, platforms, links, guarded, poolStart, poolEnd,
 	end
 end
 
--- Lanterns along a swamp's winding route, beside every fourth platform,
--- swapping sides, out of the way of the jumps, and on little islands (some
--- with a dead tree).
-local function hangRouteLanterns(folder, route, platforms, links, lights, rng)
+-- Lanterns along a swamp's winding route, beside every so many platforms
+-- (every), swapping sides, out of the way of the jumps, and on little
+-- islands (some with a dead tree).
+local function hangRouteLanterns(folder, route, platforms, links, lights, rng, every)
 	-- A post in the water there wouldn't stand in a platform or a jump.
 	local function clear(at)
 		for _, spec in platforms do
@@ -462,7 +467,7 @@ local function hangRouteLanterns(folder, route, platforms, links, lights, rng)
 			-- A little island to rest on gets its own, standing on it.
 			local at = Vector3.new(spec.x, 0, spec.z) + across * spec.size * 0.3
 			table.insert(lights, Forest.lantern(folder, at.X, at.Z, rng, -across))
-		elseif i % 4 == 2 then
+		elseif (i - 2) % every == 0 then
 			local at = Vector3.new(spec.x, 0, spec.z) + across * (spec.size / 2 + 2.5)
 			if clear(at) then
 				table.insert(lights, Forest.lantern(folder, at.X, at.Z, rng, -across))
@@ -562,12 +567,12 @@ local function buildRoom(map, index, stage, z0)
 	end
 	if swamp then
 		-- Each route platform knows its place along the route; neighbouring
-		-- rafts are roped together.
+		-- rafts are roped together, unless a far gap or a sinking raft is in it.
 		local rafts = { deck = true, logRaft = true }
 		for step, spec in trail do
 			parts[spec]:SetAttribute("RouteStep", step)
 			local nextOne = trail[step + 1]
-			if nextOne and rafts[spec.kind] and rafts[nextOne.kind] then
+			if nextOne and rafts[spec.kind] and rafts[nextOne.kind] and not nextOne.hooked and spec.hazard ~= "sinking" and nextOne.hazard ~= "sinking" then
 				Forest.rope(tileFolder, spec, nextOne)
 			end
 		end
@@ -599,15 +604,15 @@ local function buildRoom(map, index, stage, z0)
 	})
 	checkpointPad:SetAttribute("Checkpoint", index)
 	if swamp then
-		Forest.stageDoor(folder, padZ, scenery)
+		Forest.stageDoor(folder, padZ, scenery, if index == #Stages then FINAL_DOOR_SCALE else nil)
 	end
 
 	for _, hook in hooks do
-		Forest.grappleHook(folder, hook.from, hook.to, scenery, hook.side)
+		Forest.grappleHook(folder, hook.from, hook.to, scenery, hook.side, hook.free)
 	end
 
 	if swamp then
-		hangRouteLanterns(folder, trail, specs, links, lights, scenery)
+		hangRouteLanterns(folder, trail, specs, links, lights, scenery, stage.lanterns or 4)
 		dressSwamp(folder, specs, links, guarded, poolStart, poolEnd, {
 			{ halfX = startHalf, z0 = landingStart, z1 = poolStart, edge = poolStart },
 			{ halfX = FOREST.IslandHalfWidth, z0 = poolEnd, z1 = z1, edge = poolEnd },
@@ -619,7 +624,7 @@ local function buildRoom(map, index, stage, z0)
 		-- A clearing at the start, so the first platforms are in plain sight.
 		table.insert(islands, { halfX = 12, z0 = poolStart, z1 = poolStart + 14 })
 	end
-	plantTrees(folder, specs, links, z0, z1, islands, scenery, nearHalf, roamHalf, if swamp then 0.35 else nil)
+	plantTrees(folder, specs, links, z0, z1, islands, scenery, nearHalf, roamHalf, if swamp then stage.trees or 0.35 else nil, stage.treeScale)
 	local logBand = if swamp then { 0, wadeHalf - 4 } else { HALF_WIDTH + 6, FOREST.HalfWidth - 4 }
 	scatterDebris(folder, specs, links, poolStart, poolEnd, scenery, logBand, wadeHalf, guarded)
 

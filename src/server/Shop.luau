@@ -100,16 +100,22 @@ function Shop.equip(player, slot, itemId)
 end
 
 -- Spends one boost. Hush is handled here; the client flies for Updraft and
--- swings for the grapple, to target: a hook in reach (Grapple.luau).
+-- swings for the grapple, to target: a hook in reach (Grapple.luau). A hook
+-- over a stage's route is free (Forest.grappleHook), so nobody has to buy
+-- grapples to get through.
 function Shop.useBoost(player, boostId, target)
 	local profile = Progress.getProfile(player)
 	local item = type(boostId) == "string" and Catalog.byId[boostId]
 	local settings = item and item.kind == "boost" and Config.Boosts[item.id]
-	if not profile or not settings or profile.boosts[item.id] <= 0 or not isAlive(player) then
+	if not profile or not settings or not isAlive(player) then
 		return false
 	end
 	local hook = if item.id == "grapple" then Grapple.check(player, target) else nil
 	if item.id == "grapple" and not hook then
+		return false
+	end
+	local free = hook ~= nil and hook:GetAttribute("Free") == true
+	if profile.boosts[item.id] <= 0 and not free then
 		return false
 	end
 	local ready = boostReady[player] or {}
@@ -120,8 +126,10 @@ function Shop.useBoost(player, boostId, target)
 	end
 	ready[item.id] = now + settings.duration + settings.cooldown
 
-	profile.boosts[item.id] -= 1
-	Progress.sync(player)
+	if not free then
+		profile.boosts[item.id] -= 1
+		Progress.sync(player)
+	end
 	if item.id == "hush" then
 		Noise.hush(player, settings.duration)
 	elseif hook then

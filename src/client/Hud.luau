@@ -578,12 +578,15 @@ function Hud.start()
 	end
 
 	-- A boost's button shows while you carry any. The grapple's also shows
-	-- while a hook is in reach, with a + on it when you have none to buy one.
-	local hookInReach = false
+	-- while a hook is in reach, with a + on it when you have none to buy one,
+	-- and no count at all at a hook over the route, which is free.
+	local hookInReach -- the grapple hook in reach, if any
 	local function updateBoosts()
 		for id, button in boostButtons do
 			local count = player:GetAttribute("Boost_" .. id) or 0
-			button.face.Visible = count > 0 or (id == "grapple" and hookInReach)
+			local hook = if id == "grapple" then hookInReach else nil
+			button.face.Visible = count > 0 or hook ~= nil
+			button.count.Visible = not (hook and hook:GetAttribute("Free"))
 			button.count.Label.Text = if count > 0 then tostring(count) else "+"
 		end
 	end
@@ -700,7 +703,7 @@ function Hud.start()
 		if actions.Visible or snowActions.Visible then
 			placeActions()
 		end
-		local reach = inStages and Grapple.target() ~= nil
+		local reach = if inStages then Grapple.target() else nil
 		if reach ~= hookInReach then
 			hookInReach = reach
 			updateBoosts()

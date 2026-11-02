@@ -316,8 +316,10 @@ end
 
 -- A raft model (deck or logRaft) stretched to a side by side square, its top
 -- at turn (the raft's middle, turned its way). Returns its flat top, or nil
--- without a model.
-local function raftModel(folder, kind, side, turn, rng)
+-- without a model. A sinking one (spec.hazard, see Hazards.luau) is
+-- waterlogged: lower in the water and tipped a little, so you can tell, and
+-- fixed to its top so it goes under with it.
+local function raftModel(folder, kind, side, turn, rng, sinking)
 	local mesh = swampModel(kind, rng)
 	if not mesh then
 		return nil
@@ -326,18 +328,39 @@ local function raftModel(folder, kind, side, turn, rng)
 	local height = size.Y * side * 2 / (size.X + size.Z)
 	mesh.Size = Vector3.new(side, height, side)
 	mesh.CFrame = turn * CFrame.new(0, 0.05 - height / 2, 0)
+	if sinking then
+		mesh.CFrame = turn * CFrame.Angles(rng:NextNumber(-0.07, 0.07), 0, rng:NextNumber(0.04, 0.08) * (if rng:NextNumber() < 0.5 then -1 else 1)) * CFrame.new(0, -0.3 - height / 2, 0)
+	end
 	mesh.Parent = folder
-	return walkway(folder, Vector3.new(side, 0.2, side), turn * CFrame.new(0, -0.1, 0))
+	local top = walkway(folder, Vector3.new(side, 0.2, side), turn * CFrame.new(0, -0.1, 0))
+	if sinking then
+		mesh.Anchored = false
+		mesh.Massless = true
+		local weld = Instance.new("WeldConstraint")
+		weld.Part0 = top
+		weld.Part1 = mesh
+		weld.Parent = top
+	end
+	return top
 end
 
 -- A rough raft of planks resting low on the water, turned any which way,
 -- for a swamp (kind "deck"). Its spec size is the circle the jumps are
--- measured to; the planks make a square a little smaller. Returns the
--- middle plank.
+-- measured to; the planks make a square a little smaller. A creaky one
+-- (spec.hazard) is a piece of old dock, its broken posts still standing at
+-- its corners. Returns the middle plank.
 local function deck(folder, spec, top, rng)
 	local side = spec.size * 0.8
 	local turn = CFrame.new(spec.x, top, spec.z) * CFrame.Angles(0, rng:NextNumber(0, math.pi), 0)
-	local modelTop = raftModel(folder, "deck", side, turn, rng)
+	if spec.hazard == "creaky" then
+		for _, corner in { { -1, -1 }, { -1, 1 }, { 1, -1 }, { 1, 1 } } do
+			if rng:NextNumber() < 0.75 then
+				local at = turn * Vector3.new(corner[1] * (side / 2 + 0.1), 0, corner[2] * (side / 2 + 0.1))
+				column(folder, "DockPost", at.X, at.Z, FLOOR_Y, top + rng:NextNumber(0.3, 1.2), 0.55, C.barkDark, Enum.Material.Wood, DECOR)
+			end
+		end
+	end
+	local modelTop = raftModel(folder, "deck", side, turn, rng, spec.hazard == "sinking")
 	if modelTop then
 		return modelTop
 	end
@@ -369,7 +392,7 @@ end
 local function logRaft(folder, spec, top, rng)
 	local side = spec.size * 0.8
 	local turn = CFrame.new(spec.x, top, spec.z) * CFrame.Angles(0, rng:NextNumber(0, math.pi), 0)
-	local modelTop = raftModel(folder, "logRaft", side, turn, rng)
+	local modelTop = raftModel(folder, "logRaft", side, turn, rng, spec.hazard == "sinking")
 	if modelTop then
 		return modelTop
 	end
@@ -550,8 +573,10 @@ end
 -- GrappleHook, whose LandAt attribute is the middle of the platform's top
 -- (and From, the middle of the top of the one before the gap). leanFrom (1
 -- or -1, or random) is which side of the way across the post leans in from.
+-- A free hook (over a stage's route, not a shortcut) swings you over without
+-- using up a grapple (server/Shop.luau); its Free attribute says so.
 -- client/Grapple.luau lights it up while it's in reach.
-function Forest.grappleHook(folder, from, to, rng, leanFrom)
+function Forest.grappleHook(folder, from, to, rng, leanFrom, free)
 	local model = Instance.new("Model")
 	model.Name = "GrappleHook"
 	model.Parent = folder
@@ -596,6 +621,9 @@ function Forest.grappleHook(folder, from, to, rng, leanFrom)
 	})
 	hook:SetAttribute("LandAt", Vector3.new(to.x, top, to.z))
 	hook:SetAttribute("From", Vector3.new(from.x, TILE_TOP + from.raise, from.z))
+	if free then
+		hook:SetAttribute("Free", true)
+	end
 	local rope = Instance.new("Attachment")
 	rope.Name = "Rope"
 	rope.Parent = hook
@@ -609,8 +637,9 @@ end
 -- its sign on top, a warm amber glow filling the opening and a lantern on
 -- either side. Walking through it crosses the stage's checkpoint
 -- (MapBuilder.luau). Tagged StageDoor: its glow only shows as you come near
--- (client/Mood.luau), so it doesn't give the end away through the fog.
-function Forest.stageDoor(folder, z, rng)
+-- (client/Mood.luau), so it doesn't give the end away through the fog. The
+-- last stage's is grand: scale times the size, between two great dead trees.
+function Forest.stageDoor(folder, z, rng, scale)
 	local model = Instance.new("Model")
 	model.Name = "StageDoor"
 	model.Parent = folder
@@ -672,6 +701,14 @@ function Forest.stageDoor(folder, z, rng)
 		lamp.Range = 16
 		lamp.Brightness = 1
 		lamp.Parent = glass
+	end
+	if scale and scale ~= 1 then
+		model.WorldPivot = CFrame.new(0, base, z) -- grows up from the ground
+		model:ScaleTo(scale)
+		for _, side in { -1, 1 } do
+			-- Far enough out and back that their branches don't cross the sign.
+			Forest.deadTree(folder, side * (half * scale + 8), z + rng:NextNumber(4, 6), rng:NextNumber(32, 38), rng, false)
+		end
 	end
 	CollectionService:AddTag(model, "StageDoor")
 	return model

@@ -107,7 +107,9 @@ local function smooth(alpha)
 end
 
 -- Fine TV snow drawn into an image, if this game may draw images (Game
--- Settings > Security > Allow Mesh / Image APIs). Returns nil if it can't.
+-- Settings > Security > Allow Mesh / Image APIs). Returns nil if it can't:
+-- making the image can work where drawing into it doesn't, so it draws the
+-- first frame to find out.
 local function buildSnowImage(parent)
 	local ok, image = pcall(AssetService.CreateEditableImage, AssetService, { Size = SNOW_SIZE })
 	if not ok or not image then
@@ -124,6 +126,9 @@ local function buildSnowImage(parent)
 		end
 		frames[f] = frame
 		task.wait()
+	end
+	if not pcall(image.WritePixelsBuffer, image, Vector2.zero, SNOW_SIZE, frames[1]) then
+		return nil
 	end
 	local label = create("ImageLabel", {
 		Name = "Snow",

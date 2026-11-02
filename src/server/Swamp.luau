@@ -12,15 +12,23 @@
 -- one's far side has the stage's shell; with no side paths, it is on a
 -- little stump a short jump off the route. A shortcut is a far gap
 -- between two route platforms across a bend, under a hook: a grapple
--- skips the long way round, which is still there. The rest of the swamp is
--- strewn with more platforms (scatter), so there's no one clear path: most
--- are a jump from another, making ways off the route that lead nowhere or
--- back onto it a little further on, and some are only a wade.
+-- skips the long way round, which is still there. From stage 3 the route
+-- itself crosses gaps too far to jump (crossings), under free hooks, and
+-- nothing else makes a way round them: you swing, or wade. A fork is a
+-- second way between two route platforms, across the inside of a bend:
+-- shorter, on little stumps with long jumps between them. The rest of the
+-- swamp is strewn with more platforms (scatter), so there's no one clear
+-- path: most are a jump from another, making ways off the route that lead
+-- nowhere or back onto it a little further on, and some are only a wade.
+-- Some rafts are waterlogged and sink a moment after you land (sinking),
+-- and some plank rafts are old docks that creak (creaky), as Hazards.luau
+-- has them do.
 --
 -- Platforms are specs as in MapBuilder.luau: { kind, size, x, z, raise },
 -- kind "stump", "deck" (planks), "logRaft" (logs tied together), "mound"
 -- or "log" (Forest.luau). size is the width a jump is measured to; a log's
--- is its length, and its dir (a Vector2) the way it lies.
+-- is its length, and its dir (a Vector2) the way it lies. A raft can have a
+-- hazard, "sinking" or "creaky".
 -- Everything is laid out from one Random, so a stage comes out the same
 -- every time.
 
@@ -36,16 +44,21 @@ local SHELL_SIZE = 7 -- the platform across a side path's far gap
 local NOOK_SIZE = 4.5 -- the shell's stump just off the route, in a stage without side paths
 local SIDE_MARGIN = 8 -- how far in from the swamp's sides the route turns
 local LOG_WIDTH = 2.4 -- a fallen log's thickness (Forest.luau's walkLog)
+local LANDING_SIZE = { 5.5, 7 } -- the platforms either side of a crossing, before smaller
+local FORK_SIZE = { 3.2, 4 } -- a fork's little stumps
+local FORK_SKIP = 8 -- how many route platforms a fork skips at least
 local TRIES = 40
 
 -- The runs the route is made of (Stages.luau's styles weight them): how
 -- many platforms in a run, which kinds, how wide (nil: the stage's
 -- tileSize), and their gaps as a share of the stage's. Scattered
 -- platforms are picked by the same weights, scatter wide.
+-- Little stumps and rafts are smaller in a later stage (Stages.luau's
+-- smaller).
 local STYLES = {
-	stumps = { count = { 3, 5 }, kinds = { stump = 1 }, size = { 3.6, 4.6 }, scatter = { 3.2, 4.6 }, gap = 0.65 }, -- a row of little stumps
+	stumps = { count = { 3, 5 }, kinds = { stump = 1 }, size = { 3.6, 4.6 }, scatter = { 3.2, 4.6 }, gap = 0.65, shrinks = true }, -- a row of little stumps
 	wide = { count = { 2, 4 }, kinds = { stump = 1 }, scatter = { 4.5, 7 }, gap = 1 },
-	rafts = { count = { 2, 4 }, kinds = { deck = 1, logRaft = 1 }, size = { 6.5, 8.5 }, scatter = { 4.5, 8 }, gap = 1 },
+	rafts = { count = { 2, 4 }, kinds = { deck = 1, logRaft = 1 }, size = { 6.5, 8.5 }, scatter = { 4.5, 8 }, gap = 1, shrinks = true },
 	logs = { count = { 1, 1 }, kinds = { log = 1 }, size = { 9, 12 }, scatter = { 6, 11 }, gap = 1 }, -- a fallen log to walk along
 	mounds = { count = { 1, 1 }, kinds = { mound = 1 }, size = { 9, 11.5 }, scatter = { 7, 10 }, gap = 1 }, -- a little island to rest on
 }
@@ -164,9 +177,13 @@ end
 local function attempt(rng, stage, area)
 	local band = stage.halfWidth
 	local gaps, sizes = stage.gap, stage.tileSize
+	local farGaps = stage.farGap or GRAPPLE.FarGap
+	local shrink = 1 - (stage.smaller or 0)
 	local poolStart, poolEnd = area.poolStart, area.poolEnd
 	local platforms, links, hooks = {}, {}, {}
 	local guarded = {} -- platforms nothing else may come within a jump of
+	local posts = {} -- where the hooks' posts stand in the water (Vector2s)
+	local reach = MAX_JUMP + 1 -- a jump, with some to spare
 
 	local function pickSize()
 		return rng:NextNumber(sizes[1], sizes[2])
@@ -175,7 +192,8 @@ local function attempt(rng, stage, area)
 		return rng:NextNumber(gaps[1], gaps[2])
 	end
 
-	-- Inside the swamp and clear of every platform, and of the pending ones.
+	-- Inside the swamp and clear of every platform, and of the pending ones,
+	-- and of the hooks' posts.
 	local function fits(new, pending, clearance)
 		if math.abs(new.x) > band - new.size / 2 then
 			return false
@@ -188,6 +206,11 @@ local function attempt(rng, stage, area)
 				if apart(new, other) < (clearance or CLEARANCE) then
 					return false
 				end
+			end
+		end
+		for _, post in posts do
+			if (post - Vector2.new(new.x, new.z)).Magnitude < radius(new, true) + 1.2 then
+				return false
 			end
 		end
 		return true
@@ -258,6 +281,15 @@ local function attempt(rng, stage, area)
 		local dz = math.max(0, poolEnd - p.z)
 		return math.sqrt(dx * dx + dz * dz) - radius(p) <= gaps[2]
 	end
+	-- Within a jump, with some to spare, of the start or the end island.
+	local function nearStart(p)
+		local dx = math.max(0, math.abs(p.x) - area.startHalf)
+		return math.sqrt(dx * dx + (p.z - poolStart) ^ 2) - radius(p, true) <= reach
+	end
+	local function nearEnd(p)
+		local dx = math.max(0, math.abs(p.x) - area.endHalf)
+		return math.sqrt(dx * dx + (poolEnd - p.z) ^ 2) - radius(p, true) <= reach
+	end
 
 	-- The first point on the curve past cursor that is distance from p.
 	local cursor = 1
@@ -291,51 +323,120 @@ local function attempt(rng, stage, area)
 	local prev = { x = startX, z = poolStart, size = 0 } -- the start island's edge
 	local style, runLeft = nil, 0
 	local wobble = math.rad(stage.wobble or 30)
-	while #route == 0 or not reachesEnd(route[#route]) do
-		if #route > 150 then
+
+	-- The crossings: spread along the curve, none near either end, each so
+	-- many far gaps in a row. crossAt holds the route place of the platform
+	-- before each far gap.
+	local targets, crossAt = {}, {}
+	local crossings = stage.crossings or {}
+	for k, count in crossings do
+		local share = 0.12 + 0.68 * (k - 0.5) / #crossings + rng:NextNumber(-0.04, 0.04)
+		table.insert(targets, { at = math.floor(#curve * share), count = count })
+	end
+	local farLeft = 0 -- far gaps still to cross at this crossing
+
+	-- Would new be a jump from the start island or from route[1..upTo]?
+	-- Nothing past a crossing may be: it would be a way round.
+	local function wayRound(new, upTo)
+		if not upTo then
+			return false
+		end
+		if nearStart(new) then
+			return true
+		end
+		for a = 1, upTo do
+			if apart(new, route[a]) <= reach then
+				return true
+			end
+		end
+		return false
+	end
+	-- Turns the point ahead of from about the curve by up to wobble (times
+	-- by), keeping its distance.
+	local function veered(from, at, by)
+		local veer = rng:NextNumber(-wobble, wobble) * by
+		local ahead = at - from
+		local c, s = math.cos(veer), math.sin(veer)
+		return from + Vector2.new(ahead.X * c - ahead.Y * s, ahead.X * s + ahead.Y * c)
+	end
+
+	while #route == 0 or farLeft > 0 or not reachesEnd(route[#route]) do
+		if #route > 200 then
 			return nil
 		end
-		if runLeft <= 0 then
-			style = STYLES[nextStyle()] or STYLES.wide
-			runLeft = rng:NextInteger(style.count[1], style.count[2])
+		if farLeft == 0 and #route > 0 and targets[1] and cursor >= targets[1].at then
+			farLeft = table.remove(targets, 1).count
 		end
 		local placed, placedAt
-		for try = 1, 6 do
-			-- After a few misfits, fall back on a plain stump.
-			local use = if try > 3 then STYLES.wide else style
-			local kind = pickKind(rng, use.kinds)
-			local size = if use.size then rng:NextNumber(use.size[1], use.size[2]) else pickSize()
-			local gap = math.max(1.5, pickGap() * use.gap)
-			local from = Vector2.new(prev.x, prev.z)
-			local at, i = along(from, radius(prev) + gap + radius({ kind = kind, size = size }))
-			if not at then
-				return nil
-			end
-			if at.Y + size / 2 > poolEnd - 1.5 then
-				-- Nearly there: a little stump that fits in front of the island.
-				kind, size = "stump", 3.6
-				at, i = along(from, radius(prev) + gap + size / 2)
-			end
-			if at then
-				-- Veer off the curve, keeping the gap (less after a misfit).
-				local veer = rng:NextNumber(-wobble, wobble) * (if try > 3 then 0.3 else 1)
-				local ahead = at - from
-				local c, s = math.cos(veer), math.sin(veer)
-				at = from + Vector2.new(ahead.X * c - ahead.Y * s, ahead.X * s + ahead.Y * c)
-				local candidate = spec(math.clamp(at.X, -band + size / 2, band - size / 2), at.Y, size, 0, kind)
-				if kind == "log" then
-					-- Lying straight back at the platform you jump from.
-					candidate.dir = (Vector2.new(candidate.x, candidate.z) - Vector2.new(prev.x, prev.z)).Unit
+		-- Measured from where you jump: a log's far end, as it lies the way
+		-- you walked onto it, or the middle of anything else.
+		local from, fromEdge = Vector2.new(prev.x, prev.z), radius(prev)
+		if prev.kind == "log" then
+			from, fromEdge = from + prev.dir * (prev.size / 2), LOG_WIDTH / 2
+		end
+		if farLeft > 0 then
+			-- Across a far gap, under a free hook, onto a landing big enough
+			-- to come down on safely.
+			for _ = 1, 8 do
+				local kind = pickKind(rng, { stump = 1, deck = 1, logRaft = 1 })
+				local size = rng:NextNumber(LANDING_SIZE[1], LANDING_SIZE[2]) * shrink
+				local gap = rng:NextNumber(farGaps[1], farGaps[2])
+				local at, i = along(from, fromEdge + gap + radius({ kind = kind, size = size }))
+				if not at or at.Y + size / 2 > poolEnd - 1.5 then
+					return nil
 				end
-				local jump = edgeGap(candidate, prev)
-				if jump <= math.min(MAX_JUMP, gaps[2] + 0.3) and apart(candidate, prev) >= CLEARANCE and fits(candidate) then
+				at = veered(from, at, 0.3)
+				local candidate = spec(math.clamp(at.X, -band + size / 2, band - size / 2), at.Y, size, 0, kind)
+				if apart(candidate, prev) >= farGaps[1] - 0.5 and edgeGap(candidate, prev) <= farGaps[2] + 0.5 and fits(candidate) and not wayRound(candidate, #route - 1) then
 					placed, placedAt = candidate, i
 					break
 				end
 			end
-		end
-		if not placed then
-			return nil
+			if not placed then
+				return nil
+			end
+			placed.hooked = true
+			table.insert(crossAt, #route)
+			farLeft -= 1
+		else
+			if runLeft <= 0 then
+				style = STYLES[nextStyle()] or STYLES.wide
+				runLeft = rng:NextInteger(style.count[1], style.count[2])
+			end
+			for try = 1, 6 do
+				-- After a few misfits, fall back on a plain stump.
+				local use = if try > 3 then STYLES.wide else style
+				local kind = pickKind(rng, use.kinds)
+				local size = if use.size then rng:NextNumber(use.size[1], use.size[2]) * (if use.shrinks then shrink else 1) else pickSize()
+				local gap = math.max(1.5, pickGap() * use.gap)
+				local at, i = along(from, fromEdge + gap + radius({ kind = kind, size = size }))
+				if not at then
+					return nil
+				end
+				if at.Y + size / 2 > poolEnd - 1.5 then
+					-- Nearly there: a little stump that fits in front of the island.
+					kind, size = "stump", 3.6
+					at, i = along(from, fromEdge + gap + size / 2)
+				end
+				if at then
+					-- Veer off the curve, keeping the gap (less after a misfit).
+					at = veered(from, at, if try > 3 then 0.3 else 1)
+					local candidate = spec(math.clamp(at.X, -band + size / 2, band - size / 2), at.Y, size, 0, kind)
+					if kind == "log" then
+						-- Lying straight back at where you jump from.
+						candidate.dir = (Vector2.new(candidate.x, candidate.z) - from).Unit
+					end
+					local jump = edgeGap(candidate, prev)
+					if jump <= math.min(MAX_JUMP, gaps[2] + 0.3) and apart(candidate, prev) >= CLEARANCE and fits(candidate) and not wayRound(candidate, crossAt[#crossAt]) then
+						placed, placedAt = candidate, i
+						break
+					end
+				end
+			end
+			if not placed then
+				return nil
+			end
+			runLeft -= 1
 		end
 		cursor = placedAt
 		commit({ placed })
@@ -344,7 +445,10 @@ local function attempt(rng, stage, area)
 		end
 		table.insert(route, placed)
 		prev = placed
-		runLeft -= 1
+	end
+	-- Every crossing made before the end.
+	if #targets > 0 then
+		return nil
 	end
 	-- Side paths need room along it to branch off and come back.
 	if #route < (if (stage.branches or 0) > 0 then 12 else 6) then
@@ -474,11 +578,15 @@ local function attempt(rng, stage, area)
 	-- earlier one, across a bend, so a grapple skips the long way round. The
 	-- route still goes round, so they're optional. The hook's post stands
 	-- past the platform, to whichever side is clear (Forest.grappleHook).
-	local function postSide(from, to)
+	local function postAt(from, to, side)
 		local ax, az = unit(to.x - from.x, to.z - from.z)
+		local d = to.size / 2 + 2.2
+		return Vector2.new(to.x + ax * d - az * side * 1.6, to.z + az * d + ax * side * 1.6)
+	end
+	local function postSide(from, to)
 		for _, side in { 1, -1 } do
-			local d = to.size / 2 + 2.2
-			local px, pz = to.x + ax * d - az * side * 1.6, to.z + az * d + ax * side * 1.6
+			local post = postAt(from, to, side)
+			local px, pz = post.X, post.Y
 			local clear = true
 			for _, p in platforms do
 				if math.sqrt((px - p.x) ^ 2 + (pz - p.z) ^ 2) - radius(p, true) < 1.5 then
@@ -521,6 +629,17 @@ local function attempt(rng, stage, area)
 		end
 		return nil
 	end
+	-- The crossings' hooks, which are free. Nothing to stand on may come
+	-- within a jump of their ends (guarded) but the route either side.
+	for _, g in crossAt do
+		local from, to = route[g], route[g + 1]
+		local side = postSide(from, to) or 1
+		table.insert(hooks, { from = from, to = to, side = side, free = true })
+		table.insert(posts, postAt(from, to, side))
+		table.insert(guarded, from)
+		table.insert(guarded, to)
+	end
+
 	for _ = 1, stage.shortcuts or 0 do
 		local best, bestStep, bestSkip, bestFrom
 		for i = 2, #route - 5 do
@@ -543,7 +662,117 @@ local function attempt(rng, stage, area)
 				link(bestFrom, bestStep)
 			end
 			table.insert(hooks, best)
+			table.insert(posts, postAt(best.from, best.to, best.side))
 			link(best.from, best.to)
+		end
+	end
+
+	-- Whether a crossing lies between route places lo and hi (0 is the start
+	-- island, #route + 1 the end island): anything joining them would be a
+	-- way round it.
+	local function spansCrossing(lo, hi)
+		for _, g in crossAt do
+			if lo <= g and hi > g then
+				return true
+			end
+		end
+		return false
+	end
+	-- The first and last route places within a jump of new.
+	local function routeSpan(new)
+		local lo, hi = math.huge, -math.huge
+		for i, p in route do
+			if apart(new, p) <= reach then
+				lo, hi = math.min(lo, i), math.max(hi, i)
+			end
+		end
+		if nearStart(new) then
+			lo, hi = 0, math.max(hi, 0)
+		end
+		if nearEnd(new) then
+			lo, hi = math.min(lo, #route + 1), #route + 1
+		end
+		return lo, hi
+	end
+
+	-- Forks: a second way from one route platform to one further on, more or
+	-- less straight across the inside of a bend, zigzagging over little
+	-- stumps a long jump apart. It skips at least FORK_SKIP platforms of the
+	-- route, crosses no crossing, and comes within a jump of nothing but the
+	-- route round its two ends.
+	local forkGaps = { math.max(gaps[1], gaps[2] - 0.8), math.min(MAX_JUMP, gaps[2] + 0.2) }
+	local function forkChain(a, b)
+		local span = edgeGap(a, b)
+		local ax, az = unit(b.x - a.x, b.z - a.z)
+		local size = rng:NextNumber(FORK_SIZE[1], FORK_SIZE[2])
+		local gap = rng:NextNumber(forkGaps[1], forkGaps[2])
+		local count = math.max(1, math.floor((span - gap) / (size + gap) + 0.5))
+		gap = (span - count * size) / (count + 1)
+		if gap < forkGaps[1] - 0.6 or gap > forkGaps[2] then
+			return nil
+		end
+		local chain = {}
+		local d = radius(a) + gap + size / 2
+		for k = 1, count do
+			local off = (if k % 2 == 0 then 1 else -1) * rng:NextNumber(0.4, 1.4)
+			table.insert(chain, spec(a.x + ax * d - az * off, a.z + az * d + ax * off, size * rng:NextNumber(0.92, 1.08)))
+			d += size + gap
+		end
+		local steps = table.clone(chain)
+		table.insert(steps, b)
+		local last = a
+		for _, p in steps do
+			if edgeGap(last, p) > math.min(MAX_JUMP, forkGaps[2] + 0.3) or apart(last, p) < CLEARANCE then
+				return nil
+			end
+			last = p
+		end
+		return chain
+	end
+	for _ = 1, stage.forks or 0 do
+		local made = false
+		for _ = 1, TRIES * 2 do
+			local i = rng:NextInteger(3, math.max(3, #route - FORK_SKIP - 3))
+			local j = math.min(#route - 2, i + FORK_SKIP + rng:NextInteger(0, FORK_SKIP))
+			local a, b = route[i], route[j]
+			local span = edgeGap(a, b)
+			if j - i >= FORK_SKIP and a.kind ~= "log" and b.kind ~= "log" and not a.hooked and not b.hooked and not spansCrossing(i - 2, j + 2) and span > forkGaps[2] * 2 and span < 60 then
+				local chain = forkChain(a, b)
+				if chain and allFit(chain) then
+					-- Round its ends, the route a couple of platforms either way.
+					local near = {}
+					for k = math.max(1, i - 2), math.min(#route, i + 2) do
+						table.insert(near, route[k])
+					end
+					for k = math.max(1, j - 2), math.min(#route, j + 2) do
+						table.insert(near, route[k])
+					end
+					local alone = true
+					for k, p in chain do
+						local except = table.clone(near)
+						table.insert(except, chain[k - 1] or a)
+						table.insert(except, chain[k + 1] or b)
+						alone = alone and outOfReach(p, { platforms, guarded }, except) and not nearStart(p) and not nearEnd(p)
+						for _, post in posts do
+							alone = alone and (post - Vector2.new(p.x, p.z)).Magnitude > p.size / 2 + 1.2
+						end
+					end
+					if alone then
+						commit(chain)
+						local last = a
+						for _, p in chain do
+							link(last, p)
+							last = p
+						end
+						link(last, b)
+						made = true
+						break
+					end
+				end
+			end
+		end
+		if not made then
+			return nil
 		end
 	end
 
@@ -556,7 +785,7 @@ local function attempt(rng, stage, area)
 			local side = if rng:NextNumber() < 0.5 then -1 else 1
 			local d = radius(m) + pickGap() + NOOK_SIZE / 2
 			local nook = spec(m.x - fz * side * d, m.z + fx * side * d, NOOK_SIZE)
-			if fits(nook) then
+			if fits(nook) and not spansCrossing(routeSpan(nook)) and outOfReach(nook, { guarded }) then
 				commit({ nook })
 				link(m, nook)
 				shell = nook
@@ -568,10 +797,10 @@ local function attempt(rng, stage, area)
 	-- The rest of the swamp ----------------------------------------------------
 	-- Platforms all over it, most a jump or so off one already there. None may
 	-- make a way round more than skip platforms of the route (so no jumping
-	-- across a bend), come within a jump of anything off the route (side
-	-- paths, the shell's stump, a shortcut's step), or sit on a jump.
+	-- across a bend) or round a crossing, come within a jump of anything off
+	-- the route (side paths, forks, the shell's stump, a shortcut's step), or
+	-- sit on a jump.
 
-	local reach = MAX_JUMP + 1 -- a jump, with some to spare
 	local skip = stage.skip or 3
 	local routeIndex, offRoute = {}, {}
 	for i, p in route do
@@ -587,14 +816,10 @@ local function attempt(rng, stage, area)
 	-- end island #route + 1).
 	local scattered, groupOf = {}, {}
 	local function touches(new)
-		local lo, hi, groups = math.huge, -math.huge, {}
+		local lo, hi = routeSpan(new)
+		local groups = {}
 		local function mark(i)
 			lo, hi = math.min(lo, i), math.max(hi, i)
-		end
-		for i, p in route do
-			if apart(new, p) <= reach then
-				mark(i)
-			end
 		end
 		for _, p in scattered do
 			local group = groupOf[p]
@@ -605,16 +830,6 @@ local function attempt(rng, stage, area)
 					mark(group.hi)
 				end
 			end
-		end
-		local function island(half, dz)
-			local dx = math.max(0, math.abs(new.x) - half)
-			return math.sqrt(dx * dx + dz * dz) - radius(new, true) <= reach
-		end
-		if island(area.startHalf, new.z - poolStart) then
-			mark(0)
-		end
-		if island(area.endHalf, poolEnd - new.z) then
-			mark(#route + 1)
 		end
 		return lo, hi, groups
 	end
@@ -644,7 +859,7 @@ local function attempt(rng, stage, area)
 		end
 		local style = STYLES[pickKind(rng, stage.styles)] or STYLES.wide
 		local kind = pickKind(rng, style.kinds)
-		local size = rng:NextNumber(style.scatter[1], style.scatter[2])
+		local size = rng:NextNumber(style.scatter[1], style.scatter[2]) * (if style.shrinks then shrink else 1)
 		local new
 		if rng:NextNumber() < 0.7 then
 			-- A jump or so off a platform already there, any way round.
@@ -666,7 +881,7 @@ local function attempt(rng, stage, area)
 		end
 		if fits(new, nil, math.max(CLEARANCE, gaps[1])) and outOfReach(new, { offRoute }) and not onAJump(new) then
 			local lo, hi, groups = touches(new)
-			if hi - lo <= skip then
+			if hi - lo <= skip and not spansCrossing(lo, hi) then
 				commit({ new })
 				table.insert(scattered, new)
 				local group = { lo = lo, hi = hi, members = { new } }
@@ -693,14 +908,73 @@ local function attempt(rng, stage, area)
 		end
 	end
 
+	-- Last, to be sure: no way round a crossing by jumping, however it winds.
+	-- Platforms a jump apart (and the islands) make groups, and each far
+	-- gap's two ends must be in different ones.
+	if #crossAt > 0 then
+		local parent = {}
+		local function find(p)
+			while parent[p] ~= p do
+				parent[p] = parent[parent[p]]
+				p = parent[p]
+			end
+			return p
+		end
+		local function join(a, b)
+			parent[find(a)] = find(b)
+		end
+		local startIsland, endIsland = {}, {}
+		parent[startIsland], parent[endIsland] = startIsland, endIsland
+		for _, p in platforms do
+			parent[p] = p
+		end
+		for n, p in platforms do
+			if nearStart(p) then
+				join(p, startIsland)
+			end
+			if nearEnd(p) then
+				join(p, endIsland)
+			end
+			for m = n + 1, #platforms do
+				if apart(p, platforms[m]) <= reach then
+					join(p, platforms[m])
+				end
+			end
+		end
+		for _, g in crossAt do
+			if find(route[g]) == find(route[g + 1]) then
+				return nil
+			end
+		end
+	end
+
+	-- Waterlogged rafts that sink a moment after you land, and plank rafts
+	-- that are old docks and creak (Hazards.luau): never either side of a
+	-- far gap, nor among the first few on the route.
+	if stage.sinking or stage.creaky then
+		local ends = {}
+		for _, hook in hooks do
+			ends[hook.from], ends[hook.to] = true, true
+		end
+		for _, p in platforms do
+			if (p.kind == "deck" or p.kind == "logRaft") and not ends[p] and (routeIndex[p] or math.huge) > 3 then
+				if rng:NextNumber() < (stage.sinking or 0) then
+					p.hazard = "sinking"
+				elseif p.kind == "deck" and rng:NextNumber() < (stage.creaky or 0) then
+					p.hazard = "creaky"
+				end
+			end
+		end
+	end
+
 	for _, p in platforms do
 		p.raise += area.raise or 0
 	end
 	return {
 		platforms = platforms,
 		links = links, -- pairs a jump (or a grapple) apart: kept clear of trees
-		hooks = hooks, -- { from, to, side? } across each far gap; side is where the hook's post goes
-		route = route,
+		hooks = hooks, -- { from, to, side?, free? } across each far gap; side is where the hook's post goes, free for a crossing
+		route = route, -- in order; a platform past a crossing is hooked
 		shell = shell, -- the platform the shell sits on
 		guarded = guarded, -- the far gaps' ends: nothing to stand on may come within a jump
 	}
@@ -717,7 +991,7 @@ function Swamp.layout(seed, stage, area)
 			return result
 		end
 	end
-	error(("Swamp: couldn't lay out %s; give it more room or fewer branches"):format(stage.name))
+	error(("Swamp: couldn't lay out %s; give it more room, or fewer branches, forks or crossings"):format(stage.name))
 end
 
 return Swamp
