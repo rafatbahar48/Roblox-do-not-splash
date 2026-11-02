@@ -36,7 +36,7 @@ Meshy credits spent: 47 of the agreed 60 (reference views 12, model 30, rig 5). 
 
 | Move | What it does |
 |---|---|
-| Idle | Dead still, a twitch now and then, its head slowly turning to whoever is nearest |
+| Idle | Standing tall and straight like a dead tree, dead still, a twitch now and then, its head slowly turning to whoever is nearest |
 | Broken walk | One leg drags late and its body jerks; it stops mid-step |
 | Water stalk | Crouched low, its hands skimming the water |
 | Reaction | Freezes, its head snaps round and holds, its shoulders rise, its body twists, its jaw opens |

@@ -460,7 +460,7 @@ local function build(anchor)
 		modeSince = os.clock(),
 		stopUntil = 0,
 		retreatUntil = 0,
-		ease = { hips = 0.94, hunch = 30, twist = 0, jaw = 0, raiseL = 7, raiseR = -5, roll = 12 },
+		ease = { hips = 1.06, hunch = 6, twist = 0, jaw = 0, raiseL = 7, raiseR = -5, roll = 8 },
 		headFace = nil, -- where its face looks (world), eased toward its target
 		hands = {}, -- last frame's hand places, held while it freezes
 	}
@@ -547,11 +547,11 @@ end
 -- how high its feet lift, and how fast its body keeps up with where it is
 -- really going (the anchor; lower lags further behind).
 local MODES = {
-	idle = { hips = 0.94, hunch = 30, twist = 0, roll = 12, jaw = 1, stride = 4.5, lift = 1.4, follow = 6 },
+	idle = { hips = 1.06, hunch = 6, twist = 0, roll = 8, jaw = 1, stride = 4.5, lift = 1.4, follow = 6 },
 	walk = { hips = 0.9, hunch = 40, twist = 0.4, roll = 8, jaw = 3, stride = 4.2, lift = 1.5, follow = 3.5 },
 	glide = { hips = 0.66, hunch = 52, twist = 0.25, roll = 4, jaw = 0, stride = 5.5, lift = 0.45, follow = 6 },
 	retreat = { hips = 0.82, hunch = 46, twist = 0, roll = 10, jaw = -3, stride = 4.2, lift = 1.2, follow = 4 },
-	react = { hips = 0.92, hunch = 34, twist = 1, roll = 0, jaw = 18, stride = 4.5, lift = 0, follow = 6 },
+	react = { hips = 0.92, hunch = 22, twist = 1, roll = 0, jaw = 18, stride = 4.5, lift = 0, follow = 6 },
 	chase = { hips = 0.84, hunch = 68, twist = 0.3, roll = 0, jaw = 16, stride = 8.5, lift = 3.2, follow = 10 },
 	crawl = { hips = 0.48, hunch = 82, twist = 0.2, roll = -10, jaw = 12, stride = 5, lift = 1.1, follow = 9 },
 	stop = { hips = 0.9, hunch = 34, twist = 0.6, roll = 6, jaw = -4, stride = 4.5, lift = 0, follow = 12 },
@@ -562,8 +562,9 @@ local RETREAT_TIME = 14 -- seconds after that it creeps back low, glancing behin
 
 -- What it is doing, from the anchor's flags (server/Lurker.luau) and how it
 -- moves:
---   idle     standing, watching: almost lifeless, long stillnesses, a twitch
---            now and then, the head slowly turning to look at you
+--   idle     standing tall and watching, like a dead tree in the fog: almost
+--            lifeless, long stillnesses, a twitch now and then, the head
+--            slowly turning to look at you
 --   walk     the broken walk: one leg steps, the other drags late, the torso
 --            leaning and lagging behind its feet, stopping mid-step
 --   glide    the water stalk: crouched low, arms out ahead skimming the
@@ -902,8 +903,13 @@ local function poseSkinned(creature, g)
 	end
 	local chest = world
 	local chestForward = turned(forward, up, bodyTwist)
-	local reach = ({ chase = Vector3.new(0.05, 1.3), crawl = Vector3.new(-0.25, 1), glide = Vector3.new(0.25, 0.9), react = Vector3.new(0.4, 0.85) })[mode]
-		or Vector3.new(0.35, 0.9)
+	local reach = ({
+		chase = Vector3.new(0.05, 1.3),
+		crawl = Vector3.new(-0.25, 1),
+		glide = Vector3.new(0.25, 0.9),
+		react = Vector3.new(0.4, 0.85),
+		idle = Vector3.new(0.8, 0.6), -- standing tall, its head up
+	})[mode] or Vector3.new(0.35, 0.9)
 	local neck = aim(bones.neck, chest, up * reach.X + chestForward * (reach.Y + g.crouch * 0.3) - up * g.crouch * 0.4)
 
 	-- The head: its own speed, never turned more than 100 degrees from the
