@@ -24,7 +24,7 @@ A Roblox horror obby. Cross a drowned forest at night by jumping from stump to s
 - **Five doors, and nobody walks through them.** You stand on a door's pad and either start a party there (you are the host) or join the one waiting. The three stone archways in the middle are party doors, so three parties can get going at once; their host picks Normal or Hard. The door on the far left makes Easy parties, and the one on the far right is for **practice**: no creature, and no coins, shells, stats or records (none of a practice run is saved). The pop-up sets the size (1 to 4) and friends only; others join by stepping on the pad. When the countdown ends the party leaves together for a private server of its own (in Studio, which can't teleport, it goes straight into the cave here instead).
 - **The cave:** every party starts in a cave behind the building, with room to walk about and a supply stall (G) for last-minute shopping. It is gloomy but never too dark, lit by torches, lanterns and glowing crystals, with water dripping and wind blowing in through its wide mouth onto the forest. A few seconds after you arrive, something out there steps on a stick, growls two seconds later, and a note says it is your last chance to grab supplies (with a button to the shop). Practice runs skip that.
 - **Run timer:** starts when you walk out of the cave's mouth and stops at the exit. A run counts for the easiest difficulty played during it. Your best time on each difficulty is saved.
-- **Coins:** earned for each stage cleared, each shell found and each escape. Spend them in the **Shop** (the dock's shop button, the + on your coins, or B).
+- **Coins:** earned for each stage cleared, each shell found and each escape. Spend them in the **Shop** (the dock's shop button, the + on your coins, B, or D-pad left on a controller).
 - **The HUD:** your stage top left, coins bottom left (top left on touch screens, clear of the thumbstick), the run timer top middle, difficulty top right. In the lobby and the cave, big **Shop** and **Bag** buttons (what you own, to wear or take off) sit on the left, and on the right the **Christmas** button (with a LIMITED ribbon and how long is left), **2x Coins** (the Passes tab) and **Join** (Roblox's prompt to join the game's community, with a one-time coin reward; it goes away once paid), then **Stats** (escapes, fastest escape, stages cleared, times caught, shells found, runs started, time played), **Settings** (music, night sounds, sound effects, camera shake, field of view) and **Invite** (Roblox's invite-friends prompt). Out in the forest they make way for the noise meter on the left and round pebble, Updraft, Hush and Grapple buttons bottom right, which work on touch screens too (Grapple also shows near a hook: with a + to buy one there and then, or with no count at all at a free hook on the way through). On touch screens Shop and Bag sit side by side, the right-hand buttons make two rows near the top and the round buttons sit left of the jump button; on small screens (phones, small windows) the whole HUD and the party banner shrink to fit.
 - **The Christmas Bundle** (until New Year, UTC): a limited Robux bundle with the exclusive **Frostbite** skin (ice) and **Santa Hat**, 1,000 coins and 3 Self-Revives. Its window has a countdown and its own SpriteCook art. The skin and hat aren't sold for coins: in the shop they point to the bundle, and once it's over they only show to those who have them.
 - **Robux shop:** two more tabs in the shop. **Robux**: coin packs (Handful, Jar, Chest, Sunken Hoard), the Night Kit bundle (coins, Updrafts, Hushes and 2 Self-Revives), Self-Revives (1 or 3, kept until you need them) and 5-packs of Updraft and Hush. **Passes**: **2× Coins** (double coins from stages, shells and escapes) and **Deep Pockets** (5 pebbles a life and up to 15 of each boost). The + on your coins opens the Robux tab. What each one gives is in `src/shared/RobuxCatalog.luau`.
@@ -75,6 +75,45 @@ Roblox only shows uploaded images, so the parts are packed into atlases, `art/ui
 3. **Robux:** in the Creator Dashboard, open the published game > Monetization. Under **Developer Products** create one for each entry in `Config.Products` (CoinsSmall, CoinsJar, CoinsChest, CoinsHoard, NightKit, SelfRevive1, SelfRevive3, Updraft5, Hush5, and ChristmasBundle while it's on) and under **Passes** one for each in `Config.Passes` (DoubleCoins, DeepPockets), with the names and prices you want, then paste each id into `src/shared/Config.luau`. Anything left at 0 isn't offered in the live game (Studio shows it all, so you can see it). SelfRevive1 is also what the death screen sells when you are short of coins.
 4. **Sounds:** every sound's id is in `Config.Sounds` in `src/shared/Config.luau`. Swap any of them for another from the Creator Store; an empty id is skipped.
 
+## Controllers and consoles (PlayStation, Xbox)
+
+Everything in the game can be played with only a controller, on PC or on a PlayStation or Xbox. Tested in Studio's Device Simulator as a PS5 and an Xbox One with the Controller Emulator: the lobby HUD and its buttons, shop (every tab, buying, scrolling), bag, stats, settings, Christmas window, party and practice pop-ups, party banner, cave note, shop and snow-pile prompts, snowballs, pebbles, Updraft, Hush, a grapple swing, the death screen and the escape window.
+
+| Action | Controller (Xbox / PlayStation) | Keyboard |
+| --- | --- | --- |
+| Move, look, jump | left stick, right stick, A / Cross | WASD, mouse, Space |
+| Throw a pebble (or a snowball in the lobby) | RT / R2 | E |
+| Updraft / Hush | LB / L1, Y / Triangle | Q, F |
+| Grapple, near a hook | X / Square | G |
+| Shop counter, supply stall, snow pile | X / Square at the prompt | G |
+| Shop / Bag | D-pad left / D-pad right | B / (mouse) |
+| The HUD's other buttons: Stats, Settings, Invite, Christmas, 2x Coins, Join, difficulty, coins +, the party banner's Leave | D-pad up, then move with the stick or D-pad and press A / Cross | mouse |
+| In a menu: move, press, back | stick or D-pad, A / Cross, B / Circle | mouse |
+| Shop tabs | LB / RB (L1 / R1) | mouse |
+| Leave a party | step off the pad, or its banner's Leave | the same |
+
+- **Every menu opens with a button already selected** and keeps the selection inside it: the shop on its tab, Settings on Music, Stats on Close, the party pop-up on Create party, the Christmas window on its Robux button, the escape window on Play again, the death screen on Revive (B does nothing there: it has to be answered, or you bleed out on your own). The cave's last-chance note starts on I'm ready, so a jump pressed as it pops up doesn't open the shop. B closes a menu and goes back to where you were (from Settings back to the HUD's Settings button, from there back to the game).
+- **Button hints are Roblox's own icons** (`UserInputService:GetImageForKeyCode`), so a PlayStation pad shows Cross, Square, Triangle, L1 and R2 and an Xbox pad A, X, Y, LB and RT. They show only while you use a controller; on a keyboard the letters come back. The boosts' shop cards show their button instead of "Press Q".
+- **On a TV** (`GuiService:IsTenFootInterface()`, or a large display), the HUD and every window grow with the screen, up to 1.5 times their size on a 1080p screen, and stay inside the TV-safe area, 5% in from each edge (`Candy.TV_SCALE`, `Candy.TV_SAFE`).
+- **On a console the chat window and chat bar are off**, as Roblox's console guidelines ask.
+- **Nothing in the game links outside Roblox.** Join opens Roblox's own community prompt and Invite Roblox's invite prompt (only where the platform allows invites). The social links on the game's page are Roblox's to show or hide per platform.
+- The code is `src/client/Gamepad.luau` (which input you use, the hints, menu selection and B); each window tells it when it opens and closes.
+
+**Testing it in Studio:** in the viewport's device bar pick **PS5**, **PS4** or **Xbox One** (Console), press Play, then open **Virtual controller** (the gamepad icon on that bar) for the Controller Emulator. Clicking the buttons on its pad picture works for every button; some of its keyboard keys (the D-pad's 1 to 4, R1's O) didn't respond in testing, while the face buttons and stick keys did. Close the emulator when you're done: while it's open, every play test has a gamepad plugged in, so the HUD shows controller icons.
+
+### Turning on console
+
+The game is ready for it, but switching it on is your call:
+
+1. **In Studio:** File → **Experience Settings** → **Basic Info** → **Playable Devices** → tick **Console** → **Save**. (Roblox's docs: "Lets you enable each applicable device that supports your game.")
+2. **Or on the Creator Hub:** create.roblox.com → Creations → The Silent Swamp, in its settings for the devices it can be played on (Roblox's docs only describe the Studio way; forum posts put the same checkboxes under Audience → Access Settings).
+
+What Roblox's docs ask of console games (checked 2026-11-01):
+
+- **Content maturity information is required.** "Games designed for consoles always need to provide content maturity information" ([console guidelines](https://create.roblox.com/docs/production/publishing/console-guidelines)). The questionnaire was submitted on 2026-10-31 (Mild, Fear and Violence); keep it up to date in the Creator Hub (Publish settings → Content rating) if scarier things are added.
+- **No chat window on console** (done in `Gamepad.luau`), **every part of the UI reachable with the four directions, select and back**, **TV-safe areas**, and **button icons that match the device** (all done).
+- **PlayStation:** a game turned on for Console is offered on Xbox and PlayStation alike; there's no separate PlayStation switch ("If you have already published an experience to Xbox, your experience will automatically be available to PlayStation", [Roblox's PlayStation launch post](https://devforum.roblox.com/t/roblox-available-now-on-playstation/2641044)). Roblox's docs list no PlayStation-only label limit; the [maturity page](https://create.roblox.com/docs/production/promotion/content-maturity) says Minimal and Mild games are eligible for Roblox Kids (5 to 8) and Roblox Select (9 to 15), so this game's Mild keeps every audience. The launch post also said sponsored ads weren't supported on PlayStation, and that some players press the touchpad to switch the menus to controller navigation (here menus select a button themselves).
+
 ## Changing the game
 
 | What | Where |
@@ -106,6 +145,7 @@ Roblox only shows uploaded images, so the parts are packed into atlases, `art/ui
 | The cave: its size (`Config.Cave`), rock, torches, crystals, stalactites, the supply stall, where a party arrives | `src/server/CaveBuilder.luau` |
 | The cave's sounds, the stick and growl when you arrive and how long after, the last-chance note | `src/client/Cave.luau`, `Config.Cave`, `Config.Sounds` |
 | The party pop-up and banner | `src/client/PartyUi.luau` |
+| Controller buttons, which button each menu starts on, B to close, the hints' icons; how big things get on a TV and its safe margin | `src/client/Gamepad.luau` (each window calls `Gamepad.opened` / `Gamepad.closed`); `Candy.TV_SCALE`, `Candy.TV_SAFE`, `Candy.fit` in `src/shared/Candy.luau`, `src/client/ScreenFit.luau` |
 | Record boards (titles, colours, refresh rate) | `src/server/Leaderboards.luau` |
 | Moonlit lobby and exit lighting, the cave's gloom | `src/client/Mood.luau` |
 | Creature behaviour | `src/server/Lurker.luau`; how long it freezes when it hears you, and how much faster and sharper-eared it gets stage by stage: `Config.Lurker` (`ReactTime`, `StageSpeed`, `StageHearing`) |

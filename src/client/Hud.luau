@@ -18,9 +18,15 @@
 --                 button. On touch screens they sit left of the jump button.
 --
 -- plus short notifications and the escape screen. On small screens it all
--- shrinks to fit (ScreenFit.luau).
+-- shrinks to fit, and on a TV it grows (ScreenFit.luau).
+--
+-- With a controller (Gamepad.luau), the buttons show its buttons: D-pad left
+-- opens the shop, right the bag, and up takes you to the HUD's buttons, the
+-- right-hand grid first.
 
+local ContextActionService = game:GetService("ContextActionService")
 local GroupService = game:GetService("GroupService")
+local GuiService = game:GetService("GuiService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -36,6 +42,7 @@ local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Stages = require(ReplicatedStorage.Shared.Stages)
 local Zones = require(ReplicatedStorage.Shared.Zones)
 local Boosts = require(script.Parent.Boosts)
+local Gamepad = require(script.Parent.Gamepad)
 local Grapple = require(script.Parent.Grapple)
 local SettingsUi = require(script.Parent.SettingsUi)
 local Sounds = require(script.Parent.Sounds)
@@ -320,13 +327,12 @@ function Hud.start()
 	shopButton.Activated:Connect(function()
 		ShopUi.open("shop")
 	end)
-	if UserInputService.KeyboardEnabled then
-		Candy.badge(shopButton, "B", 30, UDim2.fromOffset(-6, -6))
-	end
+	Gamepad.keyHint(shopButton, "B", Enum.KeyCode.DPadLeft, 30, UDim2.fromOffset(-6, -6))
 	local bagButton = pictureButton(leftDock, "dock_bag", "Bag", SIDE_BUTTON, { LayoutOrder = 2 })
 	bagButton.Activated:Connect(function()
 		ShopUi.open("bag")
 	end)
+	Gamepad.keyHint(bagButton, nil, Enum.KeyCode.DPadRight, 30, UDim2.fromOffset(-6, -6))
 
 	-- Right: the Christmas Bundle, 2x Coins and Join, then Stats, Settings, Invite
 	-- Two columns, or on touch screens two rows from near the top, so the grid
@@ -360,6 +366,8 @@ function Hud.start()
 	end)
 	-- The coins it pays, on a lemon tag across its corner.
 	local joinButton = gridButton("dock_community", "Join", joinCommunity)
+	-- D-pad up's hint, on the grid's first button (moved in updateChristmas).
+	local gridHint = Gamepad.keyHint(doubleButton, nil, Enum.KeyCode.DPadUp, 30, UDim2.fromOffset(-6, -6))
 	local rewardTag = Candy.badge(joinButton, "+" .. Config.Community.Reward, 30, UDim2.new(1, 8, 0, -6), Vector2.new(1, 0), Candy.LEMON)
 	rewardTag.Size = UDim2.fromOffset(58, 30)
 	local function updateJoin()
@@ -405,6 +413,7 @@ function Hud.start()
 				then UDim2.fromOffset((i - 1) * step, step + timeLeftRoom)
 				else UDim2.fromOffset(step, (i - 1) * step)
 		end
+		gridHint.Parent = if onSale then christmasButton else doubleButton
 		local left = ChristmasBundle.timeLeft()
 		timeLeftText.Text = if left then ChristmasBundle.shortTime(left) else ""
 	end
@@ -428,17 +437,16 @@ function Hud.start()
 		Parent = fit,
 	})
 	shrinkOnTouch(actions, TOUCH_BUTTONS)
-	-- A round picture button with its key on the top left and how many you
-	-- have on the top right. Returns the face and its count badge.
-	local function actionButton(parent, art, name, key, size, position)
+	-- A round picture button with its key (or the controller's button) on
+	-- the top left and how many you have on the top right. Returns the face
+	-- and its count badge.
+	local function actionButton(parent, art, name, key, button, size, position)
 		local face = pictureButton(parent, art, name, size, { AnchorPoint = Vector2.new(1, 1), Position = position })
-		if UserInputService.KeyboardEnabled then
-			Candy.badge(face, key, 30, UDim2.fromOffset(-4, -4))
-		end
+		Gamepad.keyHint(face, key, button, 30, UDim2.fromOffset(-4, -4))
 		local count = Candy.badge(face, "", 30, UDim2.new(1, 4, 0, -4), Vector2.new(1, 0), Candy.LEMON)
 		return face, count
 	end
-	local pebbleButton, pebbleCount = actionButton(actions, "action_pebble", "Pebble", "E", 112, UDim2.fromScale(1, 1))
+	local pebbleButton, pebbleCount = actionButton(actions, "action_pebble", "Pebble", "E", Enum.KeyCode.ButtonR2, 112, UDim2.fromScale(1, 1))
 	pebbleButton.Activated:Connect(Throw.fromButton)
 
 	-- In the Christmas lobby, the snowball button sits where the pebble's is.
@@ -452,16 +460,16 @@ function Hud.start()
 		Parent = fit,
 	})
 	shrinkOnTouch(snowActions, TOUCH_BUTTONS)
-	local snowButton, snowCount = actionButton(snowActions, "action_snowball", "Snowball", "E", 112, UDim2.fromScale(1, 1))
+	local snowButton, snowCount = actionButton(snowActions, "action_snowball", "Snowball", "E", Enum.KeyCode.ButtonR2, 112, UDim2.fromScale(1, 1))
 	snowButton.Activated:Connect(Throw.fromButton)
 
 	local boostButtons = {}
 	for _, boost in {
-		{ id = "updraft", art = "action_updraft", name = "Updraft", key = "Q", position = UDim2.new(1, -130, 1, -6) },
-		{ id = "hush", art = "action_hush", name = "Hush", key = "F", position = UDim2.new(1, -12, 1, -130) },
-		{ id = "grapple", art = "action_grapple", name = "Grapple", key = "G", position = UDim2.new(1, -130, 1, -130) },
+		{ id = "updraft", art = "action_updraft", name = "Updraft", key = "Q", button = Enum.KeyCode.ButtonL1, position = UDim2.new(1, -130, 1, -6) },
+		{ id = "hush", art = "action_hush", name = "Hush", key = "F", button = Enum.KeyCode.ButtonY, position = UDim2.new(1, -12, 1, -130) },
+		{ id = "grapple", art = "action_grapple", name = "Grapple", key = "G", button = Enum.KeyCode.ButtonX, position = UDim2.new(1, -130, 1, -130) },
 	} do
-		local face, count = actionButton(actions, boost.art, boost.name, boost.key, 88, boost.position)
+		local face, count = actionButton(actions, boost.art, boost.name, boost.key, boost.button, 88, boost.position)
 		face.Activated:Connect(function()
 			Boosts.use(boost.id)
 		end)
@@ -533,14 +541,17 @@ function Hud.start()
 		size = UDim2.new(0.5, -Candy.WINDOW_SIDE - 6, 0, 62),
 		text = "Close",
 	})
-	playAgain.Activated:Connect(function()
+	Gamepad.keyHint(winClose, nil, Enum.KeyCode.ButtonB, 36, UDim2.new(0, 8, 1, -8), Vector2.new(0, 1))
+	local function closeWin()
 		winPanel.Visible = false
+		Gamepad.closed("escaped")
+	end
+	playAgain.Activated:Connect(function()
+		closeWin()
 		Remotes.Restart:FireServer()
 	end)
 	for _, button in { close, winClose } do
-		button.Activated:Connect(function()
-			winPanel.Visible = false
-		end)
+		button.Activated:Connect(closeWin)
 	end
 
 	gui.Parent = player:WaitForChild("PlayerGui")
@@ -661,6 +672,7 @@ function Hud.start()
 		elseif kind == "win" then
 			winDetails.Text = message
 			winPanel.Visible = true
+			Gamepad.opened("escaped", playAgain, closeWin)
 		else
 			showToast(message)
 		end
@@ -689,6 +701,38 @@ function Hud.start()
 		workspace:WaitForChild("Map")
 		hideFoundShells()
 	end)
+
+	-- D-pad left and right: the shop and the bag (as B does on a keyboard);
+	-- up: the HUD's buttons, where B lets go. Not while the selection has
+	-- the D-pad.
+	local function firstGridButton()
+		for _, face in { christmasButton, doubleButton, joinButton, menuButtons[1] } do
+			if face.Visible then
+				return face
+			end
+		end
+		return nil
+	end
+	local function onDpad(action, inputState)
+		if inputState ~= Enum.UserInputState.Begin or GuiService.SelectedObject then
+			return Enum.ContextActionResult.Pass
+		end
+		if action == "OpenShop" then
+			ShopUi.open("shop")
+		elseif action == "OpenBag" then
+			ShopUi.open("bag")
+		elseif rightDock.Visible and gui.Enabled then
+			Gamepad.opened("hud", firstGridButton, function()
+				Gamepad.closed("hud")
+			end, false)
+		else
+			return Enum.ContextActionResult.Pass
+		end
+		return Enum.ContextActionResult.Sink
+	end
+	ContextActionService:BindAction("OpenShop", onDpad, false, Enum.KeyCode.DPadLeft)
+	ContextActionService:BindAction("OpenBag", onDpad, false, Enum.KeyCode.DPadRight)
+	ContextActionService:BindAction("HudButtons", onDpad, false, Enum.KeyCode.DPadUp)
 
 	local shown = 0
 	RunService.RenderStepped:Connect(function(dt)

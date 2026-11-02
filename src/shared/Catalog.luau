@@ -9,6 +9,9 @@
 --          head and shoulders
 -- exclusive  the id of the bundle it comes in (RobuxCatalog.bundles): not
 --          sold for coins, and it has no price
+-- controls (boosts) how to use it, added to its blurb on a keyboard or touch
+--          screen
+-- button   (boosts) its controller button, whose icon its card shows instead
 --
 -- Skins recolour body regions (head, torso, arms, legs). A region left out
 -- keeps the avatar's own colour. Wearing any skin hides shirts and pants.
@@ -189,7 +192,9 @@ Catalog.items = {
 		rarity = "Rare",
 		name = "Updraft",
 		price = 40,
-		blurb = "Fly for 2 seconds. Press Q or tap Updraft.",
+		blurb = "Fly for 2 seconds.",
+		controls = "Press Q or tap Updraft.",
+		button = Enum.KeyCode.ButtonL1,
 		swatch = Color3.fromRGB(170, 230, 255),
 	},
 	{
@@ -198,7 +203,9 @@ Catalog.items = {
 		rarity = "Rare",
 		name = "Hush",
 		price = 30,
-		blurb = "Make no sound at all for 5 seconds. Press F or tap Hush.",
+		blurb = "Make no sound at all for 5 seconds.",
+		controls = "Press F or tap Hush.",
+		button = Enum.KeyCode.ButtonY,
 		swatch = Color3.fromRGB(180, 160, 255),
 	},
 	{
@@ -207,7 +214,9 @@ Catalog.items = {
 		rarity = "Epic",
 		name = "Grapple",
 		price = 35,
-		blurb = "Swing across a gap too far to jump, to the platform under a hook. Press G or tap Grapple near one.",
+		blurb = "Swing across a gap too far to jump, to the platform under a hook.",
+		controls = "Press G or tap Grapple near one.",
+		button = Enum.KeyCode.ButtonX,
 		swatch = Color3.fromRGB(150, 210, 255),
 	},
 }

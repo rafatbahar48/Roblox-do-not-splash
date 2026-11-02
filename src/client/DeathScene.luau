@@ -28,6 +28,7 @@ local TweenService = game:GetService("TweenService")
 local Candy = require(ReplicatedStorage.Shared.Candy)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local Gamepad = require(script.Parent.Gamepad)
 local LurkerVisuals = require(script.Parent.LurkerVisuals)
 local Settings = require(script.Parent.Settings)
 local Sounds = require(script.Parent.Sounds)
@@ -263,6 +264,9 @@ local function build()
 		ZIndex = 6,
 		Parent = gui,
 	}, { create("UISizeConstraint", { MaxSize = Vector2.new(560, 120) }) })
+	-- Bigger on a TV, and the choice under it further down to make room.
+	local tv = if Candy.onTv() then math.max(1, Candy.tvScale(workspace.CurrentCamera.ViewportSize.Y)) else 1
+	create("UIScale", { Scale = tv, Parent = ui.recap })
 	ui.title = create("TextLabel", {
 		BackgroundTransparency = 1,
 		Size = UDim2.new(1, 0, 0, 40),
@@ -313,7 +317,7 @@ local function build()
 	ui.choice = create("Frame", {
 		Name = "Choice",
 		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0.5, 74),
+		Position = UDim2.new(0.5, 0, 0.5, 74 * tv),
 		Size = UDim2.fromOffset(CHOICE_SIZE.X, CHOICE_SIZE.Y),
 		BackgroundTransparency = 1,
 		Visible = false,
@@ -548,6 +552,7 @@ local function surface()
 	ui.flash.BackgroundTransparency = 1
 	ui.recap.GroupTransparency = 1
 	ui.choice.Visible = false
+	Gamepad.closed("death")
 	if hud then
 		hud.Enabled = true
 		hud = nil
@@ -649,6 +654,8 @@ local function play(position, cause, loudness, anchor)
 	later(3.4, function()
 		refreshChoice()
 		ui.choice.Visible = true
+		-- A controller starts on Revive; B does nothing, the choice is yours.
+		Gamepad.opened("death", ui.revive)
 		task.spawn(function()
 			while playing and token == id do
 				refreshChoice()

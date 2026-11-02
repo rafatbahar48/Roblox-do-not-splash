@@ -9,6 +9,7 @@ local Candy = require(ReplicatedStorage.Shared.Candy)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Stages = require(ReplicatedStorage.Shared.Stages)
+local Gamepad = require(script.Parent.Gamepad)
 local Windows = require(script.Parent.Windows)
 
 local player = Players.LocalPlayer
@@ -20,7 +21,7 @@ local TILE = 92
 
 local StatsUi = {}
 
-local gui, playTimeLabel
+local gui, playTimeLabel, closeButton
 local values = {} -- [stat id] = value label
 
 local function count(attribute)
@@ -94,6 +95,7 @@ local function build()
 		BackgroundColor3 = INK,
 		BackgroundTransparency = 0.5,
 		AutoButtonColor = false,
+		Selectable = false,
 		Text = "",
 		Parent = gui,
 	})
@@ -101,6 +103,8 @@ local function build()
 
 	local window, _, close = Candy.window(gui, { size = UDim2.fromOffset(WIDTH, HEIGHT), title = "YOUR RECORD" })
 	close.Activated:Connect(StatsUi.close)
+	Gamepad.keyHint(close, nil, Enum.KeyCode.ButtonB, 36, UDim2.new(0, 8, 1, -8), Vector2.new(0, 1))
+	closeButton = close
 	Candy.fit(window, Vector2.new(WIDTH + 10, HEIGHT + 10), 24)
 
 	local columnWidth = (WIDTH - 2 * Candy.WINDOW_SIDE) / 2
@@ -164,6 +168,7 @@ function StatsUi.close()
 	if gui then
 		gui.Enabled = false
 	end
+	Gamepad.closed("stats")
 end
 
 function StatsUi.toggle()
@@ -177,6 +182,8 @@ function StatsUi.toggle()
 	closeOthers()
 	gui.Enabled = true
 	render()
+	-- Nothing to press but close, so B or A closes it.
+	Gamepad.opened("stats", closeButton, StatsUi.close)
 	-- Keep the time played ticking while it is open.
 	task.spawn(function()
 		while gui.Enabled do

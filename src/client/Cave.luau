@@ -17,6 +17,7 @@ local Candy = require(ReplicatedStorage.Shared.Candy)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Zones = require(ReplicatedStorage.Shared.Zones)
 local ShopUi = require(script.Parent.ShopUi)
+local Gamepad = require(script.Parent.Gamepad)
 local Sounds = require(script.Parent.Sounds)
 local Windows = require(script.Parent.Windows)
 
@@ -37,6 +38,8 @@ local Cave = {}
 
 local note
 local openNote -- closes the other menu windows
+local readyButton -- where a controller starts
+local closeNote
 
 local function root()
 	return player.Character and player.Character:FindFirstChild("HumanoidRootPart")
@@ -84,9 +87,12 @@ local function buildNote()
 	Candy.fit(note, Vector2.new(WIDTH + 10, HEIGHT + 10), 24)
 	local function close()
 		note.Visible = false
+		Gamepad.closed("cave")
 	end
+	closeNote = close
 	openNote = Windows.add(close)
 	closeButton.Activated:Connect(close)
+	Gamepad.keyHint(closeButton, nil, Enum.KeyCode.ButtonB, 36, UDim2.new(0, 8, 1, -8), Vector2.new(0, 1))
 
 	-- A Self-Revive: the second chance.
 	Candy.art("robux_self_revive", { Position = UDim2.fromOffset(SIDE, TOP - 4), Size = UDim2.fromOffset(124, 124), ZIndex = 3, Parent = note })
@@ -119,6 +125,7 @@ local function buildNote()
 		text = "I'm ready",
 	})
 	ready.Activated:Connect(close)
+	readyButton = ready
 	local shop = Candy.button(note, {
 		size = UDim2.new(1, -2 * SIDE - 182, 0, 62),
 		position = UDim2.new(0, SIDE + 182, 1, -Candy.WINDOW_BOTTOM - 66),
@@ -135,6 +142,8 @@ local function showNote()
 	openNote()
 	note.Position = UDim2.fromScale(0.5, 0.58)
 	note.Visible = true
+	-- On I'm ready: a jump pressed as it pops up doesn't open the shop.
+	Gamepad.opened("cave", readyButton, closeNote)
 	TweenService:Create(note, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Position = UDim2.fromScale(0.5, 0.5) }):Play()
 end
 

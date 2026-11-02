@@ -9,6 +9,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Candy = require(ReplicatedStorage.Shared.Candy)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Settings = require(script.Parent.Settings)
+local Gamepad = require(script.Parent.Gamepad)
 local Windows = require(script.Parent.Windows)
 
 local player = Players.LocalPlayer
@@ -22,6 +23,7 @@ local SettingsUi = {}
 
 local gui
 local rows = {} -- [setting id] = function that redraws the row
+local firstControl -- the first row's toggle or minus, where a controller starts
 
 local create = Candy.create
 
@@ -42,7 +44,7 @@ local function toggleRow(row, setting)
 	end)
 	return function()
 		Candy.setArt(toggle, if Settings.get(setting.id) then "toggle_on" else "toggle_off")
-	end
+	end, toggle
 end
 
 local function numberRow(row, setting)
@@ -81,7 +83,7 @@ local function numberRow(row, setting)
 		value.Text = tostring(current)
 		minus.ImageTransparency = if current <= setting.min then 0.6 else 0
 		plus.ImageTransparency = if current >= setting.max then 0.6 else 0
-	end
+	end, minus
 end
 
 local function build()
@@ -99,6 +101,7 @@ local function build()
 		BackgroundColor3 = INK,
 		BackgroundTransparency = 0.5,
 		AutoButtonColor = false,
+		Selectable = false,
 		Text = "",
 		Parent = gui,
 	})
@@ -107,6 +110,7 @@ local function build()
 	local height = Candy.WINDOW_TOP + #Config.Settings * (ROW + GAP) + Candy.WINDOW_BOTTOM + 8
 	local window, _, close = Candy.window(gui, { size = UDim2.fromOffset(WIDTH, height), title = "SETTINGS" })
 	close.Activated:Connect(SettingsUi.close)
+	Gamepad.keyHint(close, nil, Enum.KeyCode.ButtonB, 36, UDim2.new(0, 8, 1, -8), Vector2.new(0, 1))
 	Candy.fit(window, Vector2.new(WIDTH + 10, height + 10), 24)
 
 	for i, setting in Config.Settings do
@@ -125,8 +129,10 @@ local function build()
 			Text = setting.name,
 			Parent = row,
 		})
-		rows[setting.id] = if setting.min then numberRow(row, setting) else toggleRow(row, setting)
-		rows[setting.id]()
+		local redraw, control = (if setting.min then numberRow else toggleRow)(row, setting)
+		rows[setting.id] = redraw
+		firstControl = firstControl or control
+		redraw()
 	end
 
 	gui.Parent = player:WaitForChild("PlayerGui")
@@ -140,6 +146,7 @@ function SettingsUi.close()
 	if gui then
 		gui.Enabled = false
 	end
+	Gamepad.closed("settings")
 end
 
 function SettingsUi.toggle()
@@ -152,6 +159,7 @@ function SettingsUi.toggle()
 	end
 	closeOthers()
 	gui.Enabled = true
+	Gamepad.opened("settings", firstControl, SettingsUi.close)
 end
 
 function SettingsUi.start()

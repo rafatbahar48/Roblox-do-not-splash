@@ -11,7 +11,12 @@
 -- per item: the thing itself in 3D (ShopPreview.luau) on a stage in its
 -- rarity's colour, with a spinning sunburst, twinkling sparkles and a glint
 -- now and then, then its rarity, name, a line about it and one button.
+--
+-- With a controller (Gamepad.luau) it opens on the tab you're on, LB and RB
+-- change tabs, and B closes it.
 
+local ContextActionService = game:GetService("ContextActionService")
+local GuiService = game:GetService("GuiService")
 local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
 local ProximityPromptService = game:GetService("ProximityPromptService")
@@ -26,6 +31,7 @@ local Perks = require(ReplicatedStorage.Shared.Perks)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local RobuxCatalog = require(ReplicatedStorage.Shared.RobuxCatalog)
 local ChristmasBundle = require(script.Parent.ChristmasBundle)
+local Gamepad = require(script.Parent.Gamepad)
 local ItemIcons = require(script.Parent.ItemIcons)
 local ShopPreview = require(script.Parent.ShopPreview)
 local Windows = require(script.Parent.Windows)
@@ -69,6 +75,7 @@ local ShopUi = {}
 local gui, window, titleLabel, footer, emptyLabel
 local coinsLabel
 local tabButtons = {} -- [kind] = button face
+local lastTabHint -- RB's, on the last tab shown
 local cards = {} -- [item id] = { holder, status, button, price, priceText, badge, show }
 local robuxCards = {} -- [offer id] = { holder, status, button, offer, kind, show }
 local robuxPrices = {} -- [offer id] = its price in Robux, once known
@@ -269,7 +276,7 @@ local function makeShow(body, rarityName, preview, figureItem)
 end
 
 -- A card's name, status (on the right) and a line about it, under the stage.
--- Returns the status label.
+-- Returns the status label and the line.
 local function describe(body, name, blurb)
 	text({
 		Name = "ItemName",
@@ -281,7 +288,7 @@ local function describe(body, name, blurb)
 		Text = name,
 		Parent = body,
 	})
-	text({
+	local line = text({
 		Name = "Blurb",
 		Position = UDim2.fromOffset(14, STAGE_HEIGHT + 50),
 		Size = UDim2.new(1, -28, 0, 32), -- two lines
@@ -294,7 +301,7 @@ local function describe(body, name, blurb)
 		Text = blurb,
 		Parent = body,
 	})
-	return text({
+	local status = text({
 		Name = "Status",
 		AnchorPoint = Vector2.new(1, 0),
 		Position = UDim2.new(1, -14, 0, STAGE_HEIGHT + 24),
@@ -305,6 +312,7 @@ local function describe(body, name, blurb)
 		Text = "",
 		Parent = body,
 	})
+	return status, line
 end
 
 -- What a catalog item shows: you in it (skins and accessories), or its 3D
@@ -323,11 +331,16 @@ local function makeCard(item, order, parent)
 	local holder = body.Parent
 	holder.LayoutOrder = order
 	local show = makeShow(body, item.rarity, previewOf(item), item)
-	local status = describe(body, item.name, item.blurb)
+	local status, line = describe(body, item.name, item.blurb)
 	local button, price, priceText = buyButton(body, item)
+	if item.button then
+		-- Its controller button, on the stage's top right.
+		Gamepad.keyHint(body, nil, item.button, 34, UDim2.new(1, -18, 0, 14), Vector2.new(1, 0))
+	end
 	cards[item.id] = {
 		holder = holder,
 		status = status,
+		line = line,
 		button = button,
 		price = price,
 		priceText = priceText,
@@ -475,10 +488,13 @@ function ShopUi.render()
 	titleLabel.Text = MODES[mode].title
 	footer.Text = MODES[mode].footer
 		.. (if mode == "bag" then ("  ·  Self-Revives: %d"):format(player:GetAttribute("SelfRevives") or 0) else "")
-		.. (if UserInputService.KeyboardEnabled and mode == "shop" then "  ·  Press B to close" else "")
+		.. (if UserInputService.KeyboardEnabled and not Gamepad.active() and mode == "shop" then "  ·  Press B to close" else "")
 
 	for _, tab in TABS do
 		tabButtons[tab.kind].Parent.Visible = mode == "shop" or not tab.robux
+		if tabButtons[tab.kind].Parent.Visible then
+			lastTabHint.Parent = tabButtons[tab.kind]
+		end
 		if tab.kind == currentKind then
 			Candy.paint(tabButtons[tab.kind], tab.color)
 		else
@@ -528,6 +544,7 @@ function ShopUi.render()
 		end
 		card.status.Text = statusText
 		card.status.TextColor3 = statusColor
+		card.line.Text = if item.controls and not Gamepad.active() then item.blurb .. " " .. item.controls else item.blurb
 		card.badge.Visible = wearing
 		Candy.paint(card.button, color, if flat then WHITE else INK, flat)
 		card.button.Label.Text = if showPrice then "" else label
@@ -587,6 +604,7 @@ local function build()
 		BackgroundColor3 = INK,
 		BackgroundTransparency = 0.5,
 		AutoButtonColor = false,
+		Selectable = false,
 		Text = "",
 		Parent = gui,
 	})
@@ -595,6 +613,7 @@ local function build()
 	local close
 	window, titleLabel, close = Candy.window(gui, { name = "Window", size = UDim2.fromOffset(WIDTH, HEIGHT) })
 	close.Activated:Connect(ShopUi.close)
+	Gamepad.keyHint(close, nil, Enum.KeyCode.ButtonB, 36, UDim2.new(0, 8, 1, -8), Vector2.new(0, 1))
 	Candy.fit(window, Vector2.new(WIDTH + 10, HEIGHT + 10), 24)
 
 	-- Coins, between the ribbon and the close button. Its + opens the shop.
@@ -652,6 +671,10 @@ local function build()
 		end)
 		tabButtons[tab.kind] = face
 	end
+	-- LB and RB on the corners of the first and last tabs, with a controller
+	-- (the last one moves in render).
+	Gamepad.keyHint(tabButtons[TABS[1].kind], nil, Enum.KeyCode.ButtonL1, 34, UDim2.fromOffset(-12, -12))
+	lastTabHint = Gamepad.keyHint(tabButtons[TABS[#TABS].kind], nil, Enum.KeyCode.ButtonR1, 34, UDim2.new(1, 12, 0, -12), Vector2.new(1, 0))
 
 	local list = create("ScrollingFrame", {
 		Name = "Items",
@@ -664,6 +687,7 @@ local function build()
 		ScrollingDirection = Enum.ScrollingDirection.Y,
 		ScrollBarThickness = 6,
 		ScrollBarImageColor3 = INK,
+		Selectable = false,
 		Parent = window,
 	}, {
 		-- Room above the first row for the WEARING tags.
@@ -715,6 +739,34 @@ local closeOthers = Windows.add(function()
 	ShopUi.close()
 end)
 
+-- The tabs you can change to now (the bag has no Robux tabs).
+local function tabsShown()
+	local shown = {}
+	for _, tab in TABS do
+		if mode == "shop" or not tab.robux then
+			table.insert(shown, tab.kind)
+		end
+	end
+	return shown
+end
+
+-- LB and RB: the tab to the left or right, round the end.
+local function onBumper(_, inputState, input)
+	if inputState ~= Enum.UserInputState.Begin or not (gui and gui.Enabled) then
+		return Enum.ContextActionResult.Pass
+	end
+	local shown = tabsShown()
+	local at = table.find(shown, currentKind) or 1
+	local step = if input.KeyCode == Enum.KeyCode.ButtonL1 then -1 else 1
+	currentKind = shown[(at - 1 + step) % #shown + 1]
+	Candy.click()
+	ShopUi.render()
+	if Gamepad.active() then
+		GuiService.SelectedObject = tabButtons[currentKind]
+	end
+	return Enum.ContextActionResult.Sink
+end
+
 -- Opens the shop ("shop") or your bag ("bag"), on a tab if given ("robux"
 -- for the coin packs). Pressing the same one again closes it.
 function ShopUi.open(newMode, kind)
@@ -734,12 +786,16 @@ function ShopUi.open(newMode, kind)
 	end
 	gui.Enabled = true
 	ShopUi.render()
+	Gamepad.opened("shop", function()
+		return tabButtons[currentKind]
+	end, ShopUi.close)
 end
 
 function ShopUi.close()
 	if gui then
 		gui.Enabled = false
 	end
+	Gamepad.closed("shop")
 end
 
 function ShopUi.toggle()
@@ -781,6 +837,9 @@ function ShopUi.start()
 			ShopUi.toggle()
 		end
 	end)
+	-- Over the bumpers' Updraft (Boosts.luau) while the shop is open.
+	ContextActionService:BindActionAtPriority("ShopTabs", onBumper, false, Enum.ContextActionPriority.High.Value, Enum.KeyCode.ButtonL1, Enum.KeyCode.ButtonR1)
+	Gamepad.changed:Connect(ShopUi.render)
 
 	-- The shop's cottage in the lobby (LobbyBuilder.luau) and the cave's stall open it too.
 	ProximityPromptService.PromptTriggered:Connect(function(prompt)

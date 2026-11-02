@@ -85,17 +85,18 @@ local buying = false
 
 -- Asks the server to use one of boost id, if you carry any. A grapple needs
 -- a hook in reach; with none left, it buys one first, unless the hook is free.
+-- Returns whether it asked.
 function Boosts.use(id)
 	local carried = player:GetAttribute("Boost_" .. id) or 0
 	if id ~= "grapple" then
 		if carried > 0 then
 			Remotes.UseBoost:FireServer(id)
 		end
-		return
+		return carried > 0
 	end
 	local hook = Grapple.target()
 	if not hook then
-		return
+		return false
 	end
 	if carried > 0 or hook:GetAttribute("Free") then
 		Remotes.UseBoost:FireServer(id, hook)
@@ -114,18 +115,21 @@ function Boosts.use(id)
 			end
 		end)
 	end
+	return true
 end
 
+-- A key that does nothing here passes on: X also works the shop's and the
+-- snow pile's prompts.
 local function onAction(actionName, inputState)
 	if inputState ~= Enum.UserInputState.Begin then
 		return Enum.ContextActionResult.Pass
 	end
 	for _, boost in BOOSTS do
-		if boost.action == actionName then
-			Boosts.use(boost.id)
+		if boost.action == actionName and Boosts.use(boost.id) then
+			return Enum.ContextActionResult.Sink
 		end
 	end
-	return Enum.ContextActionResult.Sink
+	return Enum.ContextActionResult.Pass
 end
 
 function Boosts.start()

@@ -6,6 +6,7 @@
 -- connect to. A raised thing's holder includes its lip: give the holder the
 -- size and position, and put things in the returned body.
 
+local GuiService = game:GetService("GuiService")
 local SoundService = game:GetService("SoundService")
 
 local Config = require(script.Parent.Config)
@@ -31,6 +32,13 @@ Candy.LIP = 5 -- how far the darker edge shows under a raised thing
 Candy.WINDOW_TOP = 104
 Candy.WINDOW_SIDE = 30
 Candy.WINDOW_BOTTOM = 30
+
+-- On a TV (a console's), seen from across the room, windows and the HUD
+-- grow with the screen, up to TV_SCALE times their size on a 1080p screen,
+-- and keep TV_SAFE of the screen clear on each side, since some TVs cut the
+-- edges of the picture off.
+Candy.TV_SCALE = 1.5
+Candy.TV_SAFE = 0.05
 
 local INK, WHITE = Candy.INK, Candy.WHITE
 
@@ -276,10 +284,21 @@ function Candy.badge(parent, text, size, position, anchor, color)
 	return badge
 end
 
+-- Whether this screen is a TV.
+function Candy.onTv()
+	return GuiService:IsTenFootInterface() or GuiService.ViewportDisplaySize == Enum.DisplaySize.Large
+end
+
+-- How big things can get on a TV of this height, in pixels.
+function Candy.tvScale(height)
+	return Candy.TV_SCALE * height / 1080
+end
+
 -- A menu window from the kit: the pale panel with a lilac ribbon across its
 -- top left, where the title goes, and a pink close button on its top right.
 -- Things go inside it, WINDOW_TOP below its top edge and WINDOW_SIDE in from
--- its sides. Returns the window, its title and its close button.
+-- its sides. A controller's selection stays inside it. Returns the window,
+-- its title and its close button.
 function Candy.window(parent, props)
 	local window = Candy.art("window", {
 		Name = props.name or "Window",
@@ -287,6 +306,11 @@ function Candy.window(parent, props)
 		Position = UDim2.fromScale(0.5, 0.5),
 		Size = props.size,
 		Active = true, -- clicks on the window don't reach what's behind it
+		SelectionGroup = true,
+		SelectionBehaviorUp = Enum.SelectionBehavior.Stop,
+		SelectionBehaviorDown = Enum.SelectionBehavior.Stop,
+		SelectionBehaviorLeft = Enum.SelectionBehavior.Stop,
+		SelectionBehaviorRight = Enum.SelectionBehavior.Stop,
 		Parent = parent,
 	})
 	local title = Candy.outlined({
@@ -313,14 +337,19 @@ function Candy.window(parent, props)
 	return window, title, close
 end
 
--- Shrinks a window to fit small screens. designSize is the window's size at
--- scale 1, lip included.
+-- Shrinks a window to fit small screens, and grows it on a TV, inside its
+-- safe area. designSize is the window's size at scale 1, lip included.
 function Candy.fit(window, designSize, margin)
 	local scale = create("UIScale", { Parent = window })
 	local camera = workspace.CurrentCamera
 	local function fit()
 		local viewport = camera.ViewportSize
-		scale.Scale = math.min(1, (viewport.X - margin) / designSize.X, (viewport.Y - margin) / designSize.Y)
+		local biggest = 1
+		if Candy.onTv() then
+			biggest = Candy.tvScale(viewport.Y)
+			viewport *= 1 - 2 * Candy.TV_SAFE
+		end
+		scale.Scale = math.min(biggest, (viewport.X - margin) / designSize.X, (viewport.Y - margin) / designSize.Y)
 	end
 	camera:GetPropertyChangedSignal("ViewportSize"):Connect(fit)
 	fit()

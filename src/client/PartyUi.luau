@@ -6,8 +6,10 @@
 -- a button to leave it.
 --
 -- Made of the SpriteCook UI kit's art (shared/Candy.luau). Everything here
--- only asks; the server decides.
+-- only asks; the server decides. With a controller (Gamepad.luau) the pop-up
+-- starts on Create party and B cancels; stepping off the pad leaves too.
 
+local GuiService = game:GetService("GuiService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -16,6 +18,7 @@ local UserInputService = game:GetService("UserInputService")
 local Candy = require(ReplicatedStorage.Shared.Candy)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local Gamepad = require(script.Parent.Gamepad)
 local ScreenFit = require(script.Parent.ScreenFit)
 
 local player = Players.LocalPlayer
@@ -47,10 +50,13 @@ local doorIndex -- the party door the pop-up is for
 local doorMode = "party" -- and what kind it is
 local choice = { size = Config.Party.MaxSize, difficulty = Config.DefaultDifficulty, friendsOnly = false }
 local status -- the server's latest word on our party, or nil
+local createButton -- where a controller starts
+local cancel -- B
 
 local function close()
 	popup.Visible = false
 	doorIndex = nil
+	Gamepad.closed("party")
 end
 
 -- A button that is just a picture from the kit.
@@ -78,6 +84,7 @@ local function buildPopup()
 		Remotes.LeaveParty:FireServer()
 		close()
 	end)
+	Gamepad.keyHint(closeButton, nil, Enum.KeyCode.ButtonB, 36, UDim2.new(0, 8, 1, -8), Vector2.new(0, 1))
 
 	local function row(y, caption)
 		return text({ Position = UDim2.fromOffset(SIDE + 4, y + 10), Size = UDim2.fromOffset(150, 30), TextSize = 22, Text = caption, TextXAlignment = Enum.TextXAlignment.Left, Parent = popup })
@@ -139,7 +146,7 @@ local function buildPopup()
 		Parent = popup,
 	})
 
-	local cancel = Candy.button(popup, {
+	cancel = Candy.button(popup, {
 		size = UDim2.fromOffset(160, 62),
 		position = UDim2.new(0, SIDE, 1, -Candy.WINDOW_BOTTOM - 66),
 		text = "Cancel",
@@ -148,7 +155,7 @@ local function buildPopup()
 		Remotes.LeaveParty:FireServer()
 		close()
 	end)
-	local createButton = Candy.button(popup, {
+	createButton = Candy.button(popup, {
 		size = UDim2.new(1, -2 * SIDE - 172, 0, 62),
 		position = UDim2.new(0, SIDE + 172, 1, -Candy.WINDOW_BOTTOM - 66),
 		text = "Create party",
@@ -167,6 +174,12 @@ local function buildPopup()
 		count.Text = tostring(choice.size)
 		minus.Visible = choice.size > 1
 		plus.Visible = choice.size < Config.Party.MaxSize
+		-- A controller on the one that just went keeps its place on the other.
+		if GuiService.SelectedObject == minus and not minus.Visible then
+			GuiService.SelectedObject = plus
+		elseif GuiService.SelectedObject == plus and not plus.Visible then
+			GuiService.SelectedObject = minus
+		end
 		local offered = mode.difficulties or {}
 		difficultyRow.Visible = #offered > 0
 		modeLine.Visible = mode.line ~= nil
@@ -234,6 +247,10 @@ function PartyUi.start()
 		choice.difficulty = if table.find(offered, last) then last else offered[1]
 		refreshChoices()
 		popup.Visible = true
+		Gamepad.opened("party", createButton, function()
+			Remotes.LeaveParty:FireServer()
+			close()
+		end)
 	end)
 
 	Remotes.PartyStatus.OnClientEvent:Connect(function(newStatus)

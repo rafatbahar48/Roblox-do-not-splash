@@ -15,6 +15,7 @@ local RunService = game:GetService("RunService")
 local Candy = require(ReplicatedStorage.Shared.Candy)
 local Config = require(ReplicatedStorage.Shared.Config)
 local RobuxCatalog = require(ReplicatedStorage.Shared.RobuxCatalog)
+local Gamepad = require(script.Parent.Gamepad)
 local Windows = require(script.Parent.Windows)
 
 local player = Players.LocalPlayer
@@ -32,6 +33,7 @@ local ChristmasBundle = {}
 
 local window, countdown, buyButton, footer
 local openWindow -- closes the other menu windows
+local close
 local price -- in Robux, once Roblox says
 
 local function productId()
@@ -90,11 +92,13 @@ local function build()
 	window = made
 	window.Visible = false
 	Candy.fit(window, Vector2.new(WIDTH + 10, HEIGHT + 10), 24)
-	local function close()
+	close = function()
 		window.Visible = false
+		Gamepad.closed("christmas")
 	end
 	openWindow = Windows.add(close)
 	closeButton.Activated:Connect(close)
+	Gamepad.keyHint(closeButton, nil, Enum.KeyCode.ButtonB, 36, UDim2.new(0, 8, 1, -8), Vector2.new(0, 1))
 
 	-- Left: the picture, LIMITED, and how long is left.
 	local panel = Candy.raised(window, {
@@ -210,11 +214,12 @@ function ChristmasBundle.open()
 		build()
 	end
 	if window.Visible then
-		window.Visible = false
+		close()
 		return
 	end
 	openWindow()
 	window.Visible = true
+	Gamepad.opened("christmas", buyButton, close)
 	if not price and productId() ~= 0 then
 		task.spawn(function()
 			local ok, info = pcall(MarketplaceService.GetProductInfo, MarketplaceService, productId(), Enum.InfoType.Product)
