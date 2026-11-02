@@ -1,7 +1,9 @@
 -- Lighting by where you are: a warm, colourful night in the courtyard and on
 -- the way out, cold moonlit fog in the drowned forest (thicker and darker in
--- a stage with gloom, Stages.luau), with mist drifting low over the water
--- round you, and in the cave between them, gloom you can still see by. The
+-- a stage with gloom, Stages.luau), with faint mist drifting low over the
+-- water round you and a bank of thick fog all round further out, which
+-- moves with you: what's near you stays clear, and what's past it is lost.
+-- In the cave between them, gloom you can still see by. The
 -- contrast is the point: the forest feels darker for having just left
 -- somewhere safe. A stage's STAGE COMPLETE doorway only lights up as you
 -- come near, so you find the end rather than steer for its glow.
@@ -13,6 +15,7 @@ local CollectionService = game:GetService("CollectionService")
 local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
@@ -26,6 +29,7 @@ local CHECK_INTERVAL = 0.25
 local FADE = TweenInfo.new(1.5, Enum.EasingStyle.Sine, Enum.EasingDirection.Out)
 local MIST_TEXTURE = "rbxasset://textures/particles/smoke_main.dds" -- ships with Roblox
 local MIST_AREA = 70 -- studs across, centred on you
+local FOG_BANK = { 40, 60 } -- studs from you: the fog bank's near and far sides (the camera stays nearer, Config.CameraMaxZoom)
 local DOOR_LIT, DOOR_DARK = 45, 75 -- studs: a doorway is fully lit nearer than the first, dark past the second
 
 local SAFE = {
@@ -92,8 +96,8 @@ local CAVE = {
 
 local Mood = {}
 
--- Big, faint puffs drifting low over the water round you. Only this screen
--- sees them, and they follow you about.
+-- Big, very faint puffs drifting low over the water round you. Only this
+-- screen sees them, and they follow you about.
 local function makeMist()
 	local holder = Instance.new("Part")
 	holder.Name = "Mist"
@@ -111,8 +115,8 @@ local function makeMist()
 	emitter.LightInfluence = 0.6
 	emitter.Transparency = NumberSequence.new({
 		NumberSequenceKeypoint.new(0, 1),
-		NumberSequenceKeypoint.new(0.3, 0.86),
-		NumberSequenceKeypoint.new(0.7, 0.88),
+		NumberSequenceKeypoint.new(0.3, 0.94),
+		NumberSequenceKeypoint.new(0.7, 0.95),
 		NumberSequenceKeypoint.new(1, 1),
 	})
 	emitter.Size = NumberSequence.new(14, 22)
@@ -122,6 +126,48 @@ local function makeMist()
 	emitter.SpreadAngle = Vector2.new(180, 10)
 	emitter.Rotation = NumberRange.new(0, 360)
 	emitter.RotSpeed = NumberRange.new(-6, 6)
+	emitter.Enabled = false
+	emitter.Parent = holder
+	holder.Parent = workspace
+	return holder, emitter
+end
+
+-- Thick fog in a ring round you, FOG_BANK studs out: the forest's fog is
+-- thin enough that what's near you is clear, and this hides what's further.
+-- Its puffs move with you, so the clear ring never fills up as you go.
+local function makeFogBank()
+	local holder = Instance.new("Part")
+	holder.Name = "FogBank"
+	holder.Anchored = true
+	holder.CanCollide = false
+	holder.CanQuery = false
+	holder.CanTouch = false
+	holder.CastShadow = false
+	holder.Transparency = 1
+	holder.Size = Vector3.new(FOG_BANK[2] * 2, 1, FOG_BANK[2] * 2)
+	local emitter = Instance.new("ParticleEmitter")
+	emitter.Texture = MIST_TEXTURE
+	emitter.Shape = Enum.ParticleEmitterShape.Disc
+	emitter.ShapeStyle = Enum.ParticleEmitterShapeStyle.Volume
+	emitter.ShapePartial = FOG_BANK[1] / FOG_BANK[2] -- a disc's inner radius
+	emitter.EmissionDirection = Enum.NormalId.Top
+	emitter.LockedToPart = true
+	emitter.Color = ColorSequence.new(Color3.fromRGB(84, 102, 138)) -- dark: paler goes grey against the moon
+	emitter.LightEmission = 0.05
+	emitter.LightInfluence = 0.6
+	emitter.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 1),
+		NumberSequenceKeypoint.new(0.3, 0.6),
+		NumberSequenceKeypoint.new(0.7, 0.62),
+		NumberSequenceKeypoint.new(1, 1),
+	})
+	emitter.Size = NumberSequence.new(22, 30)
+	emitter.Lifetime = NumberRange.new(10, 14)
+	emitter.Rate = 26
+	emitter.Speed = NumberRange.new(0.2, 0.6)
+	emitter.SpreadAngle = Vector2.new(180, 10)
+	emitter.Rotation = NumberRange.new(0, 360)
+	emitter.RotSpeed = NumberRange.new(-4, 4)
 	emitter.Enabled = false
 	emitter.Parent = holder
 	holder.Parent = workspace
@@ -208,6 +254,7 @@ function Mood.start()
 	local currentGloom = 0
 	local wasDying = false
 	local mist, mistEmitter = makeMist()
+	local bank, bankEmitter = makeFogBank()
 
 	local function apply(mood, gloom)
 		local wasDark = current == "dark"
@@ -217,10 +264,23 @@ function Mood.start()
 			TweenService:Create(target, FADE, values[name]):Play()
 		end
 		mistEmitter.Enabled = mood == "dark"
+		bankEmitter.Enabled = mood == "dark"
 		if mood == "dark" and not wasDark then
-			mistEmitter:Emit(100) -- already lying there when you arrive
+			-- Already lying there when you arrive.
+			mistEmitter:Emit(100)
+			bankEmitter:Emit(300)
+		elseif mood ~= "dark" then
+			bankEmitter:Clear() -- it would follow you in
 		end
 	end
+
+	-- The fog bank keeps up with you every frame, or it would jerk along.
+	RunService.Heartbeat:Connect(function()
+		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+		if root then
+			bank.Position = Vector3.new(root.Position.X, Config.Room.SurfaceY + 1.5, root.Position.Z)
+		end
+	end)
 
 	task.spawn(function()
 		while true do

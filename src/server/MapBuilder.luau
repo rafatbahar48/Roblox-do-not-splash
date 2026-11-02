@@ -767,13 +767,13 @@ local function setupLighting()
 	sky.StarCount = 2500
 	sky.Parent = Lighting
 
-	-- The fog: out in the swamp you see the platforms and trees round you,
-	-- while further off fades to blue; the doorway at the end stays dark
-	-- until you're near (client/Mood.luau). Named so Mood can thin it in the
-	-- lobby and cave.
+	-- The fog: thin enough that the platforms and trees round you are clear,
+	-- while further off fades to blue and a bank of thick fog round you hides
+	-- the rest (client/Mood.luau); the doorway at the end stays dark until
+	-- you're near. Named so Mood can thin it in the lobby and cave.
 	local fog = Instance.new("Atmosphere")
 	fog.Name = "Fog"
-	fog.Density = 0.7
+	fog.Density = 0.5
 	fog.Offset = 0.05
 	fog.Color = Color3.fromRGB(116, 136, 164)
 	fog.Decay = Color3.fromRGB(70, 88, 112)
