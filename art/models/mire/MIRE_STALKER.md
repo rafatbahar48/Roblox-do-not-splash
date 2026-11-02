@@ -22,11 +22,11 @@ Meshy credits spent: 47 of the agreed 60 (reference views 12, model 30, rig 5). 
 
 ## In Studio
 
-- The model is `ReplicatedStorage.Creatures.MireStalker` (16 studs tall, facing -Z, its bones under the mesh). It lives only in the place file, so **save the place** after any change to it.
+- The model is `ReplicatedStorage.Creatures.MireStalker` (20 studs tall, facing -Z, its bones under the mesh; it was 16 until 2026-11-02, and its strides grow with it, see `MODEL_LEGS`). It lives only in the place file, so **save the place** after any change to it.
 - The old creature is `ServerStorage.CreatureBackup.Creature`. To bring it back, move it into `ReplicatedStorage.Creatures` and move `MireStalker` out (the folder should hold one model).
 - Attributes on the model: `Eyes`, `EyeOffset`, `EyeSize`, `EyeColor` and `EyeAlertColor` (its glowing eyes), `OwnMouth`, and `CloseUpDistance`, `CloseUpHeight` and `CloseUpAim` (how the death scene frames its mouth).
 - **To remake it:** run `add_jaw.py` in Blender 5.2 (`blender --background --factory-startup --python add_jaw.py`). Import `mire_stalker_jaw.fbx` with Import 3D, then:
-  1. Scale it to 16 studs.
+  1. Scale it to 20 studs (scale 5 in its Scale property), and its eye and close-up attributes by the same amount.
   2. Delete the RootPart, Motor6Ds, AnimationController and InitialPoses folder that the importer adds.
   3. Move the bones under the mesh, and copy the attributes over.
 
@@ -82,6 +82,8 @@ How loud, how far and how deep each one is: `VOICES`. How often: `CALLS` and `CU
 | 9.1 s | You died |
 
 There was exactly one catch and one death each run (no double kill). The death close-up frames its open mouth and eyes well.
+
+**At 20 studs**, after it was made bigger the same day, another hunt behaved the same: it grabbed at 7.3 s and you died at 9.1 s, with one catch and one death. Its grab still reached, and the close-up still framed its face.
 
 **Bugs found and fixed:**
 

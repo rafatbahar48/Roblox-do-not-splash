@@ -46,6 +46,9 @@ local Sounds = require(script.Parent.Sounds)
 
 local ANIMATE_RANGE = 300 -- past the fog
 local SURFACE_Y = Config.Room.SurfaceY
+-- How long the model's legs (thigh and shin, in studs) were when its strides
+-- (MODES) were set; scaled up in Studio, it strides that much further.
+local MODEL_LEGS = 7.4
 
 -- The part-built body's proportions, in studs. It stands about 22 tall.
 local PARTS = {
@@ -386,6 +389,7 @@ local function buildSkinned(creature)
 		upperArm = (rest("LeftForeArm") - rest("LeftArm")).Magnitude,
 		forearm = (rest("LeftHand") - rest("LeftForeArm")).Magnitude,
 	}
+	creature.dims.strideScale = (creature.dims.thigh + creature.dims.shin) / MODEL_LEGS
 	local head = bones.Head.WorldCFrame
 	-- Which way its face looks, in the head bone's own space.
 	creature.faceLocal = if bones.headfront then bones.headfront.CFrame.Position else Vector3.new(0, 0, -1)
@@ -649,7 +653,8 @@ local function gait(creature, dt, now)
 	g.running = mode == "chase" or mode == "crawl"
 	creature.moving += ((if creature.speed > 0.6 then 1 else 0) - creature.moving) * math.min(1, dt * 4)
 	g.moving = creature.moving
-	local stride = style.stride
+	local scale = dims.strideScale or 1
+	local stride = style.stride * scale
 	if mode == "chase" then
 		stride *= 1 + 0.25 * math.sin(creature.phase * 0.31) -- strides of uneven length
 	end
@@ -676,7 +681,7 @@ local function gait(creature, dt, now)
 		local dragging = i == 2 and (mode == "walk" or mode == "retreat")
 		local phase = creature.phase + (i - 1) * math.pi + (if dragging then 0.9 else 0)
 		local swing = math.sin(phase) * stride / 2 * g.moving * (if dragging then 0.75 else 1)
-		local lift = math.max(0, math.cos(phase)) * style.lift * g.moving * (if dragging then 0.25 else 1)
+		local lift = math.max(0, math.cos(phase)) * style.lift * scale * g.moving * (if dragging then 0.25 else 1)
 		g.feet[i] = position + g.right * sign * spread + g.forward * swing + g.up * (dims.ankleHeight + lift)
 		g.lift[i] = lift
 		-- A ripple each time a foot comes down, and a squelch as it stalks.
@@ -991,7 +996,7 @@ local function poseSkinned(creature, g)
 		elseif mode == "crawl" then
 			-- Planted on the water with each step, the right reaching further.
 			local phase = creature.phase + (if i == 1 then math.pi else 0)
-			local stride = MODES.crawl.stride
+			local stride = MODES.crawl.stride * (dims.strideScale or 1)
 			hand = g.position + chestForward * (2.2 + (if i == 2 then 0.9 else 0) + math.sin(phase) * stride * 0.45) + right * sign * dims.footSpread * 1.9
 			hand = Vector3.new(hand.X, surface - 0.4 + math.max(0, math.cos(phase)) * 1.4, hand.Z)
 		elseif mode == "stop" then
