@@ -1,5 +1,5 @@
--- Lighting by where you are: a warm, colourful night in the courtyard and on
--- the way out, cold moonlit fog in the drowned forest (thicker and darker in
+-- Lighting by where you are: a clear moonlit night at the outpost and on the
+-- way out, cold moonlit fog in the drowned forest (thicker and darker in
 -- a stage with gloom, Stages.luau), with faint mist drifting low over the
 -- water round you and a bank of thick fog all round further out, which
 -- moves with you: what's near you stays clear, and what's past it is lost.
@@ -33,33 +33,34 @@ local FOG_BANK = { 40, 60 } -- studs from you: the fog bank's near and far sides
 local DOOR_LIT, DOOR_DARK = 45, 75 -- studs: a doorway is fully lit nearer than the first, dark past the second
 
 local SAFE = {
-	-- Midnight under an open sky: moonlight, a purple-blue fill so the neon
-	-- and lamps stand out, and a soft haze far off.
+	-- The swamp outpost at midnight: cold blue-grey moonlight on the roofs and
+	-- water, a dim blue fill so the shadows stay readable, the lanterns warm
+	-- against it all, and the swamp past the boardwalks fading into blue fog.
 	lighting = {
-		Brightness = 0.9,
-		ExposureCompensation = 0,
-		Ambient = Color3.fromRGB(56, 54, 90),
-		OutdoorAmbient = Color3.fromRGB(62, 62, 104),
-		EnvironmentDiffuseScale = 0.25,
+		Brightness = 2.2,
+		ExposureCompensation = 0.35,
+		Ambient = Color3.fromRGB(52, 58, 76),
+		OutdoorAmbient = Color3.fromRGB(100, 114, 144),
+		EnvironmentDiffuseScale = 0.3,
 	},
 	fog = {
-		Density = 0.2,
-		Offset = 0,
-		Color = Color3.fromRGB(40, 40, 76),
-		Decay = Color3.fromRGB(26, 26, 54),
+		Density = 0.42,
+		Offset = 0.1,
+		Color = Color3.fromRGB(126, 144, 176),
+		Decay = Color3.fromRGB(78, 92, 120),
 		Glare = 0,
-		Haze = 0.5,
+		Haze = 2.4,
 	},
 	grade = {
-		Saturation = 0.18,
-		Contrast = 0.08,
-		TintColor = Color3.fromRGB(255, 250, 255),
+		Saturation = -0.08,
+		Contrast = 0.14,
+		TintColor = Color3.fromRGB(228, 236, 255),
 	},
-	-- A soft halo round the lamps and bulbs, not a glare.
+	-- A soft halo round the lanterns and lit windows, not a glare.
 	bloom = {
-		Intensity = 0.3,
-		Size = 18,
-		Threshold = 1.8,
+		Intensity = 0.5,
+		Size = 24,
+		Threshold = 1.4,
 	},
 }
 

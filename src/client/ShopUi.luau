@@ -877,10 +877,13 @@ function ShopUi.start()
 	ContextActionService:BindActionAtPriority("ShopTabs", onBumper, false, Enum.ContextActionPriority.High.Value, Enum.KeyCode.ButtonL1, Enum.KeyCode.ButtonR1)
 	Gamepad.changed:Connect(ShopUi.render)
 
-	-- The shop's cottage in the lobby (LobbyBuilder.luau) and the cave's stall open it too.
+	-- The lobby's supply store (LobbyBuilder.luau) and the cave's stall open it
+	-- too, and the mannequins in the lobby's skins display open its Premium tab.
 	ProximityPromptService.PromptTriggered:Connect(function(prompt)
 		if prompt.Name == "OpenShop" and not (gui and gui.Enabled and mode == "shop") then
 			ShopUi.open("shop")
+		elseif prompt.Name == "ViewSkin" then
+			ShopUi.open("shop", "premium")
 		end
 	end)
 end

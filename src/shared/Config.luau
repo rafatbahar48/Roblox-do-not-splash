@@ -198,30 +198,28 @@ Config.Room = {
 	DoorWidth = 8,
 	DoorHeight = 10,
 	LightSpacing = 16,
-	-- The lobby is an open courtyard in front of the building the stages are in.
-	LobbyLength = 110,
-	LobbyWidth = 100,
-	FacadeHeight = 30, -- how tall the building's front is
 	ExitLength = 24,
-	-- Stage 1's front wall has three stone archways at these x positions; they
-	-- are party doors now, and nobody walks through (Config.Doors).
+	-- The cave's back wall (behind the lobby's ridge) has shut doorways at
+	-- these x positions, where parties seem to have come in (Config.Doors).
 	EntranceDoors = { 13, 0, -13 },
 }
 
--- The doors on the lobby's building, left to right as you face it. Nobody
--- walks through them: you stand on a door's pad and start a party there (the
--- host) or join the one waiting, and when its countdown ends the party goes
--- into the cave behind, together (server/Parties.luau, client/PartyUi.luau).
---   x     where the door is (the archways are at Room.EntranceDoors)
---   mode  "easy"      an Easy party
---         "party"     the host picks Normal or Hard
---         "practice"  no creature, and no coins or records
+-- The party pads in the lobby (server/LobbyBuilder.luau). You stand on one
+-- and start a party there (the host) or join the one waiting, and when its
+-- countdown ends the party goes into the cave at the start of stage 1,
+-- together (server/Parties.luau, client/PartyUi.luau). Each station's pads
+-- are laid left to right as you face them, in this order.
+--   station  "gate"      in the mouth of the Launch Adventure tunnel
+--            "party"     at the Party station, under its awning
+--   mode     "easy"      an Easy party
+--            "party"     the host picks Normal or Hard
+--            "practice"  no creature, and no coins or records
 Config.Doors = {
-	{ x = 33, mode = "easy" },
-	{ x = 13, mode = "party" },
-	{ x = 0, mode = "party" },
-	{ x = -13, mode = "party" },
-	{ x = -33, mode = "practice" },
+	{ station = "gate", mode = "easy" },
+	{ station = "party", mode = "party" },
+	{ station = "gate", mode = "party" },
+	{ station = "party", mode = "party" },
+	{ station = "gate", mode = "practice" },
 }
 
 -- The cave behind the doors, where a party arrives: the start of stage 1,

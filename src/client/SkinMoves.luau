@@ -14,6 +14,9 @@
 --   bubbles  Cursed Diver: the helmet tilting as it looks about, bubbles
 --            rising from it, a burst now and then
 --
+-- The lobby's mannequins (tagged SkinMannequin, server/LobbyBuilder.luau)
+-- do their skins' moves too, standing still.
+--
 -- Looks only: none of them changes how anyone moves, or how loud they are.
 -- Joints (Motor6Ds, or the AnimationConstraints Roblox's newer avatars have)
 -- are posed through their Transform each frame, on top of the pose Roblox's
@@ -22,6 +25,7 @@
 -- who it is, so a roar comes at the same time for everyone. R15 avatars
 -- only; an R6 one just wears the look.
 
+local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 
@@ -73,7 +77,8 @@ local function isJoint(joint)
 	return joint:IsA("Motor6D") or joint:IsA("AnimationConstraint")
 end
 
-local function track(character, player)
+-- seed keeps one character's moves out of step with another's.
+local function track(character, seed)
 	local joints = {}
 	for name, partName in JOINTS do
 		local part = character:FindFirstChild(partName)
@@ -89,7 +94,7 @@ local function track(character, player)
 		joints = joints,
 		base = {}, -- [joint] = the pose Roblox's animation gave it
 		written = {}, -- [joint] = the pose set on top of that
-		seed = player.UserId % 997,
+		seed = seed,
 		walk = 0,
 		bubbles = {},
 		lastBubble = 0,
@@ -287,23 +292,32 @@ local function step(dt)
 	end
 end
 
+-- Tracks a character while it wears a skin with a move.
+local function follow(character, seed)
+	local function check()
+		-- Back to rest first, so nothing the last move bent stays bent.
+		untrack(character)
+		local move = character:GetAttribute("SkinMove")
+		if move and moves[move] then
+			track(character, seed)
+		end
+	end
+	character:GetAttributeChangedSignal("SkinMove"):Connect(check)
+	check()
+end
+
 local function watch(player)
 	local function onCharacter(character)
-		local function check()
-			-- Back to rest first, so nothing the last move bent stays bent.
-			untrack(character)
-			local move = character:GetAttribute("SkinMove")
-			if move and moves[move] then
-				track(character, player)
-			end
-		end
-		character:GetAttributeChangedSignal("SkinMove"):Connect(check)
-		check()
+		follow(character, player.UserId % 997)
 	end
 	player.CharacterAdded:Connect(onCharacter)
 	if player.Character then
 		onCharacter(player.Character)
 	end
+end
+
+local function onMannequin(model)
+	follow(model, model:GetAttribute("Seed") or 0)
 end
 
 function SkinMoves.start()
@@ -313,6 +327,10 @@ function SkinMoves.start()
 	Players.PlayerAdded:Connect(watch)
 	for _, player in Players:GetPlayers() do
 		watch(player)
+	end
+	CollectionService:GetInstanceAddedSignal("SkinMannequin"):Connect(onMannequin)
+	for _, model in CollectionService:GetTagged("SkinMannequin") do
+		onMannequin(model)
 	end
 	RunService.PreSimulation:Connect(step)
 end

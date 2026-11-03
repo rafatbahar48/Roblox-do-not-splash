@@ -19,10 +19,11 @@ A Roblox horror obby. Cross a drowned forest at night by jumping from stump to s
   - **9, The Hollow Basin:** a great pond the way curves right round, two harder ways across it, little stumps and long swings.
   - **10, The Last Crossing:** the biggest swamp, the longest jumps on the smallest stumps, three far gaps in a row, and a great doorway between two huge dead trees at the end.
 - **Easy, Normal and Hard:** harder modes make you louder and the creature faster.
-- **The lobby** is a big open courtyard at night, under the stars, in front of the old brick building the stages are in: lit windows, the game's sign in neon, lamp posts, string lights, grass beds with palms and benches. It is colourful on purpose, so the forest feels darker after it. Nothing in the lobby shows what waits inside: the building hides the forest, and its doors stay shut. The east wall has the record boards (most escapes and the fastest escape on each difficulty) and the shop (G): a snowy log cottage with Christmas lights, a striped awning over its counter, a wreath and a snowman, made in Meshy, with a SHOP sign from SpriteCook.
-- **Christmas in the lobby** (`Config.Christmas`, on for now): snow over the courtyard with a path shovelled to the doors, snow on every roof, wall, bench and lamp, falling snow, decorated Christmas trees in the beds (a big one with presents under it), wreaths on the doors, frozen puddles, and "Haunted Sleigh Bells" instead of the music box. **Snowball fights:** grab snowballs from a pile (G, up to 10) and throw them (E, R2 or the snowball button). A hit splats snow in their face and tells you both; it never moves anyone, so nobody gets knocked off a party pad. Snowballs only work in the lobby. Set `Config.Christmas = false` after the holidays to bring the palms back.
-- **Five doors, and nobody walks through them.** You stand on a door's pad and either start a party there (you are the host) or join the one waiting. The three stone archways in the middle are party doors, so three parties can get going at once; their host picks Normal or Hard. The door on the far left makes Easy parties, and the one on the far right is for **practice**: no creature, and no coins, shells, stats or records (none of a practice run is saved). The pop-up sets the size (1 to 4) and friends only; others join by stepping on the pad. When the countdown ends the party leaves together for a private server of its own (in Studio, which can't teleport, it goes straight into the cave here instead).
-- **The cave:** every party starts in a cave behind the building, with room to walk about and a supply stall (G) for last-minute shopping. It is gloomy but never too dark, lit by torches, lanterns and glowing crystals, with water dripping and wind blowing in through its wide mouth onto the forest. A few seconds after you arrive, something out there steps on a stick, growls two seconds later, and a note says it is your last chance to grab supplies (with a button to the shop). Practice runs skip that.
+- **The lobby** is an abandoned expedition outpost on old boardwalks over a black swamp at night, under a big moon. You arrive on the boardwalk at the front, facing a two-storey timber **lodge** with lit windows, a balcony across its front, a cupola, and the game's sign on its gable (THE SILENT in old white, SWAMP in red, roots and moss hanging off it). Inside is a hall with a fire, tables of maps and a stair up to a gallery and the balcony. On the left is the **Party** station, in the middle under the balcony the **Skins** display, beside the lodge the **Shop**, and on the right the **Launch Adventure** tunnel into the rock, with a green glow deep inside. Two watchtowers join the lodge's upper floor by rope bridges. All round there are dead trees, hanging moss, mud islands, reeds and lily pads, mist lying on the water, fireflies and flickering lanterns. A wooded ridge behind it all hides the stages: nothing in the lobby shows what waits out there, even from the towers. Railings and invisible walls keep everyone on the boardwalks, and anyone who ends up in the water is put back at the spawn. The record boards (most escapes, and the fastest escape on each difficulty) are on the lodge's left side.
+- **The Skins display:** the five premium skins on lit mannequins, each doing its move, with its name and Robux price on a plaque (the price comes from its Game Pass). Their prompt (G) opens the shop's Premium tab. The **Shop** is a supply store with shelves of bottles behind its counter; its prompt (G) opens the shop.
+- **Christmas in the lobby** (`Config.Christmas`, on for now): the outpost has no snow, but snow falls there, there are piles of snowballs on the boardwalks, and "Haunted Sleigh Bells" plays instead of the music box. **Snowball fights:** grab snowballs from a pile (G, up to 10) and throw them (E, R2 or the snowball button). A hit splats snow in their face and tells you both; it never moves anyone, so nobody gets knocked off a party pad. Snowballs only work in the lobby. Set `Config.Christmas = false` after the holidays.
+- **Five party pads.** You stand on a pad and either start a party there (you are the host) or join the one waiting. The **Launch Adventure** tunnel has three in its mouth: **Easy**, **Normal or Hard** (the host picks), and **practice** (no creature, and no coins, shells, stats or records: none of a practice run is saved). The **Party** station has two more Normal or Hard pads, so groups can gather there while others set off from the tunnel. Each pad has a board showing its party: who is setting one up, how full it is and when it leaves. The pop-up sets the size (1 to 4) and friends only; others join by stepping on the pad. When the countdown ends the party leaves together for a private server of its own (in Studio, which can't teleport, it goes straight into the cave here instead).
+- **The cave:** every party starts in a cave behind the ridge, with room to walk about and a supply stall (G) for last-minute shopping. It is gloomy but never too dark, lit by torches, lanterns and glowing crystals, with water dripping and wind blowing in through its wide mouth onto the forest. A few seconds after you arrive, something out there steps on a stick, growls two seconds later, and a note says it is your last chance to grab supplies (with a button to the shop). Practice runs skip that.
 - **Run timer:** starts when you walk out of the cave's mouth and stops at the exit. A run counts for the easiest difficulty played during it. Your best time on each difficulty is saved.
 - **Coins:** earned for each stage cleared, each shell found and each escape. Spend them in the **Shop** (the dock's shop button, the + on your coins, B, or D-pad left on a controller).
 - **The HUD:** your stage top left, coins bottom left (top left on touch screens, clear of the thumbstick), the run timer top middle, difficulty top right. In the lobby and the cave, big **Shop** and **Bag** buttons (what you own, to wear or take off) sit on the left, and on the right the **Christmas** button (with a LIMITED ribbon and how long is left), **2x Coins** (the Passes tab) and **Join** (Roblox's prompt to join the game's community, with a one-time coin reward; it goes away once paid), then **Stats** (escapes, fastest escape, stages cleared, times caught, shells found, runs started, time played), **Settings** (music, night sounds, sound effects, camera shake, field of view) and **Invite** (Roblox's invite-friends prompt). Out in the forest they make way for the noise meter on the left and round pebble, Updraft, Hush and Grapple buttons bottom right, which work on touch screens too (Grapple also shows near a hook: with a + to buy one there and then, or with no count at all at a free hook on the way through). On touch screens Shop and Bag sit side by side, the right-hand buttons make two rows near the top and the round buttons sit left of the jump button; on small screens (phones, small windows) the whole HUD and the party banner shrink to fit.
@@ -37,7 +38,7 @@ A Roblox horror obby. Cross a drowned forest at night by jumping from stump to s
 
 The whole map is built by script when the server starts, so almost everything lives in the Luau files under `src/`. The exceptions are the 3D models made in Meshy (`art/models/`), which are imported into the place:
 
-- **The lobby's props** live in `ServerStorage.LobbyProps`. The lobby uses `CottageShop` (the shop, from `art/models/lobby/cottage_shop.glb`), `PottedPalm` and `Planter` (`FloatHut` isn't used any more), places each one it finds and skips any that are missing.
+- **The lobby** is built from parts and terrain, apart from its dead trees (the forest's, below). `ServerStorage.LobbyProps` (the old courtyard's cottage, palms and planters) isn't used any more.
 - **The forest's trees** near the trail are the models in `ServerStorage.ForestProps` (`GnarledTree` and `BrokenTrunk`, from `art/models/dead-tree3.glb` and `dead-tree2.glb`, each standing on its own pivot at the bottom of its roots). Each is planted at a random size and turn, with an invisible post round its trunk. Far off in the fog, or without the models, trees are built from parts.
 - **The swamp's platforms** are the models in `ServerStorage.SwampProps`: `StumpA` and `StumpB` (cut stumps), `PlankRaft`, `LogRaft` and `FallenLog`, made in Meshy from the pictures in `art/meshy-refs/swamp/` (the models and previews in `art/models/swamp/`), one MeshPart each, standing upright. Each is stretched to its platform's size, and you stand on an unseen flat top of exactly that size, so jumps measure the same either way. A stump's `TopShare` attribute says how much of its width its cut top is (its roots spread wider). Without them, the platforms are built from parts.
 - **The shop's 3D models** live in `ReplicatedStorage.ShopModels`, one per thing sold that isn't worn (coin packs, Night Kit, Self-Revive, passes, Updraft and Hush), named like its icon art (`robux_coins_chest`, `action_hush`, ...). They were made in Meshy from three-quarter drawings of the shop's SpriteCook icons (`art/meshy-refs/shop-3q-*.png`; the models in `art/models/shop/`, previews beside them; `art/models/import/shop/` has copies for Import 3D). `robux_coins_jar` is put together in Studio, because Meshy can't make clear glass: the Meshy coin heap (`coins_heap.glb`) inside see-through glass parts with a lilac lid, its coins as the model's primary part. Without a model, its card shows its icon bobbing instead.
@@ -56,7 +57,7 @@ You need [Roblox Studio](https://create.roblox.com/) and [Rojo](https://rojo.spa
    rojo serve
    ```
 3. In Studio, create a new **Baseplate** place. Open the Rojo plugin and click **Connect**. The scripts appear under ServerScriptService, ReplicatedStorage and StarterPlayerScripts.
-4. Press **Play**. You spawn in the lobby. Stand on a door's pad and create a party (size 1 leaves in 5 seconds) to go into the cave and stage 1.
+4. Press **Play**. You spawn in the lobby. Stand on a party pad (at the Launch Adventure tunnel or the Party station) and create a party (size 1 leaves in 5 seconds) to go into the cave and stage 1.
 
 Or skip the live sync: run `rojo build -o StillWater.rbxl` and open the file in Studio.
 
@@ -135,13 +136,13 @@ What Roblox's docs ask of console games (checked 2026-11-01):
 | Name and tagline on the lobby sign | `Config.GameName`, `Config.Tagline` |
 | How each stretch is laid out, the water, a swamp's islands, banks and plants, lighting, the moon, fog and colour grading | `src/server/MapBuilder.luau` |
 | What trees, stumps, plank and log rafts and their ropes, fallen logs, islands, cattails, lily pads, algae, lanterns, grapple hooks, signposts and the STAGE COMPLETE doorway look like | `src/server/Forest.luau` |
-| Lobby: size (`Config.Room.LobbyWidth`, `LobbyLength`), the building, doors and party doors, signs, record wall, lamps and string lights, where each prop stands, spawn | `src/server/LobbyBuilder.luau` |
+| Lobby: where everything stands (`LODGE`, `BAY`, `SHOP`, `PARTY`, `GATE`, `TOWERS`, `SPAWN`), the lodge, boardwalks and railings, signs, record boards, lanterns, the swamp round it and the ridge | `src/server/LobbyBuilder.luau` |
 | Christmas on or off; how many snowballs a pile gives, how many you carry, how far and fast they fly | `Config.Christmas`, `Config.Snowballs` |
 | What the Christmas trees, presents, wreaths and snowball piles look like | `src/server/Christmas.luau` (where they go: `src/server/LobbyBuilder.luau`) |
-| The shop's cottage: where it stands, how big, where its sign, counter and light glows go | `SHOP` in `src/server/LobbyBuilder.luau` (the model is `art/models/lobby/cottage_shop.glb`, the sign `shop_sign` in the UI kit) |
+| The supply store and the skins display: where they stand, the counter, plaques and lights | `SHOP`, `BAY` and `buildShop` / `buildSkins` in `src/server/LobbyBuilder.luau` |
 | Throwing snowballs, hits | `src/server/Snowballs.luau`, `src/client/Throw.luau` |
 | Falling snow, snow in your face when you're hit | `src/client/Snow.luau` |
-| Which door does what (Easy, party, practice) and where; party size and countdowns | `Config.Doors`, `Config.Room.EntranceDoors` (the archways), `Config.Party` |
+| Which pad does what (Easy, party, practice) and at which station; party size and countdowns | `Config.Doors`, `Config.Party` |
 | Parties: the doors' pads and screens, joining, leaving, countdown, sending a party to its own server or into the cave | `src/server/Parties.luau` |
 | Practice runs (nothing earned or saved) | `src/server/Progress.luau`; the creature ignores practice players in `src/server/Lurker.luau` and isn't drawn for them in `src/client/LurkerVisuals.luau` |
 | The cave: its size (`Config.Cave`), rock, torches, crystals, stalactites, the supply stall, where a party arrives | `src/server/CaveBuilder.luau` |
@@ -209,9 +210,9 @@ src/
     CaveBuilder.luau     the cave a party arrives in, at the start of stage 1
     Christmas.luau       Christmas trees, presents, wreaths, snow and snowball piles for the lobby
     Forest.luau          trees, stumps, rafts, logs, islands, plants, lanterns, hooks, signposts, doorways
-    LobbyBuilder.luau    builds the night courtyard lobby
+    LobbyBuilder.luau    builds the swamp outpost lobby
     Parts.luau           part-building helpers both builders use
-    Parties.luau         the lobby's doors: parties, countdowns, private servers, practice
+    Parties.luau         the lobby's party pads: parties, countdowns, private servers, practice
     Leaderboards.luau    record boards (OrderedDataStores)
     Noise.luau           per-player noise, splashes, hard landings, Hush
     Lurker.luau          one creature: watching, stalking, chasing (moves an invisible anchor)
@@ -238,7 +239,8 @@ src/
     Sounds.luau          sounds only you hear, and your wading
     ItemIcons.luau       pictures of the shop's items
     ShopPreview.luau     the 3D on shop cards: you wearing it, or its model
-    SkinMoves.luau       the premium skins' moves (lantern, stalking, floating, roar, bubbles)
+    SkinMoves.luau       the premium skins' moves (lantern, stalking, floating, roar, bubbles), on players and the lobby's mannequins
+    LobbyLife.luau       the lobby's lanterns flickering
     PartyUi.luau         the party pop-up and banner
     ChristmasBundle.luau the Christmas Bundle's window and countdown
     Cave.luau            the cave's drips, wind and torches; the scare and note when you arrive
@@ -249,7 +251,7 @@ src/
     LurkerVisuals.luau   poses the creature model (or a body of parts) as it walks
     Fear.luau            vignette, heartbeat, faltering lights, shake
     DeathScene.luau      the death scene: its face up close, TV static, "what it heard", revive or bleed out
-    Mood.luau            warm lobby and exit lighting, the cave's gloom, cold moonlit forest fog, drifting mist, doorways lighting up as you near them
+    Mood.luau            moonlit lobby and exit lighting, the cave's gloom, cold moonlit forest fog, drifting mist, doorways lighting up as you near them
     Throw.luau           throw input (E / R2 / the HUD's pebble or snowball button)
     CameraReport.luau    tells the server which way your camera points (for where the creature appears)
 tools/
