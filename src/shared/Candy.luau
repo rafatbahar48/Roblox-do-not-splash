@@ -1,6 +1,8 @@
--- The candy look shared by the menus and the HUD. The panels, buttons, coins
--- and badges are SpriteCook art (UiArt.luau, from the UI kit in
--- art/ui/kit/); the lettering is bubbly FredokaOne on top.
+-- The look shared by the menus and the HUD: lantern-lit wood, like the
+-- lobby's outpost. The panels, buttons, coins and badges are SpriteCook art
+-- (UiArt.luau, from the UI kits in art/ui/); the lettering is Merriweather,
+-- like the lobby's signs, in dark ink on parchment and in old white with a
+-- dark edge on wood. (It was a candy look once, hence the name.)
 --
 -- Every builder here takes the parent first and returns what you fill or
 -- connect to. A raised thing's holder includes its lip: give the holder the
@@ -14,24 +16,27 @@ local UiArt = require(script.Parent.UiArt)
 
 local Candy = {}
 
-Candy.INK = Color3.fromRGB(43, 34, 87)
-Candy.WHITE = Color3.fromRGB(255, 255, 255)
-Candy.MUTED = Color3.fromRGB(74, 69, 128)
-Candy.SKY = Color3.fromRGB(99, 201, 255)
-Candy.MINT = Color3.fromRGB(111, 227, 180)
-Candy.LEMON = Color3.fromRGB(255, 221, 74)
-Candy.PINK = Color3.fromRGB(255, 111, 177)
-Candy.LILAC = Color3.fromRGB(180, 160, 255)
-Candy.ICE = Color3.fromRGB(234, 247, 255)
-Candy.CLOUD = Color3.fromRGB(230, 235, 242) -- greyed-out buttons
-Candy.DIM = Color3.fromRGB(215, 230, 242)
+-- The colours keep their old candy names; the buttons in those colours are
+-- the kit's woods (see PILLS).
+Candy.INK = Color3.fromRGB(38, 24, 14) -- dark brown: lettering on parchment, and every edge
+Candy.WHITE = Color3.fromRGB(244, 234, 212) -- old white: lettering on wood
+Candy.MUTED = Color3.fromRGB(112, 86, 60)
+Candy.SKY = Color3.fromRGB(110, 170, 178) -- swamp teal
+Candy.MINT = Color3.fromRGB(138, 182, 98) -- moss
+Candy.LEMON = Color3.fromRGB(242, 178, 74) -- lantern amber
+Candy.PINK = Color3.fromRGB(206, 96, 68) -- rust
+Candy.LILAC = Color3.fromRGB(168, 148, 190)
+Candy.ICE = Color3.fromRGB(236, 224, 196) -- parchment
+Candy.CLOUD = Color3.fromRGB(128, 124, 118) -- greyed-out buttons
+Candy.DIM = Color3.fromRGB(196, 182, 156)
 Candy.LIP = 5 -- how far the darker edge shows under a raised thing
+Candy.FONT = Font.new("rbxasset://fonts/families/Merriweather.json", Enum.FontWeight.Bold)
 
--- Where the window art leaves room for things: below the ribbon, inside the
--- outline (see Candy.window).
-Candy.WINDOW_TOP = 104
-Candy.WINDOW_SIDE = 30
-Candy.WINDOW_BOTTOM = 30
+-- Where the window art leaves room for things: below its hanging plaque,
+-- inside its wooden frame (see Candy.window).
+Candy.WINDOW_TOP = 100
+Candy.WINDOW_SIDE = 46
+Candy.WINDOW_BOTTOM = 44
 
 -- On a TV (a console's), seen from across the room, windows and the HUD
 -- grow with the screen, up to TV_SCALE times their size on a 1080p screen,
@@ -61,6 +66,10 @@ local function pillFor(color)
 	return "button_white"
 end
 Candy.pillFor = pillFor
+
+-- The darker woods, where lettering is old white with a dark edge; on the
+-- others (amber, bone) it is dark ink.
+local DARK_PILLS = { button_mint = true, button_pink = true, button_sky = true, button_grey = true }
 
 function Candy.create(className, props, children)
 	local instance = Instance.new(className)
@@ -93,6 +102,7 @@ end
 function Candy.art(name, props, height)
 	local image = create("ImageLabel", { Name = name, BackgroundTransparency = 1 })
 	UiArt.apply(image, name, UiArt.fitScale(name, height or 0))
+	image:SetAttribute("Art", name)
 	for key, value in props do
 		image[key] = value
 	end
@@ -107,24 +117,25 @@ end
 -- Puts a different part on an image made by Candy.art or Candy.button.
 function Candy.setArt(image, name, height)
 	UiArt.apply(image, name, UiArt.fitScale(name, height or image.AbsoluteSize.Y))
+	image:SetAttribute("Art", name)
 end
 
--- Rounded ink lettering. Scales to fit unless given a TextSize.
-function Candy.text(props)
+-- Ink lettering. Scales to fit unless given a TextSize.
+function Candy.text(props, children)
 	local label = create("TextLabel", {
 		BackgroundTransparency = 1,
-		Font = Enum.Font.FredokaOne,
+		FontFace = Candy.FONT,
 		TextColor3 = INK,
 		TextScaled = props.TextSize == nil,
 		ZIndex = 3,
-	})
+	}, children)
 	for key, value in props do
 		label[key] = value
 	end
 	return label
 end
 
--- Bubbly lettering with an ink outline, like the lobby's signs.
+-- Lettering with an ink edge, like the lobby's signs.
 function Candy.outlined(props, thickness)
 	local label = Candy.text(props)
 	create("UIStroke", { Color = INK, Thickness = thickness or 3, LineJoinMode = Enum.LineJoinMode.Round, Parent = label })
@@ -132,7 +143,7 @@ function Candy.outlined(props, thickness)
 end
 
 -- Outlined lettering standing on an ink copy of itself, so it looks thick
--- and solid, like a title cut out of plastic. Returns the front label.
+-- and solid, like a title cut into a board. Returns the front label.
 function Candy.title(parent, props, thickness, depth)
 	local front = Candy.outlined(props, thickness)
 	local back = Candy.outlined(props, thickness)
@@ -171,9 +182,39 @@ local function pixelHeight(size)
 	return if size and size.Y.Scale == 0 then size.Y.Offset else 0
 end
 
--- A raised panel: the kit's pale tile (or a coloured button, given a colour)
--- with an ink outline and a darker lip. Returns the body; its parent is the
--- holder.
+-- Keeps lettering readable on dark wood: whatever is put on the body (but
+-- not on a button there, which looks after its own, nor on a light piece of
+-- the kit there, like a tag) ink turns old white and muted ink pale tan, now
+-- and whenever it is set again.
+local function lightenOnWood(body)
+	local function watch(label)
+		if not label:IsA("TextLabel") and not label:IsA("TextBox") then
+			return
+		end
+		local button = label:FindFirstAncestorWhichIsA("GuiButton")
+		if button and button:IsDescendantOf(body) then
+			return
+		end
+		local art = label.Parent and label.Parent:GetAttribute("Art")
+		if art and art ~= "tile" and not DARK_PILLS[art] then
+			return
+		end
+		local function fix()
+			if label.TextColor3 == INK then
+				label.TextColor3 = WHITE
+			elseif label.TextColor3 == Candy.MUTED then
+				label.TextColor3 = Candy.DIM
+			end
+		end
+		fix()
+		label:GetPropertyChangedSignal("TextColor3"):Connect(fix)
+	end
+	body.DescendantAdded:Connect(watch)
+end
+
+-- A raised panel: the kit's dark wooden tile (or a wooden button, given a
+-- colour). Lettering on it reads light where the wood is dark. Returns the
+-- body; its parent is the holder.
 function Candy.raised(parent, props)
 	local lip = props.lip or Candy.LIP
 	local holder = create("Frame", {
@@ -187,16 +228,20 @@ function Candy.raised(parent, props)
 	})
 	local name = if props.color and props.color ~= WHITE then pillFor(props.color) else "tile"
 	Candy.art(name, { Name = "Art", Size = UDim2.fromScale(1, 1), ZIndex = holder.ZIndex, Parent = holder }, pixelHeight(props.size))
-	return create("Frame", {
+	local body = create("Frame", {
 		Name = "Body",
 		Size = UDim2.new(1, 0, 1, -lip),
 		BackgroundTransparency = 1,
 		ZIndex = holder.ZIndex,
 		Parent = holder,
 	})
+	if name == "tile" or DARK_PILLS[name] then
+		lightenOnWood(body)
+	end
+	return body
 end
 
--- A shiny, chunky button from the kit, with a label on it. Returns the
+-- A chunky wooden button from the kit, with a label on it. Returns the
 -- clickable face; set its colour with Candy.paint(face, color).
 function Candy.button(parent, props)
 	local holder = create("Frame", {
@@ -219,9 +264,11 @@ function Candy.button(parent, props)
 		Candy.text({
 			Name = "Label",
 			AnchorPoint = Vector2.new(0.5, 0.5),
-			Position = UDim2.fromScale(0.5, 0.46),
-			Size = UDim2.new(1, -24, 0.5, 0),
+			Position = UDim2.fromScale(0.5, 0.5),
+			Size = UDim2.new(1, -36, 0.5, 0), -- clear of the rounded ends
 			Text = props.text or "",
+		}, {
+			create("UIStroke", { Name = "Edge", Color = INK, Thickness = 1.5, LineJoinMode = Enum.LineJoinMode.Round }),
 		}),
 	})
 	face:SetAttribute("Height", pixelHeight(props.size))
@@ -240,13 +287,30 @@ function Candy.button(parent, props)
 	return face
 end
 
+-- The lettering colour that reads on the kit's button of this colour: old
+-- white on the darker woods, ink on the others.
+function Candy.letteringOn(color)
+	return if DARK_PILLS[pillFor(color)] then WHITE else INK
+end
+
 -- Recolours a button: the kit's button in that colour. Flat buttons (greyed
--- out) are the grey one.
+-- out) are the grey one. On the darker woods, ink lettering (or none asked
+-- for) turns old white with a dark edge, so it can be read.
 function Candy.paint(face, color, labelColor, flat)
 	local name = if flat then "button_grey" else pillFor(color)
 	local height = face:GetAttribute("Height") or 0
 	UiArt.apply(face, name, UiArt.fitScale(name, if height > 0 then height else face.AbsoluteSize.Y))
-	face.Label.TextColor3 = labelColor or (if flat then WHITE else INK)
+	face:SetAttribute("Art", name)
+	local label = face.Label
+	if DARK_PILLS[name] and (labelColor == nil or labelColor == INK) then
+		label.TextColor3 = WHITE
+	else
+		label.TextColor3 = labelColor or INK
+	end
+	local edge = label:FindFirstChild("Edge")
+	if edge then
+		edge.Enabled = label.TextColor3 == WHITE
+	end
 end
 
 -- A coin from the kit.
@@ -294,8 +358,9 @@ function Candy.tvScale(height)
 	return Candy.TV_SCALE * height / 1080
 end
 
--- A menu window from the kit: the pale panel with a lilac ribbon across its
--- top left, where the title goes, and a pink close button on its top right.
+-- A menu window from the kit: parchment in a frame of old planks and iron,
+-- with a plaque hanging at its top left, where the title goes, and an iron
+-- close button on its top right.
 -- Things go inside it, WINDOW_TOP below its top edge and WINDOW_SIDE in from
 -- its sides. A controller's selection stays inside it. Returns the window,
 -- its title and its close button.
@@ -315,9 +380,9 @@ function Candy.window(parent, props)
 	})
 	local title = Candy.outlined({
 		Name = "Title",
-		Position = UDim2.fromOffset(34, 18),
-		Size = UDim2.fromOffset(186, 48),
-		Rotation = -4,
+		Position = UDim2.fromOffset(26, 42),
+		Size = UDim2.fromOffset(166, 40),
+		Rotation = -2,
 		TextColor3 = WHITE,
 		Text = props.title or "",
 		ZIndex = 4,
@@ -326,8 +391,8 @@ function Candy.window(parent, props)
 	local close = create("TextButton", {
 		Name = "Close",
 		AnchorPoint = Vector2.new(1, 0),
-		Position = UDim2.new(1, -2, 0, 4),
-		Size = UDim2.fromOffset(86, 86),
+		Position = UDim2.new(1, -2, 0, 38),
+		Size = UDim2.fromOffset(78, 78),
 		BackgroundTransparency = 1,
 		Text = "",
 		ZIndex = 5,

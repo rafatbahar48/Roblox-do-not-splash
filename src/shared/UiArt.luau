@@ -1,20 +1,35 @@
--- The menu and button art: parts of the SpriteCook UI kit "Still Water lobby
--- menus", packed into atlases (art/ui/kit/atlas-panels.png, atlas-icons.png,
--- atlas-event.png, the seasonal art, and atlas-boosts.png, boost buttons
--- added after the icons atlas filled up) that are uploaded to Roblox.
--- UiArtParts.luau says where each part sits in its atlas.
+-- The menu and button art: parts of the SpriteCook UI kits "Silent Swamp
+-- lantern menus" (the lantern-lit wood look) and "Still Water lobby menus"
+-- (the parts not redone yet), packed into atlases (art/ui/kit/atlas-panels.png,
+-- atlas-icons.png, atlas-event.png, the seasonal art, and atlas-boosts.png)
+-- that are uploaded to Roblox. UiArtParts.luau says where each part sits in
+-- its atlas.
 --
 -- After repacking (tools/pack-ui.ps1), upload the atlases again and paste
--- their new ids here.
+-- their new ids here. Until an atlas has an id, Studio shows it from its own
+-- content folder (content/textures/SilentSwamp/atlas-<name>.png, copied there
+-- by hand), so the art can be tried out before it is uploaded; a published
+-- game without the ids shows no menu art at all.
+
+local RunService = game:GetService("RunService")
 
 local Parts = require(script.Parent.UiArtParts)
 
 local ATLASES = {
-	panels = "rbxassetid://71375555921517", -- art/ui/kit/atlas-panels.png
-	icons = "rbxassetid://93884646547007", -- art/ui/kit/atlas-icons.png
-	event = "rbxassetid://73354802440089", -- art/ui/kit/atlas-event.png
-	boosts = "rbxassetid://95633318954409", -- art/ui/kit/atlas-boosts.png
+	panels = "", -- art/ui/kit/atlas-panels.png
+	icons = "", -- art/ui/kit/atlas-icons.png
+	event = "", -- art/ui/kit/atlas-event.png
+	boosts = "", -- art/ui/kit/atlas-boosts.png
 }
+local PREVIEW = "rbxasset://textures/SilentSwamp/atlas-%s.png"
+
+local function atlas(name)
+	local id = ATLASES[name]
+	if id ~= "" then
+		return id
+	end
+	return if RunService:IsStudio() then PREVIEW:format(name) else ""
+end
 
 local UiArt = {}
 
@@ -29,7 +44,7 @@ end
 -- size they were packed at).
 function UiArt.apply(image, name, scale)
 	local part = Parts[name]
-	image.Image = ATLASES[part.atlas]
+	image.Image = atlas(part.atlas)
 	image.ImageRectOffset = Vector2.new(part.x, part.y)
 	image.ImageRectSize = Vector2.new(part.w, part.h)
 	if part.slice then

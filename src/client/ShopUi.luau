@@ -42,7 +42,7 @@ local player = Players.LocalPlayer
 local INK, WHITE, MUTED = Candy.INK, Candy.WHITE, Candy.MUTED
 local OWNED = Color3.fromRGB(31, 122, 90) -- "Owned" and "Wearing"
 
-local WIDTH, HEIGHT = 920, 620
+local WIDTH, HEIGHT = 960, 620
 local CARD = Vector2.new(268, 352)
 local STAGE_HEIGHT = 196 -- the stage the thing turns on, at the top of a card
 -- Where the sparkles twinkle on a card: x, y, size.
@@ -529,7 +529,7 @@ function ShopUi.render()
 		if tab.kind == currentKind then
 			Candy.paint(tabButtons[tab.kind], tab.color)
 		else
-			Candy.paint(tabButtons[tab.kind], WHITE, MUTED)
+			Candy.paint(tabButtons[tab.kind], WHITE, INK)
 		end
 	end
 
@@ -666,11 +666,12 @@ local function build()
 		Position = UDim2.fromOffset(62, 5),
 		Size = UDim2.new(1, -116, 1, -14),
 		TextSize = 24,
+		TextColor3 = WHITE, -- on the counter's dark wood
 		TextXAlignment = Enum.TextXAlignment.Left,
 		Text = "0",
 		ZIndex = 4,
 		Parent = pill,
-	})
+	}, { Candy.stroke(1.5) })
 	local more = create("TextButton", {
 		AnchorPoint = Vector2.new(1, 0),
 		Position = UDim2.fromScale(1, 0),

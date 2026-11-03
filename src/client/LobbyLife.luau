@@ -23,14 +23,31 @@ local LobbyLife = {}
 
 local lights = {} -- [light] = { base brightness, seed }
 local swept = false
+local sweep -- the sweep's tween while it plays
+
+-- Gives the camera back to the player, following their character now (it may
+-- have been swapped for a new one while the sweep played).
+local function settle(camera)
+	camera.CameraType = Enum.CameraType.Custom
+	local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+	if humanoid then
+		camera.CameraSubject = humanoid
+	end
+end
 
 local function arrive(character)
+	local camera = workspace.CurrentCamera
+	if sweep then
+		-- A new character mid-sweep (a skin going on, or a checkpoint): stop it.
+		sweep:Cancel()
+		sweep = nil
+		settle(camera)
+	end
 	local root = character:WaitForChild("HumanoidRootPart", 10)
 	task.wait(0.3) -- after the camera has settled on the new character
-	if not root or not root.Parent or Zones.at(root.Position) ~= "lobby" then
+	if not root or not root.Parent or player.Character ~= character or Zones.at(root.Position) ~= "lobby" then
 		return
 	end
-	local camera = workspace.CurrentCamera
 	local flat = (LODGE - root.Position) * Vector3.new(1, 0, 1)
 	if flat.Magnitude < 1 then
 		return
@@ -41,10 +58,24 @@ local function arrive(character)
 		swept = true
 		camera.CameraType = Enum.CameraType.Scriptable
 		camera.CFrame = CFrame.lookAt(root.Position - ahead * 26 + Vector3.new(0, 30, 0), LODGE)
-		local sweep = TweenService:Create(camera, SWEEP, { CFrame = behind })
-		sweep:Play()
-		sweep.Completed:Wait()
-		camera.CameraType = Enum.CameraType.Custom
+		local tween = TweenService:Create(camera, SWEEP, { CFrame = behind })
+		sweep = tween
+		tween:Play()
+		-- Cut short if you're sent off somewhere first (to your checkpoint).
+		while tween.PlaybackState == Enum.PlaybackState.Playing do
+			if not root.Parent or Zones.at(root.Position) ~= "lobby" then
+				tween:Cancel()
+			end
+			task.wait(0.1)
+		end
+		if sweep ~= tween then
+			return -- stopped for a new character, which has the camera now
+		end
+		sweep = nil
+		settle(camera)
+		if tween.PlaybackState ~= Enum.PlaybackState.Completed then
+			return
+		end
 	end
 	camera.CFrame = behind
 end

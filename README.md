@@ -32,7 +32,7 @@ A Roblox horror obby. Cross a drowned forest at night by jumping from stump to s
 - **Robux shop:** two more tabs in the shop. **Robux**: coin packs (Handful, Jar, Chest, Sunken Hoard), the Night Kit bundle (coins, Updrafts, Hushes and 2 Self-Revives), Self-Revives (1 or 3, kept until you need them) and 5-packs of Updraft and Hush. **Passes**: **2× Coins** (double coins from stages, shells and escapes) and **Deep Pockets** (5 pebbles a life and up to 15 of each boost). The + on your coins opens the Robux tab. What each one gives is in `src/shared/RobuxCatalog.luau`.
 - **Getting caught:** its face up close, then a dead TV channel with what gave you away. The static stays until you choose: **Revive** (a Self-Revive if you have one, else 50 coins, else a Self-Revive bought with Robux) puts you back on the last dry ground you stood on, silent for a moment, with your run still going; **Bleed out** sends you to your last checkpoint, or the lobby if you have none; **Back to lobby** ends the run. Not choosing bleeds out after 30 seconds (`Config.Revive`).
 - **Music and sound:** a music box in the lobby, an ominous bed in the forest and chase music while it hunts you, fading into each other; crickets at night; splashes, creaky boards, pebbles, your own feet in the water, the creature's footsteps and growl from where it is, a heartbeat while you are hunted, its roar and the TV static when it gets you, and chimes for stages, shells, escapes and purchases. All from Roblox's licensed libraries (APM Music and ProSoundEffects), set in `Config.Sounds`.
-- **The menus and buttons are SpriteCook art**, from the UI kit "Still Water lobby menus" (see below); the code only places them and writes the words and numbers.
+- **The menus and buttons are SpriteCook art** in a lantern-lit wood look that matches the lobby: windows of old planks and rusty iron with parchment inside and a title plaque hanging on rope, wooden buttons in amber, moss, rust, teal, bone and grey, lantern switches, and carved wooden HUD buttons with glowing amber icons (see below). The lettering is Merriweather, like the lobby's signs: dark ink on parchment, old white with a dark edge on wood. The code only places the art and writes the words and numbers.
 - **Shop:** 6 skins, 6 accessories, and 3 boosts. Every item has a big card with the thing itself in 3D: skins and accessories on **you** (your own avatar, turning; head things close up), and everything else as its 3D model, spinning and bobbing. Each stands in front of a spinning sunburst in its rarity colour (Common mint, Rare sky, Epic pink, Legendary lemon), with twinkling sparkles and a glint now and then. The boosts, which you carry and use: **Updraft** (Q / L1 / Fly button) lifts you and lets you glide for 2 seconds, **Hush** (F / Y / Hush button) makes you completely silent for 5 seconds, and the **Grapple** (G / X / Grapple button, near a hook) swings you on a rope over a gap too far to jump, onto the platform under the hook. With no grapple, the button buys one for coins and swings at once. The hooks on each stage's way through are free; grapples are only used up on the shortcuts.
 - Your progress, shells, escapes, difficulty, coins, items, stats and settings are saved.
 
@@ -63,13 +63,15 @@ Or skip the live sync: run `rojo build -o StillWater.rbxl` and open the file in 
 
 ### The menu art
 
-The panels, buttons, toggles, tiles and icons come from a SpriteCook UI kit. Each part is a PNG in `art/ui/kit/parts/` (logged with its SpriteCook asset id in `art/spritecook-assets.json`); `concept-a.png` and `sheet-1.png` are the concept and the sheet they were cut from.
+The panels, buttons, toggles, tiles and icons come from SpriteCook UI kits. The windows, buttons, toggles, coin counter, tiles, the HUD and action buttons and the stat icons are the lantern-lit wood kit "Silent Swamp lantern menus": PNGs in `art/ui/swamp/parts/`, logged with their SpriteCook asset ids in `art/ui/swamp/kit.json`, cut from `sheet-1.png` and `sheet-2.png`, which were made from `concept-2.png`. The rest (the Robux pack icons, the sunburst and sparkles behind the shop's items, the Christmas art) are still the first candy kit's, in `art/ui/kit/parts/` (logged in `art/spritecook-assets.json`); the packer takes a part from the swamp kit when it has one.
 
 Roblox only shows uploaded images, so the parts are packed into atlases, `art/ui/kit/atlas-panels.png`, `atlas-icons.png`, `atlas-event.png` (seasonal art) and `atlas-boosts.png` (boost buttons added after the icons atlas filled up; each at most 1024x1024), and `src/shared/UiArtParts.luau` says where each part sits and how it stretches. To change a part:
 
-1. Replace its PNG in `art/ui/kit/parts/`.
+1. Replace its PNG in `art/ui/swamp/parts/` (or add it there, to replace a candy one).
 2. Run `powershell -ExecutionPolicy Bypass -File tools/pack-ui.ps1` to repack the atlases and rewrite `UiArtParts.luau`.
-3. Upload the atlases that changed in Studio (pick the file in an ImageLabel's **Image** property, or use the Asset Manager) and paste their new ids into `src/shared/UiArt.luau`.
+3. Upload the atlases that changed in Studio (pick the file in an ImageLabel's **Image** property, or use the Asset Manager) and paste their new ids into `src/shared/UiArt.luau`. Check which id is which by the image's size: panels is 1024x636, icons 1024x979, event 1024x462, boosts 1024x198.
+
+Until an atlas has an id in `UiArt.luau`, Studio shows it from its own content folder, so new art can be tried before it's uploaded: copy the atlases to `content/textures/SilentSwamp/` in Studio's install folder (`%LOCALAPPDATA%\Roblox\Versions\<version>\content`; a Studio update clears it). A published game shows no menu art for an atlas without an id, so upload them before publishing.
 
 ### Before publishing
 
@@ -77,6 +79,7 @@ Roblox only shows uploaded images, so the parts are packed into atlases, `art/ui
 2. **Game Settings → Security → Enable Studio Access to API Services.** Turn this on to test saving in Studio. Published games can always save.
 3. **Robux:** in the Creator Dashboard, open the published game > Monetization. Under **Developer Products** create one for each entry in `Config.Products` (CoinsSmall, CoinsJar, CoinsChest, CoinsHoard, NightKit, SelfRevive1, SelfRevive3, Updraft5, Hush5, and ChristmasBundle while it's on) and under **Passes** one for each in `Config.Passes` (DoubleCoins, DeepPockets, and the premium skins SwampSurvivor, BogHunter, WillowWraith, RotwoodSentinel and CursedDiver, whose icons are in `art/marketing/passes/`), with the names and prices you want, then paste each id into `src/shared/Config.luau`. Anything left at 0 isn't offered in the live game (Studio shows it all, so you can see it). SelfRevive1 is also what the death screen sells when you are short of coins.
 4. **Sounds:** every sound's id is in `Config.Sounds` in `src/shared/Config.luau`. Swap any of them for another from the Creator Store; an empty id is skipped.
+5. **Menu art:** every atlas in `src/shared/UiArt.luau` needs its uploaded id (see The menu art above), or the published game's menus have no pictures.
 
 ## Controllers and consoles (PlayStation, Xbox)
 
@@ -168,7 +171,7 @@ What Roblox's docs ask of console games (checked 2026-11-01):
 | How the HUD shrinks to fit small screens | `src/client/ScreenFit.luau` |
 | The Christmas Bundle: what it gives, when it ends, the lines its window shows; its window | `RobuxCatalog.bundles` in `src/shared/RobuxCatalog.luau`, `src/client/ChristmasBundle.luau`; the exclusive items are in `src/shared/Catalog.luau` (`exclusive`) and the Santa Hat's shape in `src/shared/AccessoryLook.luau` |
 | The menus' and HUD's building blocks: the kit's window, panels, buttons, badges and coins, and the lettering on them | `src/shared/Candy.luau` |
-| Which picture each part is, and the atlas ids | `src/shared/UiArt.luau`, `src/shared/UiArtParts.luau` (generated), `art/ui/kit/` |
+| Which picture each part is, and the atlas ids | `src/shared/UiArt.luau`, `src/shared/UiArtParts.luau` (generated), `art/ui/swamp/` (the wood kit), `art/ui/kit/` (the atlases, and the candy parts still used) |
 | The shop and the bag | `src/client/ShopUi.luau` |
 | Stats window | `src/client/StatsUi.luau` (the numbers are kept in `src/server/Progress.luau`) |
 | Settings: the list and defaults, the window, what each one does | `Config.Settings`, `src/client/SettingsUi.luau`, `src/client/Settings.luau` |
@@ -255,5 +258,5 @@ src/
     Throw.luau           throw input (E / R2 / the HUD's pebble or snowball button)
     CameraReport.luau    tells the server which way your camera points (for where the creature appears)
 tools/
-  pack-ui.ps1          packs the UI kit's parts into atlases
+  pack-ui.ps1          packs the UI kits' parts into atlases
 ```

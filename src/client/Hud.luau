@@ -56,7 +56,7 @@ local player = Players.LocalPlayer
 
 local INK, WHITE, MUTED = Candy.INK, Candy.WHITE, Candy.MUTED
 local RED = Color3.fromRGB(255, 60, 60)
-local GREYED = Color3.fromRGB(150, 150, 165) -- tints an action button with none left
+local GREYED = Color3.fromRGB(130, 124, 118) -- tints an action button with none left
 local DIFFICULTY_COLORS = { Easy = Candy.MINT, Normal = Candy.LEMON, Hard = Candy.PINK }
 local SEGMENTS = 6 -- in the noise meter
 local MARGIN = 16
@@ -72,8 +72,11 @@ local Hud = {}
 
 local create, text = Candy.create, Candy.text
 
+-- How wide some lettering is: Candy's bold Merriweather unless given a font
+-- (GetTextSize only knows the regular weight, so a little is added for it).
 local function textWidth(value, size, font)
-	return TextService:GetTextSize(value, size, font or Enum.Font.FredokaOne, Vector2.new(2000, 100)).X
+	local width = TextService:GetTextSize(value, size, font or Enum.Font.Merriweather, Vector2.new(2000, 100)).X
+	return if font then width else math.ceil(width * 1.08)
 end
 
 -- A picture button from the kit with its name across its bottom edge.
@@ -183,10 +186,11 @@ function Hud.start()
 		Position = UDim2.fromOffset(66, 6),
 		Size = UDim2.new(1, -122, 1, -14),
 		TextSize = 28,
+		TextColor3 = Candy.WHITE, -- on the counter's dark wood
 		TextXAlignment = Enum.TextXAlignment.Left,
 		Text = "0",
 		Parent = coinsPill,
-	})
+	}, { Candy.stroke(1.5) })
 	local moreCoins = create("TextButton", {
 		Name = "More",
 		AnchorPoint = Vector2.new(1, 0),
@@ -208,7 +212,7 @@ function Hud.start()
 		AutomaticSize = Enum.AutomaticSize.X,
 		Parent = fit,
 	}, 40)
-	create("UIPadding", { PaddingLeft = UDim.new(0, 18), PaddingRight = UDim.new(0, 18), PaddingBottom = UDim.new(0, 4), Parent = stagePill })
+	create("UIPadding", { PaddingLeft = UDim.new(0, 24), PaddingRight = UDim.new(0, 26), PaddingBottom = UDim.new(0, 2), Parent = stagePill })
 	create("UIListLayout", {
 		FillDirection = Enum.FillDirection.Horizontal,
 		VerticalAlignment = Enum.VerticalAlignment.Center,
@@ -611,7 +615,9 @@ function Hud.start()
 		for name, face in difficultyButtons do
 			local on = name == current
 			face.ImageTransparency = if on then 0 else 1
-			face.Label.TextColor3 = if on then INK else MUTED
+			-- The others are just lettering on the bar's dark wood.
+			face.Label.TextColor3 = if on then Candy.letteringOn(DIFFICULTY_COLORS[name]) else Candy.DIM
+			face.Label.Edge.Enabled = face.Label.TextColor3 ~= INK
 		end
 	end
 

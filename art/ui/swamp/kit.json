@@ -1,0 +1,253 @@
+{
+  "ui_kit": {
+    "id": "c31c80b4-23c3-445f-9719-a096f72a7872",
+    "name": "Silent Swamp lantern menus",
+    "made": "2026-11-03"
+  },
+  "assets": [
+    {
+      "asset_id": "514a198e-68cf-41fc-be03-4f114e2c8abd",
+      "label": "Lobby reference picture (style guide)"
+    },
+    {
+      "asset_id": "bff7db8f-b9b4-4c0e-8da3-fff8604e6df4",
+      "sha12": "cd23addbea14",
+      "label": "Concept 1 (not used)",
+      "file": "concept-1.png"
+    },
+    {
+      "asset_id": "65e9066a-383c-487d-8a50-7cb151dbe4dd",
+      "sha12": "433ff1cade5c",
+      "label": "Concept 2 (the kit's concept)",
+      "file": "concept-2.png"
+    },
+    {
+      "asset_id": "889464d7-c7d2-44b3-a2e7-a7661d9ee4e3",
+      "sha12": "e5f1993e69f8",
+      "label": "Component sheet 1: frames and controls",
+      "file": "sheet-1.png"
+    },
+    {
+      "asset_id": "b5b4cc5e-1097-453f-a671-ba46a56adf56",
+      "sha12": "a89664677a56",
+      "label": "Component sheet 2: icon buttons",
+      "file": "sheet-2.png"
+    },
+    {
+      "asset_id": "ef5f1e93-7914-4585-b04c-150b39c78adc",
+      "sha12": "02133d60c28d",
+      "label": "window",
+      "file": "parts/window.png"
+    },
+    {
+      "asset_id": "30d5de23-7227-4ebc-9aa5-2462cf6a066f",
+      "sha12": "e030dc78f3fe",
+      "label": "ribbon",
+      "file": "parts/ribbon.png"
+    },
+    {
+      "asset_id": "aa828072-9f6f-492e-a63a-e9871840083d",
+      "sha12": "731e7bec9fe0",
+      "label": "close",
+      "file": "parts/close.png"
+    },
+    {
+      "asset_id": "a87e9375-d4ca-41fe-9440-b70e550e8a70",
+      "sha12": "19a18f3f6aa9",
+      "label": "button_lemon",
+      "file": "parts/button_lemon.png"
+    },
+    {
+      "asset_id": "b55ba544-963b-47f6-b7f6-067c172d90c7",
+      "sha12": "a46a65725be8",
+      "label": "button_mint",
+      "file": "parts/button_mint.png"
+    },
+    {
+      "asset_id": "e79e6a1f-8848-4567-8e51-7396459dbefa",
+      "sha12": "3c7d3bce640b",
+      "label": "button_pink",
+      "file": "parts/button_pink.png"
+    },
+    {
+      "asset_id": "56cd2139-7b7f-4719-8347-53a40c34aeae",
+      "sha12": "f0216c6dcec0",
+      "label": "button_sky",
+      "file": "parts/button_sky.png"
+    },
+    {
+      "asset_id": "571209b0-ecbc-4494-a3fe-45c06093da3c",
+      "sha12": "23e44b596840",
+      "label": "button_white",
+      "file": "parts/button_white.png"
+    },
+    {
+      "asset_id": "d9fc5601-e004-4506-a79f-e1385783334a",
+      "sha12": "26dd6f04b688",
+      "label": "button_grey",
+      "file": "parts/button_grey.png"
+    },
+    {
+      "asset_id": "c1b077d0-3bbd-409b-8475-1864f28370af",
+      "sha12": "5062d307f74e",
+      "label": "coin_counter",
+      "file": "parts/coin_counter.png"
+    },
+    {
+      "asset_id": "b9617044-1840-4009-b9d3-067424dac124",
+      "sha12": "9ad129a0751e",
+      "label": "plus",
+      "file": "parts/plus.png"
+    },
+    {
+      "asset_id": "0933a969-c89c-4e61-b972-482b8e95b30f",
+      "sha12": "4165d31aa6b3",
+      "label": "minus",
+      "file": "parts/minus.png"
+    },
+    {
+      "asset_id": "dfe85f31-3501-4097-a549-be1496ffeb89",
+      "sha12": "6772dd8a1292",
+      "label": "card",
+      "file": "parts/card.png"
+    },
+    {
+      "asset_id": "ca21f758-a595-4bdc-bdfc-3caf32652e5a",
+      "sha12": "2f8d07bc66ab",
+      "label": "well",
+      "file": "parts/well.png"
+    },
+    {
+      "asset_id": "dd9c0c26-27dc-4460-b3b3-5754b5340b6d",
+      "sha12": "3b5e50b96ae4",
+      "label": "toggle_on",
+      "file": "parts/toggle_on.png"
+    },
+    {
+      "asset_id": "0885da28-1c96-440e-8bb6-1a8cd67e56f1",
+      "sha12": "d9292faf5443",
+      "label": "toggle_off",
+      "file": "parts/toggle_off.png"
+    },
+    {
+      "asset_id": "bfc7b608-0399-47f9-b89b-f1409e37f693",
+      "sha12": "19e13e39acb0",
+      "label": "dock_shop",
+      "file": "parts/dock_shop.png"
+    },
+    {
+      "asset_id": "cc5bc9bf-ba0f-424c-8317-0b130628c86f",
+      "sha12": "5ea1a8d078d8",
+      "label": "dock_bag",
+      "file": "parts/dock_bag.png"
+    },
+    {
+      "asset_id": "901c5a4c-6bc2-44de-84e5-2f2ed5e55196",
+      "sha12": "126417bac9e9",
+      "label": "dock_stats",
+      "file": "parts/dock_stats.png"
+    },
+    {
+      "asset_id": "5dd23bb5-14ed-418e-af7f-dc152317524b",
+      "sha12": "c3d883d7a828",
+      "label": "dock_settings",
+      "file": "parts/dock_settings.png"
+    },
+    {
+      "asset_id": "abc5e5d4-f1b9-4eb1-b644-96868ec60174",
+      "sha12": "20b84c2679ac",
+      "label": "dock_invite",
+      "file": "parts/dock_invite.png"
+    },
+    {
+      "asset_id": "bfe10ffe-cf6f-4603-af70-24812d5ff583",
+      "sha12": "83c0e4a7f877",
+      "label": "dock_community",
+      "file": "parts/dock_community.png"
+    },
+    {
+      "asset_id": "37532de2-6340-4989-a626-e04dd178df2d",
+      "sha12": "eee2e021a32a",
+      "label": "action_pebble",
+      "file": "parts/action_pebble.png"
+    },
+    {
+      "asset_id": "beca1b4e-c7e4-4443-aa76-fb74f4701927",
+      "sha12": "4e5b48f0ca9b",
+      "label": "action_updraft",
+      "file": "parts/action_updraft.png"
+    },
+    {
+      "asset_id": "092689e3-25c2-496a-99fd-ecc5ea60c4d7",
+      "sha12": "28805614d282",
+      "label": "action_hush",
+      "file": "parts/action_hush.png"
+    },
+    {
+      "asset_id": "61d149c8-af71-4926-82c0-55a928bdff28",
+      "sha12": "9899ea4231ef",
+      "label": "action_grapple",
+      "file": "parts/action_grapple.png"
+    },
+    {
+      "asset_id": "5d66ead7-4ab2-45b5-9f3b-48a05b2b4d31",
+      "sha12": "9b8320b62528",
+      "label": "action_snowball",
+      "file": "parts/action_snowball.png"
+    },
+    {
+      "asset_id": "22cf5d69-72e5-4eaf-b949-557dd50d2f7f",
+      "sha12": "5b20b404ec6f",
+      "label": "stat_trophy",
+      "file": "parts/stat_trophy.png"
+    },
+    {
+      "asset_id": "97084b7c-05f4-45cd-a370-a9da94737105",
+      "sha12": "58b66f46eda7",
+      "label": "stat_stopwatch",
+      "file": "parts/stat_stopwatch.png"
+    },
+    {
+      "asset_id": "dec891b4-e714-41dd-94d1-c0c7deda0e08",
+      "sha12": "7b091765e4a5",
+      "label": "stat_footprints",
+      "file": "parts/stat_footprints.png"
+    },
+    {
+      "asset_id": "a0b49988-b477-426d-b2e2-f1cb8c184be3",
+      "sha12": "9fdfbcc92797",
+      "label": "stat_skull",
+      "file": "parts/stat_skull.png"
+    },
+    {
+      "asset_id": "d447e3b0-4901-4fa4-be33-4adc1b5d3f47",
+      "sha12": "5494aa51aedd",
+      "label": "stat_shell",
+      "file": "parts/stat_shell.png"
+    },
+    {
+      "asset_id": "27c00f25-b071-4fe1-8b56-4f4da92a8219",
+      "sha12": "f7acaa9a0e8e",
+      "label": "stat_wave",
+      "file": "parts/stat_wave.png"
+    },
+    {
+      "asset_id": "4862f6cd-1137-48ff-abd3-e3f9ccaa040e",
+      "sha12": "297075e9e615",
+      "label": "button_double_coins",
+      "file": "parts/button_double_coins.png"
+    },
+    {
+      "asset_id": "93d843f9-e1a0-4e37-a848-ffb6304521a0",
+      "sha12": "4ab57c4ad224",
+      "label": "tile (made on its own, matching the kit)",
+      "file": "parts/tile.png"
+    },
+    {
+      "asset_id": null,
+      "sha12": "ea84095f8b9e",
+      "label": "coin (cut from coin_counter's left end)",
+      "file": "parts/coin.png"
+    }
+  ]
+}

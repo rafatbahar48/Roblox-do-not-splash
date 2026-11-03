@@ -75,45 +75,48 @@ public static class UiPack {
 }
 "@
 
-$parts = "$Root\art\ui\kit\parts"
+# The parts: the lantern-lit wood kit (art/ui/swamp/parts, SpriteCook kit
+# "Silent Swamp lantern menus"), and for what it hasn't redone yet (the Robux
+# pack icons, the sunburst and sparkle, the Christmas art) the first kit's
+# candy parts (art/ui/kit/parts).
+$parts = "$Root\art\ui\swamp\parts"
+$oldParts = "$Root\art\ui\kit\parts"
 # name, atlas, scale, 9-slice borders in source pixels (left, top, right, bottom) or $null,
 # and $true to keep every bit of it (icons with loose sparkles or pearls)
 $specs = @(
-    @("window", "panels", 0.56, @(440, 190, 160, 80)),
-    @("ribbon", "panels", 0.5, $null),
-    @("close", "panels", 0.5, $null),
-    @("button_pink", "panels", 0.5, @(70, 62, 70, 62)),
-    @("button_mint", "panels", 0.5, @(70, 62, 70, 62)),
-    @("button_lemon", "panels", 0.5, @(70, 62, 70, 62)),
-    @("button_white", "panels", 0.5, @(70, 62, 70, 62)),
-    @("button_sky", "panels", 0.5, @(70, 66, 70, 66)),
-    @("button_grey", "panels", 0.5, @(70, 64, 70, 64)),
-    @("minus", "panels", 0.5, $null),
-    @("plus", "panels", 0.5, $null),
-    @("toggle_on", "panels", 0.5, $null),
-    @("toggle_off", "panels", 0.5, $null),
-    @("coin_counter", "panels", 0.22, @(420, 220, 345, 220)),
-    @("plus_mint", "panels", 0.5, $null),
-    @("coin", "panels", 0.085, $null),
-    @("tile", "panels", 0.45, @(70, 70, 70, 70)),
-    @("well", "panels", 0.35, $null),
-    @("shop_sign", "panels", 0.24, $null, $true), # the cottage shop's sign, drawn at 2048 px
-    @("dock_shop", "icons", 0.6, $null),
-    @("dock_bag", "icons", 0.6, $null),
-    @("dock_stats", "icons", 0.6, $null),
-    @("dock_settings", "icons", 0.6, $null),
-    @("dock_invite", "icons", 0.6, $null),
-    @("dock_community", "icons", 0.2, $null), # drawn at 1024 px
-    @("stat_trophy", "icons", 0.55, $null),
-    @("stat_stopwatch", "icons", 0.55, $null),
-    @("stat_footprints", "icons", 0.55, $null),
-    @("stat_skull", "icons", 0.55, $null),
-    @("stat_shell", "icons", 0.55, $null),
-    @("stat_wave", "icons", 0.55, $null),
-    @("action_pebble", "icons", 0.8, $null),
-    @("action_updraft", "icons", 0.8, $null),
-    @("action_hush", "icons", 0.8, $null),
-    @("action_snowball", "icons", 0.19, $null), # drawn at 1024 px; the others at 242
+    @("window", "panels", 0.36, @(600, 300, 240, 150)),
+    @("ribbon", "panels", 0.36, $null),
+    @("close", "panels", 0.36, $null),
+    @("button_pink", "panels", 0.36, @(80, 60, 80, 60)),
+    @("button_mint", "panels", 0.36, @(80, 60, 80, 60)),
+    @("button_lemon", "panels", 0.36, @(80, 60, 80, 60)),
+    @("button_white", "panels", 0.36, @(80, 60, 80, 60)),
+    @("button_sky", "panels", 0.36, @(80, 60, 80, 60)),
+    @("button_grey", "panels", 0.36, @(80, 62, 80, 62)),
+    @("minus", "panels", 0.33, $null),
+    @("plus", "panels", 0.33, $null),
+    @("toggle_on", "panels", 0.29, $null),
+    @("toggle_off", "panels", 0.29, $null),
+    @("coin_counter", "panels", 0.3, @(360, 110, 240, 110)),
+    @("coin", "panels", 0.36, $null, $true), # cut from the coin counter's left end
+    @("tile", "panels", 0.16, @(100, 100, 100, 100)),
+    @("well", "panels", 0.37, $null),
+    @("dock_shop", "icons", 0.62, $null),
+    @("dock_bag", "icons", 0.62, $null),
+    @("dock_stats", "icons", 0.62, $null),
+    @("dock_settings", "icons", 0.62, $null),
+    @("dock_invite", "icons", 0.62, $null),
+    @("dock_community", "icons", 0.62, $null),
+    @("stat_trophy", "icons", 0.51, $null),
+    @("stat_stopwatch", "icons", 0.51, $null),
+    @("stat_footprints", "icons", 0.51, $null),
+    @("stat_skull", "icons", 0.51, $null),
+    @("stat_shell", "icons", 0.51, $null),
+    @("stat_wave", "icons", 0.51, $null),
+    @("action_pebble", "icons", 0.5, $null),
+    @("action_updraft", "icons", 0.5, $null),
+    @("action_hush", "icons", 0.5, $null),
+    @("action_snowball", "icons", 0.5, $null),
     @("robux_coins_small", "icons", 0.6, $null, $true),
     @("robux_coins_jar", "icons", 0.6, $null, $true),
     @("robux_coins_chest", "icons", 0.6, $null, $true),
@@ -124,15 +127,16 @@ $specs = @(
     @("robux_kit", "icons", 0.6, $null, $true),
     @("sunburst", "icons", 0.5, $null, $true),
     @("sparkle", "icons", 0.2, $null, $true),
-    # Seasonal: the Christmas event button, bundle window and its art
+    # Seasonal: the Christmas event button, bundle window and its art; and
+    # the 2x Coins button beside it
     @("button_christmas", "event", 0.175, $null, $true),
-    @("button_double_coins", "event", 0.17, $null, $true),
+    @("button_double_coins", "event", 0.45, $null),
     @("icon_frostbite", "event", 0.12, $null, $true),
     @("icon_santa_hat", "event", 0.13, $null, $true),
     @("christmas_bundle", "event", 0.42, $null, $true),
     @("ribbon_red", "event", 0.125, $null, $true),
     # Boosts added after the icons atlas filled up
-    @("action_grapple", "boosts", 0.8, $null)
+    @("action_grapple", "boosts", 0.5, $null)
 )
 
 $MAX = 1024
@@ -144,7 +148,9 @@ foreach ($atlasName in @("panels", "icons", "event", "boosts")) {
     $items = @()
     foreach ($s in $specs) {
         if ($s[1] -ne $atlasName) { continue }
-        $src = [System.Drawing.Bitmap]::FromFile("$parts\$($s[0]).png")
+        $file = "$parts\$($s[0]).png"
+        if (-not (Test-Path $file)) { $file = "$oldParts\$($s[0]).png" }
+        $src = [System.Drawing.Bitmap]::FromFile($file)
         $copy = New-Object System.Drawing.Bitmap($src)
         $src.Dispose()
         Write-Host $s[0]
@@ -191,8 +197,10 @@ foreach ($atlasName in @("panels", "icons", "event", "boosts")) {
 
 foreach ($s in $specs) { $lines.Add($placed[$s[0]]) }
 $header = @"
--- Generated by tools/pack-ui.ps1 from the SpriteCook UI kit "Still Water lobby
--- menus" (art/ui/kit/parts, logged in art/spritecook-assets.json): where each
+-- Generated by tools/pack-ui.ps1 from the SpriteCook UI kits "Silent Swamp
+-- lantern menus" (art/ui/swamp/parts) and "Still Water lobby menus"
+-- (art/ui/kit/parts), logged in art/ui/swamp/kit.json and
+-- art/spritecook-assets.json: where each
 -- part sits in its atlas (art/ui/kit/atlas-<name>.png), in pixels, and its
 -- 9-slice borders (left, top, right, bottom) for parts that stretch.
 -- Don't edit by hand; repack instead. The atlases' Roblox ids live in UiArt.luau.
