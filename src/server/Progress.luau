@@ -157,7 +157,9 @@ local function load(player)
 		for slot, kind in Catalog.slots do
 			local id = data.equipped[slot]
 			local item = type(id) == "string" and Catalog.byId[id]
-			if item and item.kind == kind and owned[id] then
+			-- A premium skin is owned through its Game Pass, checked as it is
+			-- put on (Cosmetics.luau).
+			if item and item.kind == kind and (owned[id] or item.premium) then
 				equipped[slot] = id
 			end
 		end

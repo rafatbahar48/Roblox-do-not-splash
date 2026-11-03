@@ -100,6 +100,12 @@ Config.Products = {
 Config.Passes = {
 	DoubleCoins = 2061271796,
 	DeepPockets = 2058219044,
+	-- The premium skins (Catalog.luau, premium), one pass each.
+	SwampSurvivor = 2070006719,
+	BogHunter = 2070462444,
+	WillowWraith = 2066436965,
+	RotwoodSentinel = 2069958763,
+	CursedDiver = 2070252647,
 }
 -- The game's Roblox community (made on roblox.com). Being in it pays Reward
 -- coins, once per player: through the HUD's Join button, or on their next

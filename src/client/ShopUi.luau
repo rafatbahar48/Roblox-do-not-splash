@@ -1,8 +1,9 @@
 -- The shop window and the bag. The shop sells skins, accessories and boosts
--- for coins on three tabs, and coin packs, Self-Revives and bundles
--- (Robux tab) and Game Passes (Passes tab) for Robux, from
--- shared/RobuxCatalog.luau; the bag shows only what you own, to wear or take
--- off. It shows what the server says (player attributes, see
+-- for coins on three tabs, the premium skins for Robux, each with its own
+-- Game Pass (Premium tab; Catalog.luau, premium), and coin packs,
+-- Self-Revives and bundles (Robux tab) and Game Passes (Passes tab) for
+-- Robux, from shared/RobuxCatalog.luau; the bag shows only what you own, to
+-- wear or take off, premium skins on its Skins tab. It shows what the server says (player attributes, see
 -- server/Progress.luau) and sends requests; the server decides what actually
 -- happens (server/Shop.luau, server/Purchases.luau).
 --
@@ -53,6 +54,7 @@ local RARITIES = {
 	Rare = { color = Candy.SKY },
 	Epic = { color = Candy.PINK },
 	Legendary = { color = Candy.LEMON },
+	Premium = { color = Candy.LEMON },
 }
 local TOP = Candy.WINDOW_TOP
 
@@ -61,6 +63,7 @@ local TABS = {
 	{ kind = "skin", title = "Skins", color = Candy.PINK, width = 116 },
 	{ kind = "accessory", title = "Accessories", color = Candy.MINT, width = 180 },
 	{ kind = "boost", title = "Boosts", color = Candy.LEMON, width = 128 },
+	{ kind = "premium", title = "Premium", color = Candy.LEMON, width = 132, robux = true },
 	{ kind = "robux", title = "Robux", color = Candy.SKY, width = 124, robux = true },
 	{ kind = "pass", title = "Passes", color = Candy.PINK, width = 128, robux = true },
 }
@@ -89,7 +92,18 @@ local function ownedSet()
 	for id in string.gmatch(player:GetAttribute("Owned") or "", "[^,]+") do
 		owned[id] = true
 	end
+	for _, item in Catalog.items do
+		if item.premium and Perks.owns(player, item.premium) then
+			owned[item.id] = true
+		end
+	end
 	return owned
+end
+
+-- The tab an item's card is on: a premium skin's own tab in the shop, the
+-- Skins tab in the bag.
+local function tabOf(item)
+	return if item.premium and mode == "shop" then "premium" else item.kind
 end
 
 local function boostCount(item)
@@ -114,6 +128,16 @@ local function onCardPressed(item)
 	if item.exclusive and not ownedSet()[item.id] then
 		-- Not for coins: it comes in its bundle.
 		ChristmasBundle.open()
+		return
+	end
+	if item.premium and not ownedSet()[item.id] then
+		-- For Robux, with its Game Pass (Purchases.luau puts it on).
+		local id = Config.Passes[item.premium] or 0
+		if id == 0 then
+			footer.Text = ("Set Config.Passes.%s first (README: Robux)"):format(item.premium)
+		else
+			MarketplaceService:PromptGamePassPurchase(player, id)
+		end
 		return
 	end
 	if item.kind == "boost" or not ownedSet()[item.id] then
@@ -278,16 +302,17 @@ end
 -- A card's name, status (on the right) and a line about it, under the stage.
 -- Returns the status label and the line.
 local function describe(body, name, blurb)
-	text({
+	local title = text({
 		Name = "ItemName",
 		Position = UDim2.fromOffset(14, STAGE_HEIGHT + 18),
 		Size = UDim2.new(1, -112, 0, 28),
-		TextSize = 24,
 		TextXAlignment = Enum.TextXAlignment.Left,
 		TextTruncate = Enum.TextTruncate.AtEnd,
 		Text = name,
 		Parent = body,
 	})
+	-- Long names (Rotwood Sentinel) shrink to fit beside the status.
+	create("UITextSizeConstraint", { MinTextSize = 15, MaxTextSize = 24, Parent = title })
 	local line = text({
 		Name = "Blurb",
 		Position = UDim2.fromOffset(14, STAGE_HEIGHT + 50),
@@ -456,7 +481,13 @@ end
 
 -- Prices come from the dashboard, a little after the shop opens.
 local function fetchPrices()
-	for _, list in { { "product", RobuxCatalog.products }, { "pass", RobuxCatalog.passes } } do
+	local premiumPasses = {}
+	for _, item in Catalog.items do
+		if item.premium then
+			table.insert(premiumPasses, { id = item.premium })
+		end
+	end
+	for _, list in { { "product", RobuxCatalog.products }, { "pass", RobuxCatalog.passes }, { "pass", premiumPasses } } do
 		local kind = list[1]
 		for _, offer in list[2] do
 			local id = robuxId(kind, offer)
@@ -508,7 +539,9 @@ function ShopUi.render()
 		-- A bundle's exclusive shows while the bundle is on sale, and after
 		-- that only to those who have it.
 		local offered = not item.exclusive or owned[item.id] or ChristmasBundle.onSale()
-		local shown = item.kind == currentKind and offered and (mode == "shop" or inBag(item, owned))
+		-- A premium skin shows once its pass is set up (always in Studio).
+		offered = offered and (not item.premium or owned[item.id] or (Config.Passes[item.premium] or 0) ~= 0 or RunService:IsStudio())
+		local shown = tabOf(item) == currentKind and offered and (mode == "shop" or inBag(item, owned))
 		card.holder.Visible = shown
 		anyShown = anyShown or shown
 		-- What the button says and does. A greyed button still sends its
@@ -537,6 +570,9 @@ function ShopUi.render()
 		elseif item.exclusive then
 			statusText = "Christmas Bundle only"
 			label, color = "See the bundle", Candy.PINK
+		elseif item.premium then
+			statusText = "Forever"
+			label = ("R$ %d"):format(robuxPrices[item.premium] or item.robux)
 		elseif coins >= item.price then
 			showPrice = true
 		else
@@ -659,7 +695,7 @@ local function build()
 	}, {
 		create("UIListLayout", {
 			FillDirection = Enum.FillDirection.Horizontal,
-			Padding = UDim.new(0, 12),
+			Padding = UDim.new(0, 10), -- six tabs just fit
 			SortOrder = Enum.SortOrder.LayoutOrder,
 		}),
 	})
@@ -781,7 +817,7 @@ function ShopUi.open(newMode, kind)
 	mode = newMode
 	if kind then
 		currentKind = kind
-	elseif newMode == "bag" and (currentKind == "robux" or currentKind == "pass") then
+	elseif newMode == "bag" and (currentKind == "robux" or currentKind == "pass" or currentKind == "premium") then
 		currentKind = "skin"
 	end
 	gui.Enabled = true

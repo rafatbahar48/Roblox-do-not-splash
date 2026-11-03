@@ -50,6 +50,10 @@ local function piece(model, weldTo, cframe, size, color, material, shape)
 	return part
 end
 
+-- The premium skins' outfits are built the same way (OutfitLook.luau).
+AccessoryLook.findAttachment = findAttachment
+AccessoryLook.piece = piece
+
 -- Accessory builders, keyed by catalog id. Each gets the model to fill and
 -- the character, and returns false if the avatar lacks what it needs.
 local builders = {}

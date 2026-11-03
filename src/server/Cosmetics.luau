@@ -1,13 +1,19 @@
 -- Puts skins and accessories on characters: skins recolour body regions and
 -- hide shirts and pants (shared/SkinLook.luau); accessories are small builds
--- welded to the avatar's attachment points (shared/AccessoryLook.luau).
+-- welded to the avatar's attachment points (shared/AccessoryLook.luau). A
+-- premium skin adds its outfit (shared/OutfitLook.luau), only while its Game
+-- Pass is owned, and marks the character with its move (SkinMove), which
+-- every client plays (client/SkinMoves.luau). Under an outfit, the shop's
+-- head accessories stay off.
 --
--- Both can be changed mid-life.
+-- All can be changed mid-life.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local AccessoryLook = require(ReplicatedStorage.Shared.AccessoryLook)
 local Catalog = require(ReplicatedStorage.Shared.Catalog)
+local OutfitLook = require(ReplicatedStorage.Shared.OutfitLook)
+local Perks = require(ReplicatedStorage.Shared.Perks)
 local SkinLook = require(ReplicatedStorage.Shared.SkinLook)
 
 local APPEARANCE_WAIT = 6 -- seconds to wait for the avatar to finish loading
@@ -39,8 +45,16 @@ function Cosmetics.apply(player, character, equipped)
 	if player.Character ~= character or not character.Parent then
 		return
 	end
-	SkinLook.apply(character, equipped.skin and Catalog.byId[equipped.skin])
-	AccessoryLook.apply(character, equipped.accessory)
+	local skin = equipped.skin and Catalog.byId[equipped.skin]
+	if skin and skin.premium and not Perks.owns(player, skin.premium) then
+		skin = nil -- still equipped, for when the pass shows up (Purchases.luau)
+	end
+	SkinLook.apply(character, skin)
+	OutfitLook.apply(character, skin)
+	character:SetAttribute("SkinMove", skin and skin.move)
+	local accessory = equipped.accessory and Catalog.byId[equipped.accessory]
+	local covered = skin and skin.premium and accessory and accessory.focus == "head"
+	AccessoryLook.apply(character, if covered then nil else equipped.accessory)
 end
 
 return Cosmetics

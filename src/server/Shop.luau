@@ -41,6 +41,16 @@ local function isAlive(player)
 	return humanoid ~= nil and humanoid.Health > 0 and character:FindFirstChild("HumanoidRootPart") ~= nil
 end
 
+-- Whether a player has a skin or accessory: bought with coins (or in a
+-- bundle), or a premium skin's Game Pass.
+function Shop.owns(player, item)
+	local profile = Progress.getProfile(player)
+	if item.premium then
+		return Perks.owns(player, item.premium)
+	end
+	return profile ~= nil and profile.owned[item.id] == true
+end
+
 -- Buys one of an item: a skin or accessory to keep, or a boost to carry.
 function Shop.buy(player, itemId)
 	local profile = Progress.getProfile(player)
@@ -48,8 +58,8 @@ function Shop.buy(player, itemId)
 	if not profile or not item then
 		return false
 	end
-	if item.exclusive then
-		-- Only in its bundle, for Robux (Purchases.luau).
+	if item.exclusive or item.premium then
+		-- Only in its bundle, or with its Game Pass, for Robux (Purchases.luau).
 		return false
 	end
 	if item.kind == "boost" then
@@ -85,7 +95,7 @@ function Shop.equip(player, slot, itemId)
 	end
 	if itemId ~= nil then
 		local item = type(itemId) == "string" and Catalog.byId[itemId]
-		if not item or item.kind ~= kind or not profile.owned[item.id] then
+		if not item or item.kind ~= kind or not Shop.owns(player, item) then
 			return false
 		end
 	end

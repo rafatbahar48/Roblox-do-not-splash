@@ -3,8 +3,8 @@
 --
 -- kind     "skin", "accessory" or "boost"
 -- swatch   colour on the shop card
--- rarity   "Common", "Rare", "Epic" or "Legendary": the tag and colour of
---          its shop card
+-- rarity   "Common", "Rare", "Epic", "Legendary" or "Premium": the tag and
+--          colour of its shop card
 -- focus    (accessories) "head" for things worn there: the shop shows your
 --          head and shoulders
 -- exclusive  the id of the bundle it comes in (RobuxCatalog.bundles): not
@@ -12,6 +12,12 @@
 -- controls (boosts) how to use it, added to its blurb on a keyboard or touch
 --          screen
 -- button   (boosts) its controller button, whose icon its card shows instead
+--
+-- premium  (skins) the Game Pass that owns it (Config.Passes): sold for
+--          Robux on the shop's Premium tab, never for coins. robux is the
+--          price to set on that pass, shown until the real one is known.
+--          Its outfit is built by shared/OutfitLook.luau, keyed by id, and
+--          move is how it moves (client/SkinMoves.luau).
 --
 -- Skins recolour body regions (head, torso, arms, legs). A region left out
 -- keeps the avatar's own colour. Wearing any skin hides shirts and pants.
@@ -113,6 +119,78 @@ Catalog.items = {
 		torso = region(150, 205, 245, Enum.Material.Ice),
 		arms = region(190, 226, 250, Enum.Material.Ice),
 		legs = region(110, 160, 220, Enum.Material.Ice),
+	},
+
+	-- Premium skins, for Robux
+	{
+		id = "swamp_survivor",
+		kind = "skin",
+		rarity = "Premium",
+		premium = "SwampSurvivor",
+		robux = 399,
+		move = "lantern",
+		name = "Swamp Survivor",
+		blurb = "Beanie, flannel and a lantern held up high. Lantern Idle.",
+		swatch = Color3.fromRGB(150, 40, 34),
+		torso = region(140, 38, 34, Enum.Material.Fabric),
+		arms = region(140, 38, 34, Enum.Material.Fabric),
+		legs = region(50, 52, 58, Enum.Material.Fabric),
+	},
+	{
+		id = "bog_hunter",
+		kind = "skin",
+		rarity = "Premium",
+		premium = "BogHunter",
+		robux = 499,
+		move = "stalker",
+		name = "Bog Hunter",
+		blurb = "Hidden under moss and grass, moving low. Stalker Walk.",
+		swatch = Color3.fromRGB(88, 104, 56),
+		torso = region(80, 94, 50, Enum.Material.Grass),
+		arms = region(80, 94, 50, Enum.Material.Grass),
+		legs = region(58, 66, 42, Enum.Material.Fabric),
+	},
+	{
+		id = "willow_wraith",
+		kind = "skin",
+		rarity = "Premium",
+		premium = "WillowWraith",
+		robux = 599,
+		move = "spirit",
+		name = "Willow Wraith",
+		blurb = "Pale, soaked through, drifting on green mist. Spirit Float.",
+		swatch = Color3.fromRGB(120, 230, 170),
+		torso = region(150, 156, 140, Enum.Material.Fabric),
+		arms = region(214, 220, 216),
+		legs = region(150, 156, 140, Enum.Material.Fabric),
+	},
+	{
+		id = "rotwood_sentinel",
+		kind = "skin",
+		rarity = "Premium",
+		premium = "RotwoodSentinel",
+		robux = 499,
+		move = "roar",
+		name = "Rotwood Sentinel",
+		blurb = "Antlered skull, bark for skin, embers all round. Nature Roar.",
+		swatch = Color3.fromRGB(110, 82, 52),
+		torso = region(86, 64, 42, Enum.Material.Wood),
+		arms = region(86, 64, 42, Enum.Material.Wood),
+		legs = region(66, 50, 34, Enum.Material.Wood),
+	},
+	{
+		id = "cursed_diver",
+		kind = "skin",
+		rarity = "Premium",
+		premium = "CursedDiver",
+		robux = 599,
+		move = "bubbles",
+		name = "Cursed Diver",
+		blurb = "A rusted helmet glowing green, never dry. Bubble Aura.",
+		swatch = Color3.fromRGB(60, 220, 120),
+		torso = region(112, 92, 64, Enum.Material.Fabric),
+		arms = region(112, 92, 64, Enum.Material.Fabric),
+		legs = region(88, 72, 52, Enum.Material.Fabric),
 	},
 
 	-- Accessories

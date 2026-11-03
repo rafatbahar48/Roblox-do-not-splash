@@ -1,7 +1,8 @@
 -- The 3D on the shop's cards (ShopUi.luau), each in its own ViewportFrame:
 --
 --   avatar   a copy of your own avatar wearing a skin or an accessory
---            (shared/SkinLook.luau, shared/AccessoryLook.luau), turning slowly
+--            (shared/SkinLook.luau, shared/AccessoryLook.luau), with a
+--            premium skin's outfit (shared/OutfitLook.luau), turning slowly
 --   model    one of the shop's 3D models (ReplicatedStorage.ShopModels, made
 --            in Meshy from the shop's icons), spinning and bobbing
 --
@@ -12,6 +13,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local AccessoryLook = require(ReplicatedStorage.Shared.AccessoryLook)
+local OutfitLook = require(ReplicatedStorage.Shared.OutfitLook)
 local SkinLook = require(ReplicatedStorage.Shared.SkinLook)
 
 local player = Players.LocalPlayer
@@ -80,13 +82,15 @@ local function copyAvatar()
 	if extra then
 		extra:Destroy()
 	end
+	OutfitLook.restore(copy)
 	for _, item in copy:GetDescendants() do
 		if item:IsA("LuaSourceContainer") or item:IsA("Sound") or item:IsA("ForceField") or item:IsA("BillboardGui") then
 			item:Destroy()
 		elseif item:IsA("Light") then
 			item.Enabled = false
-		elseif item:IsA("Motor6D") then
-			item.Transform = CFrame.identity -- standing, not mid-stride
+		elseif item:IsA("Motor6D") or item:IsA("AnimationConstraint") then
+			-- Standing, not mid-stride (or mid-move, in a premium skin).
+			item.Transform = CFrame.identity
 		elseif item:IsA("BasePart") then
 			item.Anchored = false
 			item.CanCollide = false
@@ -117,6 +121,7 @@ function ShopPreview.avatar(viewport, look)
 	end
 	SkinLook.apply(model, look.skin)
 	model:PivotTo(CFrame.new())
+	OutfitLook.apply(model, look.skin)
 	if look.accessory then
 		AccessoryLook.apply(model, look.accessory)
 	end
