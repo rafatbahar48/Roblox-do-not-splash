@@ -38,10 +38,11 @@ Candy.WINDOW_TOP = 100
 Candy.WINDOW_SIDE = 46
 Candy.WINDOW_BOTTOM = 44
 
--- On a TV (a console's), seen from across the room, windows and the HUD
--- grow with the screen, up to TV_SCALE times their size on a 1080p screen,
--- and keep TV_SAFE of the screen clear on each side, since some TVs cut the
--- edges of the picture off.
+-- On a big screen (a console's TV, seen from across the room, or a large
+-- monitor), windows and the HUD grow with the screen, up to TV_SCALE times
+-- their size on a 1080p screen. On a console's TV they also keep TV_SAFE of
+-- the screen clear on each side, since some TVs cut the edges of the picture
+-- off; a monitor shows it all, so there they go right to the edges.
 Candy.TV_SCALE = 1.5
 Candy.TV_SAFE = 0.05
 
@@ -348,9 +349,15 @@ function Candy.badge(parent, text, size, position, anchor, color)
 	return badge
 end
 
--- Whether this screen is a TV.
+-- Whether this screen is a console's TV.
 function Candy.onTv()
-	return GuiService:IsTenFootInterface() or GuiService.ViewportDisplaySize == Enum.DisplaySize.Large
+	return GuiService:IsTenFootInterface()
+end
+
+-- Whether this screen is big enough for things to grow on: a TV, or a large
+-- monitor (Roblox calls most PC screens large).
+function Candy.bigScreen()
+	return Candy.onTv() or GuiService.ViewportDisplaySize == Enum.DisplaySize.Large
 end
 
 -- How big things can get on a TV of this height, in pixels.
@@ -402,16 +409,19 @@ function Candy.window(parent, props)
 	return window, title, close
 end
 
--- Shrinks a window to fit small screens, and grows it on a TV, inside its
--- safe area. designSize is the window's size at scale 1, lip included.
+-- Shrinks a window to fit small screens, and grows it on a big one (on a TV,
+-- inside its safe area). designSize is the window's size at scale 1, lip
+-- included.
 function Candy.fit(window, designSize, margin)
 	local scale = create("UIScale", { Parent = window })
 	local camera = workspace.CurrentCamera
 	local function fit()
 		local viewport = camera.ViewportSize
 		local biggest = 1
-		if Candy.onTv() then
+		if Candy.bigScreen() then
 			biggest = Candy.tvScale(viewport.Y)
+		end
+		if Candy.onTv() then
 			viewport *= 1 - 2 * Candy.TV_SAFE
 		end
 		scale.Scale = math.min(biggest, (viewport.X - margin) / designSize.X, (viewport.Y - margin) / designSize.Y)

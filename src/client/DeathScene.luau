@@ -264,8 +264,8 @@ local function build()
 		ZIndex = 6,
 		Parent = gui,
 	}, { create("UISizeConstraint", { MaxSize = Vector2.new(560, 120) }) })
-	-- Bigger on a TV, and the choice under it further down to make room.
-	local tv = if Candy.onTv() then math.max(1, Candy.tvScale(workspace.CurrentCamera.ViewportSize.Y)) else 1
+	-- Bigger on a big screen, and the choice under it further down to make room.
+	local tv = if Candy.bigScreen() then math.max(1, Candy.tvScale(workspace.CurrentCamera.ViewportSize.Y)) else 1
 	create("UIScale", { Scale = tv, Parent = ui.recap })
 	ui.title = create("TextLabel", {
 		BackgroundTransparency = 1,

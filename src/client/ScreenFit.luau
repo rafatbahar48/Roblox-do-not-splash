@@ -1,8 +1,9 @@
 -- Fits the HUD and the party banner to the screen. Their things are laid out
 -- on a screen at least DESIGN big; on a smaller one (phones and small
 -- windows), the frame holding them is made that big and shrunk to fit with a
--- UIScale, so everything keeps its place and nothing overlaps. On a TV it
--- grows instead, inside the TV's safe area (Candy.TV_SAFE, Candy.TV_SCALE).
+-- UIScale, so everything keeps its place and nothing overlaps. On a big
+-- screen it grows instead (Candy.TV_SCALE), and on a TV it keeps inside the
+-- TV's safe area (Candy.TV_SAFE).
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
@@ -30,10 +31,8 @@ function ScreenFit.frame(gui)
 		if size.X <= 0 or size.Y <= 0 then
 			return -- not on screen yet
 		end
-		local margin, biggest = 0, 1
-		if Candy.onTv() then
-			margin, biggest = Candy.TV_SAFE, math.max(1, Candy.tvScale(size.Y))
-		end
+		local margin = if Candy.onTv() then Candy.TV_SAFE else 0
+		local biggest = if Candy.bigScreen() then math.max(1, Candy.tvScale(size.Y)) else 1
 		local room = 1 - 2 * margin
 		local s = math.clamp(math.min(size.X * room / DESIGN.X, size.Y * room / DESIGN.Y), SMALLEST, biggest)
 		scale.Scale = s

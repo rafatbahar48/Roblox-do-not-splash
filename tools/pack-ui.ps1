@@ -135,8 +135,10 @@ $specs = @(
     @("icon_santa_hat", "event", 0.13, $null, $true),
     @("christmas_bundle", "event", 0.42, $null, $true),
     @("ribbon_red", "event", 0.125, $null, $true),
-    # Boosts added after the icons atlas filled up
-    @("action_grapple", "boosts", 0.5, $null)
+    # Added after the icons atlas filled up: the Grapple boost and the
+    # Premium button
+    @("action_grapple", "boosts", 0.5, $null),
+    @("dock_premium", "boosts", 0.62, $null)
 )
 
 $MAX = 1024

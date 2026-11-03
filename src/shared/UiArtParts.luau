@@ -57,4 +57,5 @@ return {
 	christmas_bundle = { atlas = "event", x = 0, y = 0, w = 402, h = 362, slice = nil },
 	ribbon_red = { atlas = "event", x = 0, y = 366, w = 243, h = 96, slice = nil },
 	action_grapple = { atlas = "boosts", x = 0, y = 0, w = 196, h = 198, slice = nil },
+	dock_premium = { atlas = "boosts", x = 200, y = 0, w = 199, h = 188, slice = nil },
 }

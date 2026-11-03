@@ -16,10 +16,10 @@ local RunService = game:GetService("RunService")
 local Parts = require(script.Parent.UiArtParts)
 
 local ATLASES = {
-	panels = "", -- art/ui/kit/atlas-panels.png
-	icons = "", -- art/ui/kit/atlas-icons.png
-	event = "", -- art/ui/kit/atlas-event.png
-	boosts = "", -- art/ui/kit/atlas-boosts.png
+	panels = "rbxassetid://118090668996658", -- art/ui/kit/atlas-panels.png
+	icons = "rbxassetid://123618167573660", -- art/ui/kit/atlas-icons.png
+	event = "rbxassetid://71459998617775", -- art/ui/kit/atlas-event.png
+	boosts = "rbxassetid://82282886075787", -- art/ui/kit/atlas-boosts.png
 }
 local PREVIEW = "rbxasset://textures/SilentSwamp/atlas-%s.png"
 

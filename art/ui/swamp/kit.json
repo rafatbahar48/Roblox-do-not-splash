@@ -248,6 +248,13 @@
       "sha12": "ea84095f8b9e",
       "label": "coin (cut from coin_counter's left end)",
       "file": "parts/coin.png"
+    },
+    {
+      "asset_id": "583afb77-064d-4d6b-9666-e1ad6796f286",
+      "sha12": "2a8885452736",
+      "label": "dock_premium",
+      "file": "parts/dock_premium.png",
+      "made_from": "dock_stats, edited (trophy to crown)"
     }
   ]
 }

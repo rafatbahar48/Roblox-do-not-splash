@@ -7,8 +7,8 @@
 --   top right     the difficulty buttons
 --   left          big Shop and Bag buttons (side by side on touch screens,
 --                 above the thumbstick), or out in the forest the noise meter
---   right         the Christmas Bundle (LIMITED, with how long is left),
---                 2x Coins and Join (the game's community, until its reward
+--   right         Premium (the shop's premium skins), 2x Coins and Join
+--                 (the game's community, until its reward
 --                 is paid), and Stats, Settings and Invite (not out in the
 --                 forest: in the lobby, the cave and the way out); on touch
 --                 screens in two rows near the top, clear of the jump button
@@ -46,7 +46,6 @@ local Gamepad = require(script.Parent.Gamepad)
 local Grapple = require(script.Parent.Grapple)
 local SettingsUi = require(script.Parent.SettingsUi)
 local Sounds = require(script.Parent.Sounds)
-local ChristmasBundle = require(script.Parent.ChristmasBundle)
 local ScreenFit = require(script.Parent.ScreenFit)
 local ShopUi = require(script.Parent.ShopUi)
 local StatsUi = require(script.Parent.StatsUi)
@@ -338,7 +337,7 @@ function Hud.start()
 	end)
 	Gamepad.keyHint(bagButton, nil, Enum.KeyCode.DPadRight, 30, UDim2.fromOffset(-6, -6))
 
-	-- Right: the Christmas Bundle, 2x Coins and Join, then Stats, Settings, Invite
+	-- Right: Premium, 2x Coins and Join, then Stats, Settings, Invite
 	-- Two columns, or on touch screens two rows from near the top, so the grid
 	-- stays clear of the jump button.
 
@@ -348,8 +347,8 @@ function Hud.start()
 		AnchorPoint = Vector2.new(1, if touch then 0 else 0.5),
 		Position = if touch then UDim2.new(1, -MARGIN, 0, 100) else UDim2.new(1, -MARGIN, 0.5, 0),
 		Size = if touch
-			then UDim2.fromOffset(step * 3 - GRID_GAP, step * 2 + 30)
-			else UDim2.fromOffset(step * 2 - GRID_GAP, step * 3 + 30),
+			then UDim2.fromOffset(step * 3 - GRID_GAP, step * 2 - GRID_GAP)
+			else UDim2.fromOffset(step * 2 - GRID_GAP, step * 3 - GRID_GAP),
 		BackgroundTransparency = 1,
 		Parent = fit,
 	})
@@ -364,14 +363,16 @@ function Hud.start()
 		gridButton("dock_settings", "Settings", SettingsUi.toggle),
 		gridButton("dock_invite", "Invite", inviteFriends),
 	}
-	local christmasButton = gridButton("button_christmas", "Christmas", ChristmasBundle.open)
+	local premiumButton = gridButton("dock_premium", "Premium", function()
+		ShopUi.open("shop", "premium")
+	end)
 	local doubleButton = gridButton("button_double_coins", "2x Coins", function()
 		ShopUi.open("shop", "pass")
 	end)
 	-- The coins it pays, on a lemon tag across its corner.
 	local joinButton = gridButton("dock_community", "Join", joinCommunity)
-	-- D-pad up's hint, on the grid's first button (moved in updateChristmas).
-	local gridHint = Gamepad.keyHint(doubleButton, nil, Enum.KeyCode.DPadUp, 30, UDim2.fromOffset(-6, -6))
+	-- D-pad up's hint, on the grid's first button.
+	Gamepad.keyHint(premiumButton, nil, Enum.KeyCode.DPadUp, 30, UDim2.fromOffset(-6, -6))
 	local rewardTag = Candy.badge(joinButton, "+" .. Config.Community.Reward, 30, UDim2.new(1, 8, 0, -6), Vector2.new(1, 0), Candy.LEMON)
 	rewardTag.Size = UDim2.fromOffset(58, 30)
 	local function updateJoin()
@@ -379,55 +380,12 @@ function Hud.start()
 	end
 	updateJoin()
 	player:GetAttributeChangedSignal("CommunityRewarded"):Connect(updateJoin)
-	-- LIMITED across its corner, and how long is left under it.
-	local limited = Candy.art("ribbon_red", {
-		Name = "Limited",
-		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = UDim2.new(0.62, 0, 0, 4),
-		Size = UDim2.fromOffset(96, 38),
-		Rotation = 14,
-		ZIndex = 6,
-		Parent = christmasButton,
-	})
-	Candy.outlined({ Position = UDim2.fromScale(0.16, 0.16), Size = UDim2.fromScale(0.68, 0.52), TextColor3 = WHITE, Text = "LIMITED", ZIndex = 7, Parent = limited }, 2)
-	local timeLeft = Candy.art("button_white", {
-		Name = "TimeLeft",
-		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 1, -2),
-		Size = UDim2.fromOffset(GRID_BUTTON, 26),
-		ZIndex = 5,
-		Parent = christmasButton,
-	}, 26)
-	local timeLeftText = text({ Position = UDim2.fromScale(0.08, 0.1), Size = UDim2.fromScale(0.84, 0.66), Text = "", ZIndex = 6, Parent = timeLeft })
-	local function updateChristmas()
-		local onSale = ChristmasBundle.onSale()
-		christmasButton.Visible = onSale
-		-- 2x Coins and Join follow the bundle, or take its place once it's
-		-- gone; while it's on sale, what comes under it leaves room for the
-		-- time left.
-		local timeLeftRoom = if onSale then 30 else 0
-		for i, face in { christmasButton, doubleButton, joinButton } do
-			local slot = if onSale then i - 1 else i - 2
-			face.Position = if touch
-				then UDim2.fromOffset(slot * step, 0)
-				else UDim2.fromOffset(0, slot * step + (if slot > 0 then timeLeftRoom else 0))
-		end
-		for i, face in menuButtons do
-			face.Position = if touch
-				then UDim2.fromOffset((i - 1) * step, step + timeLeftRoom)
-				else UDim2.fromOffset(step, (i - 1) * step)
-		end
-		gridHint.Parent = if onSale then christmasButton else doubleButton
-		local left = ChristmasBundle.timeLeft()
-		timeLeftText.Text = if left then ChristmasBundle.shortTime(left) else ""
+	for i, face in { premiumButton, doubleButton, joinButton } do
+		face.Position = if touch then UDim2.fromOffset((i - 1) * step, 0) else UDim2.fromOffset(0, (i - 1) * step)
 	end
-	updateChristmas()
-	task.spawn(function()
-		while true do
-			task.wait(20)
-			updateChristmas()
-		end
-	end)
+	for i, face in menuButtons do
+		face.Position = if touch then UDim2.fromOffset((i - 1) * step, step) else UDim2.fromOffset(step, (i - 1) * step)
+	end
 
 	-- Bottom right: pebble and boost buttons -------------------------------------
 	-- On touch screens left of the jump button (placeActions, below).
@@ -712,7 +670,7 @@ function Hud.start()
 	-- up: the HUD's buttons, where B lets go. Not while the selection has
 	-- the D-pad.
 	local function firstGridButton()
-		for _, face in { christmasButton, doubleButton, joinButton, menuButtons[1] } do
+		for _, face in { premiumButton, doubleButton, joinButton, menuButtons[1] } do
 			if face.Visible then
 				return face
 			end

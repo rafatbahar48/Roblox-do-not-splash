@@ -1,7 +1,7 @@
 -- The Christmas Bundle's window (shared/RobuxCatalog.luau's bundles): its
 -- picture, how long it's on sale for, what's in it, and its Robux button.
--- Opened by the HUD's Christmas button (Hud.luau) and by the shop's
--- exclusive items (ShopUi.luau). Roblox takes the payment and
+-- Opened by the shop's exclusive items, their "See the bundle" button
+-- (ShopUi.luau). Roblox takes the payment and
 -- server/Purchases.luau hands out what it gives.
 --
 -- Made of the SpriteCook UI kit's art (shared/Candy.luau); the code only
