@@ -287,8 +287,7 @@ Config.Settings = {
 -- ProSoundEffects), which any experience may use.
 Config.Sounds = {
 	-- Music, fading from one to the next (client/Music.luau)
-	LobbyMusic = "rbxassetid://139190190976686", -- Halloween Music Box: the lobby and the way out
-	ChristmasMusic = "rbxassetid://1836275417", -- Haunted Sleigh Bells: instead, while Config.Christmas is on
+	LobbyMusic = "rbxassetid://9044512469", -- Cypress Bayou: haunting swamp blues on a slide guitar, the lobby and the way out
 	ForestMusic = "rbxassetid://71555461626609", -- The Lurking Dread: scary suspense out in the forest
 	Chase = "rbxassetid://135888560895946", -- Rising Fear: while it hunts you
 	Escape = "rbxassetid://1844016113", -- White Sands (sting): you got out
@@ -316,6 +315,11 @@ Config.Sounds = {
 	CreatureSnap = "rbxassetid://9120258724", -- wood snapping as it crashes after you
 	CreatureSnarl = "rbxassetid://9113991846", -- a hissing snarl, now and then in the chase
 	CreatureImpact = "rbxassetid://9113493156", -- the thud as it grabs someone (with the Lunge roar)
+
+	-- Far off, now and then in the lobby (client/LobbyLife.luau)
+	DistantRoar = "rbxassetid://9113987603", -- something roaring beyond the ridge
+	DistantSplash = "rbxassetid://9119479417", -- something big dropping into the water out on the swamp
+	DistantSplashDeep = "rbxassetid://9119476512", -- the same, deeper
 
 	-- The cave where a party arrives (client/Cave.luau)
 	CaveDrips = "rbxassetid://9126190860", -- water dripping, while you are in it
