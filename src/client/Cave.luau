@@ -4,7 +4,8 @@
 -- CaveArrival attribute, server/Progress.luau). A few seconds of quiet, then
 -- something out past the mouth steps on a stick, growls two seconds later,
 -- and a note says this is the last chance to stock up, with a button to the
--- shop. Practice runs skip the scare: nothing is out there.
+-- shop; before your first run it says how to survive instead. Practice runs
+-- skip the scare: nothing is out there.
 
 local Debris = game:GetService("Debris")
 local Players = game:GetService("Players")
@@ -33,13 +34,17 @@ local WIDTH, HEIGHT = 560, 380
 local TOP, SIDE = Candy.WINDOW_TOP, Candy.WINDOW_SIDE
 local NOTE_TEXT = "This is your last chance to grab some supplies before you face the unknown."
 local NOTE_HINT = "Better to have a second chance than to start over."
+local HOW_TO = {
+	{ art = "action_hush", text = "It hunts by sound. Splashes, wading and hard landings give you away, so watch your noise." },
+	{ art = "action_pebble", text = "Throw a pebble into the water to draw it away before you cross." },
+	{ art = "robux_self_revive", text = "If it catches you, your first Self-Revive is free." },
+}
+local HOW_TO_ROW = 58
 
 local Cave = {}
 
-local note
-local openNote -- closes the other menu windows
-local readyButton -- where a controller starts
-local closeNote
+local gui
+local lastChance, howTo -- each { window, open (closes the other menu windows), close, button (where a controller starts) }
 
 local function root()
 	return player.Character and player.Character:FindFirstChild("HumanoidRootPart")
@@ -72,8 +77,22 @@ local function playAt(name, position, volume, near)
 	Debris:AddItem(attachment, 12)
 end
 
-local function buildNote()
-	local gui = Candy.create("ScreenGui", {
+-- A note's window, hidden.
+local function noteWindow(name, title)
+	local window, _, closeButton = Candy.window(gui, { name = name, size = UDim2.fromOffset(WIDTH, HEIGHT), title = title })
+	window.Visible = false
+	Candy.fit(window, Vector2.new(WIDTH + 10, HEIGHT + 10), 24)
+	local function close()
+		window.Visible = false
+		Gamepad.closed("cave")
+	end
+	closeButton.Activated:Connect(close)
+	Gamepad.keyHint(closeButton, nil, Enum.KeyCode.ButtonB, 36, UDim2.new(0, 8, 1, -8), Vector2.new(0, 1))
+	return { window = window, open = Windows.add(close), close = close }
+end
+
+local function buildNotes()
+	gui = Candy.create("ScreenGui", {
 		Name = "Cave",
 		ResetOnSpawn = false,
 		DisplayOrder = 7,
@@ -81,18 +100,8 @@ local function buildNote()
 		ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
 		Parent = player:WaitForChild("PlayerGui"),
 	})
-	local window, _, closeButton = Candy.window(gui, { name = "LastChance", size = UDim2.fromOffset(WIDTH, HEIGHT), title = "LAST CHANCE" })
-	note = window
-	note.Visible = false
-	Candy.fit(note, Vector2.new(WIDTH + 10, HEIGHT + 10), 24)
-	local function close()
-		note.Visible = false
-		Gamepad.closed("cave")
-	end
-	closeNote = close
-	openNote = Windows.add(close)
-	closeButton.Activated:Connect(close)
-	Gamepad.keyHint(closeButton, nil, Enum.KeyCode.ButtonB, 36, UDim2.new(0, 8, 1, -8), Vector2.new(0, 1))
+	lastChance = noteWindow("LastChance", "LAST CHANCE")
+	local note = lastChance.window
 
 	-- A Self-Revive: the second chance.
 	Candy.art("robux_self_revive", { Position = UDim2.fromOffset(SIDE, TOP - 4), Size = UDim2.fromOffset(124, 124), ZIndex = 3, Parent = note })
@@ -124,8 +133,8 @@ local function buildNote()
 		position = UDim2.new(0, SIDE, 1, -Candy.WINDOW_BOTTOM - 66),
 		text = "I'm ready",
 	})
-	ready.Activated:Connect(close)
-	readyButton = ready
+	ready.Activated:Connect(lastChance.close)
+	lastChance.button = ready
 	local shop = Candy.button(note, {
 		size = UDim2.new(1, -2 * SIDE - 182, 0, 62),
 		position = UDim2.new(0, SIDE + 182, 1, -Candy.WINDOW_BOTTOM - 66),
@@ -133,18 +142,42 @@ local function buildNote()
 		color = Candy.LEMON,
 	})
 	shop.Activated:Connect(function()
-		close()
+		lastChance.close()
 		ShopUi.open("shop")
 	end)
+
+	-- Before your first run: how to survive, a line for each thing to know.
+	howTo = noteWindow("HowTo", "HOW TO PLAY")
+	for i, line in HOW_TO do
+		local y = TOP - 6 + (i - 1) * HOW_TO_ROW
+		Candy.art(line.art, { Position = UDim2.fromOffset(SIDE, y), Size = UDim2.fromOffset(50, 50), ZIndex = 3, Parent = howTo.window })
+		Candy.text({
+			Position = UDim2.fromOffset(SIDE + 62, y),
+			Size = UDim2.new(1, -2 * SIDE - 62, 0, 50),
+			Font = Enum.Font.GothamMedium,
+			TextSize = 19,
+			TextWrapped = true,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			Text = line.text,
+			Parent = howTo.window,
+		})
+	end
+	howTo.button = Candy.button(howTo.window, {
+		anchor = Vector2.new(0.5, 0),
+		size = UDim2.fromOffset(220, 62),
+		position = UDim2.new(0.5, 0, 1, -Candy.WINDOW_BOTTOM - 66),
+		text = "I'm ready",
+	})
+	howTo.button.Activated:Connect(howTo.close)
 end
 
-local function showNote()
-	openNote()
-	note.Position = UDim2.fromScale(0.5, 0.58)
-	note.Visible = true
+local function showNote(note)
+	note.open()
+	note.window.Position = UDim2.fromScale(0.5, 0.58)
+	note.window.Visible = true
 	-- On I'm ready: a jump pressed as it pops up doesn't open the shop.
-	Gamepad.opened("cave", readyButton, closeNote)
-	TweenService:Create(note, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Position = UDim2.fromScale(0.5, 0.5) }):Play()
+	Gamepad.opened("cave", note.button, note.close)
+	TweenService:Create(note.window, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Position = UDim2.fromScale(0.5, 0.5) }):Play()
 end
 
 -- Eases a looped sound toward a volume, playing it only while it can be heard.
@@ -161,7 +194,7 @@ local function fade(sound, target, dt)
 end
 
 function Cave.start()
-	buildNote()
+	buildNotes()
 
 	local drips = Sounds.loop("CaveDrips", 0, "Ambience")
 	local wind = Sounds.loop("CaveWind", 0, "Ambience")
@@ -219,7 +252,7 @@ function Cave.start()
 		playAt("CaveGrowl", mouth + Vector3.new(-side * math.random(6, 18), 1, 34), 2, 50)
 		task.wait(NOTE_DELAY)
 		if still() then
-			showNote()
+			showNote(if (player:GetAttribute("StatRuns") or 0) == 0 then howTo else lastChance)
 		end
 	end
 	local function onArrival()

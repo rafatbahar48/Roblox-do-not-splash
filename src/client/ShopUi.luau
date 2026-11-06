@@ -32,6 +32,7 @@ local Perks = require(ReplicatedStorage.Shared.Perks)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local RobuxCatalog = require(ReplicatedStorage.Shared.RobuxCatalog)
 local ChristmasBundle = require(script.Parent.ChristmasBundle)
+local FriendPack = require(script.Parent.FriendPack)
 local Gamepad = require(script.Parent.Gamepad)
 local ItemIcons = require(script.Parent.ItemIcons)
 local ShopPreview = require(script.Parent.ShopPreview)
@@ -123,6 +124,10 @@ local function onCardPressed(item)
 		-- More of it, from the shop.
 		mode = "shop"
 		ShopUi.render()
+		return
+	end
+	if item.pack and not ownedSet()[item.id] then
+		FriendPack.open()
 		return
 	end
 	if item.exclusive and not ownedSet()[item.id] then
@@ -567,6 +572,9 @@ function ShopUi.render()
 			wearing = worn[item.kind] == item.id
 			statusText, statusColor = if wearing then "Wearing" else "Owned", OWNED
 			label, color = if wearing then "Take off" else "Wear", if wearing then WHITE else Candy.MINT
+		elseif item.pack then
+			statusText = "Rare Pack only"
+			label, color = "See the pack", Candy.PINK
 		elseif item.exclusive then
 			statusText = "Christmas Bundle only"
 			label, color = "See the bundle", Candy.PINK
@@ -822,6 +830,9 @@ function ShopUi.open(newMode, kind)
 		currentKind = "skin"
 	end
 	gui.Enabled = true
+	if mode == "shop" then
+		Remotes.ShopOpened:FireServer()
+	end
 	ShopUi.render()
 	Gamepad.opened("shop", function()
 		return tabButtons[currentKind]

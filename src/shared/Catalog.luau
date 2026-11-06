@@ -9,6 +9,8 @@
 --          head and shoulders
 -- exclusive  the id of the bundle it comes in (RobuxCatalog.bundles): not
 --          sold for coins, and it has no price
+-- pack     (skins) only from the Rare Pack (Config.FriendPack): not sold, and
+--          it has no price
 -- controls (boosts) how to use it, added to its blurb on a keyboard or touch
 --          screen
 -- button   (boosts) its controller button, whose icon its card shows instead
@@ -17,7 +19,8 @@
 --          Robux on the shop's Premium tab, never for coins. robux is the
 --          price to set on that pass, shown until the real one is known.
 --          Its outfit is built by shared/OutfitLook.luau, keyed by id, and
---          move is how it moves (client/SkinMoves.luau).
+--          move is how it moves (client/SkinMoves.luau). The Rare Pack's skin
+--          has both too.
 --
 -- Skins recolour body regions (head, torso, arms, legs). A region left out
 -- keeps the avatar's own colour. Wearing any skin hides shirts and pants.
@@ -119,6 +122,20 @@ Catalog.items = {
 		torso = region(150, 205, 245, Enum.Material.Ice),
 		arms = region(190, 226, 250, Enum.Material.Ice),
 		legs = region(110, 160, 220, Enum.Material.Ice),
+	},
+	{
+		id = "marsh_moth",
+		kind = "skin",
+		rarity = "Legendary",
+		pack = true,
+		name = "Marsh Moth",
+		blurb = "Great soft wings, and eyes that watch from them. Only from the Rare Pack.",
+		swatch = Color3.fromRGB(40, 130, 120),
+		move = "flutter",
+		head = region(40, 30, 24, Enum.Material.Fabric),
+		torso = region(52, 40, 30, Enum.Material.Fabric),
+		arms = region(28, 44, 40, Enum.Material.Fabric),
+		legs = region(24, 34, 32, Enum.Material.Fabric),
 	},
 
 	-- Premium skins, for Robux

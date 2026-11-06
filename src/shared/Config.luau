@@ -20,12 +20,19 @@ Config.CameraMaxZoom = 14
 -- player to jump. A default Roblox character clears about 8.
 Config.MaxJump = 7
 
+-- needs: escapes on another difficulty before this one opens (Perks.canPlay).
 Config.Difficulties = {
-	Easy = { order = 1, noiseMultiplier = 0.6, lurkerSpeedMultiplier = 0.8 },
-	Normal = { order = 2, noiseMultiplier = 1, lurkerSpeedMultiplier = 1 },
-	Hard = { order = 3, noiseMultiplier = 1.35, lurkerSpeedMultiplier = 1.2 },
+	Easy = { order = 1, noiseMultiplier = 0.6, lurkerSpeedMultiplier = 0.8, blurb = "Quieter steps. More room for mistakes." },
+	Normal = { order = 2, noiseMultiplier = 1, lurkerSpeedMultiplier = 1, blurb = "As it is meant to be played." },
+	Hard = {
+		order = 3,
+		noiseMultiplier = 1.35,
+		lurkerSpeedMultiplier = 1.2,
+		blurb = "Louder steps. Less room for mistakes.",
+		needs = { on = "Normal", escapes = 2 },
+	},
 }
-Config.DefaultDifficulty = "Normal"
+Config.DefaultDifficulty = "Easy"
 
 Config.Noise = {
 	Max = 100,
@@ -45,6 +52,13 @@ Config.Noise = {
 -- While nobody is in the water it watches from out in the fog, barely
 -- visible. Touch the water and it comes out of the fog ahead of you, where
 -- your camera points, runs straight at you, round you, and grabs you.
+-- How many creatures a party can choose to have out there (server/Lurkers.luau),
+-- and what coins from stages, shells and escapes count for with each number.
+Config.Monsters = {
+	Max = 3,
+	Coins = { 1, 1.5, 2 },
+}
+
 Config.Lurker = {
 	StalkSpeed = 8, -- moving round in the fog to keep watching you
 	HuntSpeed = 26, -- running at you (you wade at 9)
@@ -75,6 +89,7 @@ Config.Lurker = {
 -- Not choosing bleeds out after ChoiceTime.
 Config.Revive = {
 	Cost = 50, -- coins
+	Free = 1, -- Self-Revives a player has until their first run starts
 	ChoiceTime = 30, -- seconds to choose
 	BuyTime = 60, -- extra seconds while a Robux purchase goes through
 	SafeSeconds = 3, -- after a revive, how long you make no noise at all
@@ -113,6 +128,31 @@ Config.Passes = {
 Config.Community = {
 	GroupId = 642612714,
 	Reward = 100, -- coins
+}
+
+-- The reward for coming back on a new day, by UTC (client/WelcomeBack.luau):
+-- the first on your first day back, the next on each day in a row after it,
+-- round again after the last. Missing a day starts again at the first. A
+-- reward is what Progress.grant takes.
+Config.Daily = {
+	Rewards = {
+		{ coins = 50 },
+		{ coins = 75 },
+		{ boosts = { updraft = 1, hush = 1 } },
+		{ coins = 100 },
+		{ selfRevives = 1 },
+		{ coins = 150 },
+		{ coins = 300, selfRevives = 1 },
+	},
+}
+
+-- The Rare Pack (client/FriendPack.luau): set off in a party with this many
+-- friends of its host, and everyone in it who clears every stage on that run
+-- gets it, once. Skin is its skin (Catalog.luau, pack).
+Config.FriendPack = {
+	Friends = 2,
+	Skin = "marsh_moth",
+	Gives = { items = { "marsh_moth" }, coins = 500, selfRevives = 1 },
 }
 
 -- What the passes do (shared/Perks.luau).
@@ -211,11 +251,10 @@ Config.Room = {
 -- are laid left to right as you face them, in this order.
 --   station  "gate"      in the mouth of the Launch Adventure tunnel
 --            "party"     at the Party station, under its awning
---   mode     "easy"      an Easy party
---            "party"     the host picks Normal or Hard
+--   mode     "party"     the host picks the difficulty and how many monsters
 --            "practice"  no creature, and no coins or records
 Config.Doors = {
-	{ station = "gate", mode = "easy" },
+	{ station = "gate", mode = "party" },
 	{ station = "party", mode = "party" },
 	{ station = "gate", mode = "party" },
 	{ station = "party", mode = "party" },
@@ -268,7 +307,8 @@ Config.Party = {
 	MaxSize = 4,
 	Countdown = 20, -- seconds a new party waits for others to join
 	FullCountdown = 5, -- seconds left once it is full
-	SetupTimeout = 45, -- seconds the setup pop-up stays open
+	AutoCreate = 15, -- seconds after the last change in the setup pop-up that it creates the party itself
+	SetupTimeout = 45, -- seconds the server keeps a pad held for the pop-up
 }
 
 -- The settings window (client/SettingsUi.luau), saved with each player's

@@ -58,8 +58,9 @@ function Shop.buy(player, itemId)
 	if not profile or not item then
 		return false
 	end
-	if item.exclusive or item.premium then
-		-- Only in its bundle, or with its Game Pass, for Robux (Purchases.luau).
+	if item.exclusive or item.premium or item.pack then
+		-- Only in its bundle, with its Game Pass, for Robux (Purchases.luau), or
+		-- from the Rare Pack.
 		return false
 	end
 	if item.kind == "boost" then

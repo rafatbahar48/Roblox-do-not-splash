@@ -16,8 +16,8 @@
 --   party station      on the left, under an awning: two party pads
 --                      (Config.Doors), each with its board
 --   launch adventure   on the right, a mine tunnel into the rock with a
---                      green glow far inside: the Easy, the Normal or Hard
---                      and the practice pads in its mouth. A party that sets
+--                      green glow far inside: two party pads and the practice
+--                      pad in its mouth. A party that sets
 --                      off from any pad goes to the cave at the start of
 --                      stage 1, as always (server/Parties.luau).
 --   watchtowers        two, each joined to the lodge's upper floor by a
@@ -133,8 +133,7 @@ local C = {
 	fire = Color3.fromRGB(255, 140, 70),
 	green = Color3.fromRGB(110, 255, 160),
 	spot = Color3.fromRGB(255, 214, 170),
-	-- The pads, as on the old doors: Easy mint, Normal or Hard lemon,
-	-- practice sky; the record boards' glows too.
+	-- The pads: parties lemon, practice sky; the record boards' glows too.
 	mint = Color3.fromRGB(111, 227, 180),
 	lemon = Color3.fromRGB(255, 221, 74),
 	sky = Color3.fromRGB(99, 201, 255),
@@ -144,8 +143,7 @@ local C = {
 -- Each kind of pad (Config.Doors): its title, colour and what its board says.
 -- The boards never say what is out there.
 local DOOR_LOOKS = {
-	easy = { title = "EASY", color = C.mint, blurb = "Quieter steps. More room for mistakes." },
-	party = { title = "NORMAL OR HARD", color = C.lemon, blurb = "Alone or up to " .. Config.Party.MaxSize .. " together." },
+	party = { title = "NEW PARTY", color = C.lemon, blurb = "Alone or up to " .. Config.Party.MaxSize .. " together." },
 	practice = { title = "PRACTICE", color = C.sky, blurb = "Nothing out there. No coins or records." },
 }
 

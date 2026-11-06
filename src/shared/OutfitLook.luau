@@ -1,6 +1,6 @@
--- How a premium skin's outfit looks on a character (Catalog items with
--- premium, keyed by id): its 3D piece from ReplicatedStorage.SkinModels
--- (made in Meshy, art/models/skins/), smaller pieces built from parts, and
+-- How a skin's outfit looks on a character (Catalog items with premium, and
+-- the Rare Pack's, keyed by id): its 3D piece from ReplicatedStorage.SkinModels
+-- (made in Meshy or Blender, art/models/skins/), smaller pieces built from parts, and
 -- its lights and effects. A piece worn as the head (the ghillie hood, the
 -- wraith's face and hair, the skull, the diving helmet) hides the avatar's
 -- own head and face while it is on, and every outfit hides the avatar's
@@ -50,13 +50,34 @@ local SPOTS = {
 		eyes = { offset = Vector3.new(0.23, 0.08, 0.65), size = 0.12, color = Color3.fromRGB(255, 190, 80) },
 	},
 	SkinDiverHelmet = { fit = 1.95, offset = Vector3.new(0, -0.2, 0) },
+	-- The moth's sizes and places are what art/models/skins/marsh_moth/build_moth.py
+	-- reports, over the 1.2 studs of the head it was built on.
+	SkinMothHead = {
+		fit = 2.424,
+		offset = Vector3.new(0.026, -0.596, 0.02),
+		eyes = { offset = Vector3.new(0.392, 0.696, 0.566), size = 0.13, color = Color3.fromRGB(160, 255, 190) },
+	},
+	SkinMothAntennae = { fit = 0.937, offset = Vector3.new(0, 0.856, -0.427) },
 }
+
+-- The moth's wings, in studs on that 1.2 stud head. Each is on a joint at the
+-- middle of the back that client/SkinMoves.luau turns. Middles are from the
+-- joint, for the right wing; the left's X is the other way.
+local MOTH_HEAD = 1.2
+local WING_HEIGHT = 6.367
+local WING_MIDDLE = Vector3.new(2.208, -0.524, 0.258)
+local WING_GLOW_HEIGHT = 5.967
+local WING_GLOW_MIDDLE = Vector3.new(2.499, -0.43, 0.282)
+local WING_GAP = 0.18 -- how far apart their joints are from the spine
+local WING_SWEEP = math.rad(14) -- how far back they sit
+local MOTH_GLOW = Color3.fromRGB(150, 255, 190)
+local MOTH_ANTENNAE = Color3.fromRGB(150, 118, 58)
 
 -- The template of a 3D piece (a MeshPart, or a model holding one), or nil
 -- until it has been imported.
 local function template(name)
 	local folder = ReplicatedStorage:FindFirstChild("SkinModels")
-	local found = folder and folder:FindFirstChild(name)
+	local found = folder and folder:FindFirstChild(name, true)
 	if found and not found:IsA("BasePart") then
 		found = found:FindFirstChildWhichIsA("BasePart", true)
 	end
@@ -80,6 +101,16 @@ local function emitter(parent, props)
 	end
 	particles.Parent = parent
 	return particles
+end
+
+-- Makes a piece something that only rides along.
+local function loose(part)
+	part.Anchored = false
+	part.CanCollide = false
+	part.CanQuery = false
+	part.CanTouch = false
+	part.Massless = true
+	return part
 end
 
 local function hide(part)
@@ -126,11 +157,7 @@ local function meshPiece(model, character, name)
 	local offset = part:GetAttribute("Offset") or spot.offset or Vector3.zero
 	local turn = part:GetAttribute("Turn") or Vector3.zero
 	part.Size *= fit * head.Size.Y / math.max(part.Size.Y, 1e-3)
-	part.Anchored = false
-	part.CanCollide = false
-	part.CanQuery = false
-	part.CanTouch = false
-	part.Massless = true
+	loose(part)
 	local rotation = CFrame.Angles(math.rad(turn.X), math.rad(turn.Y), math.rad(turn.Z))
 
 	if spot.hand then
@@ -265,6 +292,78 @@ function builders.willow_wraith(model, character)
 			Shape = Enum.ParticleEmitterShape.Disc,
 			ShapeStyle = Enum.ParticleEmitterShapeStyle.Surface,
 			Acceleration = Vector3.new(0, 1.2, 0),
+			RotSpeed = NumberRange.new(90, 180),
+		})
+	end
+end
+
+-- A piece made to glow: no texture, Neon, this colour.
+local function glowing(part, color)
+	part.TextureID = ""
+	part.Material = Enum.Material.Neon
+	part.Color = color
+	return part
+end
+
+-- One of the moth's wings and its glowing rings and dots. side: -1 for the
+-- left, 1 for the right.
+local function mothWing(model, character, side)
+	local torso = character:FindFirstChild("UpperTorso")
+	local head = character:FindFirstChild("Head")
+	local letter = if side < 0 then "L" else "R"
+	local wingSource, glowSource = template("SkinMothWing" .. letter), template("SkinMothGlow" .. letter)
+	if not torso or not head or not wingSource or not glowSource then
+		return
+	end
+	local scale = head.Size.Y / MOTH_HEAD
+	local flip = Vector3.new(side, 1, 1) * scale
+
+	local wing = loose(wingSource:Clone())
+	wing.Size *= WING_HEIGHT * scale / math.max(wing.Size.Y, 1e-3)
+	local joint = Instance.new("Motor6D")
+	joint.Name = "OutfitWing"
+	joint.Part0 = torso
+	joint.Part1 = wing
+	joint.C0 = CFrame.new(side * WING_GAP * scale, torso.Size.Y * 0.2, torso.Size.Z / 2 + 0.06) * CFrame.Angles(0, -side * WING_SWEEP, 0)
+	joint.C1 = CFrame.new(-WING_MIDDLE * flip)
+	joint:SetAttribute("Side", side)
+	joint.Parent = wing
+	wing.CFrame = torso.CFrame * joint.C0 * joint.C1:Inverse()
+	wing.Parent = model
+
+	local glow = glowing(loose(glowSource:Clone()), MOTH_GLOW)
+	glow.Size *= WING_GLOW_HEIGHT * scale / math.max(glow.Size.Y, 1e-3)
+	glow.CFrame = wing.CFrame * CFrame.new((WING_GLOW_MIDDLE - WING_MIDDLE) * flip)
+	local weld = Instance.new("WeldConstraint")
+	weld.Part0 = glow
+	weld.Part1 = wing
+	weld.Parent = glow
+	glow.Parent = model
+end
+
+function builders.marsh_moth(model, character)
+	meshPiece(model, character, "SkinMothHead")
+	local antennae = meshPiece(model, character, "SkinMothAntennae")
+	if antennae then
+		glowing(antennae, MOTH_ANTENNAE)
+	end
+	mothWing(model, character, -1)
+	mothWing(model, character, 1)
+	local chest = character:FindFirstChild("UpperTorso") or character:FindFirstChild("Torso")
+	if chest then
+		light(chest, Color3.fromRGB(110, 255, 190), 0.3, 7)
+		emitter(chest, {
+			Name = "OutfitWisps",
+			Texture = "rbxasset://textures/particles/sparkles_main.dds",
+			Color = ColorSequence.new(Color3.fromRGB(120, 255, 190)),
+			LightEmission = 1,
+			Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.4), NumberSequenceKeypoint.new(1, 0) }),
+			Transparency = NumberSequence.new(0.2),
+			Lifetime = NumberRange.new(1.4, 2.2),
+			Rate = 12,
+			Speed = NumberRange.new(1, 2.2),
+			SpreadAngle = Vector2.new(180, 180),
+			Acceleration = Vector3.new(0, 1.4, 0),
 			RotSpeed = NumberRange.new(90, 180),
 		})
 	end

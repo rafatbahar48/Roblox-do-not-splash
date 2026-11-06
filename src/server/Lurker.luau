@@ -1,4 +1,5 @@
--- The creature: one for the whole forest. While nobody is in the water it
+-- The creature (one for the whole forest, unless a party chose more:
+-- Lurkers.luau). While nobody is in the water it
 -- keeps watch from out in the fog, far enough away to be barely visible,
 -- standing still and moving round only to stay that far from the nearest
 -- player. The moment someone is in the water (and it can hear them) it is
@@ -36,9 +37,12 @@ local Progress = require(script.Parent.Progress)
 
 local SETTINGS = Config.Lurker
 local TRAIL_HALF = Config.Room.Width / 2 -- where the stepping stones are
+local APPEAR_ANGLES = { 0, math.rad(40), math.rad(-40) } -- where each one comes out of the fog, off where you look
 
 local Lurker = {}
 Lurker.__index = Lurker
+
+local grabbing = {} -- [player] = true while one of them has hold of them
 
 local function flatDistance(a, b)
 	return Vector2.new(a.X - b.X, a.Z - b.Z).Magnitude
@@ -97,13 +101,14 @@ end
 
 -- area is where it can go: { poolStart, poolEnd, roamHalfWidth, floorY,
 -- surfaceY } across all the stages, and roomAt(position) for which stage a
--- point is in (MapBuilder.luau's layout).
-function Lurker.new(area, parent, rng)
+-- point is in (MapBuilder.luau's layout). index is which of them this is.
+function Lurker.new(area, parent, rng, index)
 	local self = setmetatable({}, Lurker)
 	self.area = area
 	self.rng = rng
+	self.index = index
 	self.anchor = buildAnchor(parent)
-	self.position = self:clampToArea(Vector3.new(-area.roamHalfWidth, 0, area.poolStart + 60))
+	self.position = self:clampToArea(Vector3.new(-area.roamHalfWidth, 0, area.poolStart + 60 * index))
 	self.heading = Vector3.new(0, 0, -1)
 	self.busy = false
 	self.alert = false
@@ -197,6 +202,7 @@ end
 
 function Lurker:lunge(player, state)
 	self.busy = true
+	grabbing[player] = true
 	self.circling = nil
 	self:setFlag("Running", "running", false)
 	self:setFlag("Circling", "crawling", false)
@@ -233,6 +239,7 @@ function Lurker:lunge(player, state)
 			humanoid.Health = 0
 		end
 		task.wait(0.6)
+		grabbing[player] = nil
 		self.anchor:SetAttribute("Lunging", false)
 		self.goal = nil
 		self.busy = false
@@ -249,6 +256,7 @@ function Lurker:appearAhead(state)
 	end
 	local look = state.look or flat(state.root.CFrame.LookVector)
 	look = if look.Magnitude > 0.01 then look.Unit else Vector3.zAxis
+	look = CFrame.Angles(0, APPEAR_ANGLES[self.index], 0):VectorToWorldSpace(look)
 	local spot = self:clampToArea(target + look * SETTINGS.AppearDistance)
 	-- Looking back the way you came, the fog ahead can be past the start of
 	-- the water, which would put it right beside you: it comes from where it is.
@@ -298,7 +306,7 @@ function Lurker:listen()
 	local best, bestScore = nil, SETTINGS.HearingThreshold
 	for player, state in Noise.states() do
 		local hunted = player == self.huntingPlayer
-		if state.room and state.root and (state.inWater or hunted) and not practising(player) then
+		if state.room and state.root and (state.inWater or hunted) and not practising(player) and not grabbing[player] then
 			local score = state.noise - flatDistance(self.position, state.root.Position) * SETTINGS.DistanceFalloff
 			if hunted then
 				score += SETTINGS.Stickiness

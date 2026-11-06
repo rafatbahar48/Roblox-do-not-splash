@@ -1,16 +1,34 @@
--- Spawns the creature (one, for the whole forest) and steps it each frame.
--- Players being chased get the "Hunted" attribute for the HUD.
+-- Spawns the creatures (one for the whole forest, or as many as the party
+-- chose, Config.Monsters) and steps them each frame. Workspace's Monsters
+-- attribute says how many are out there. Players being chased get the
+-- "Hunted" attribute for the HUD.
 
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local Config = require(ReplicatedStorage.Shared.Config)
 local Lurker = require(script.Parent.Lurker)
 
 local Lurkers = {}
 
 local lurkers = {}
+local area
+local folder
+
+-- Makes it this many creatures, adding or taking away.
+function Lurkers.setCount(count)
+	count = math.clamp(math.floor(count), 1, Config.Monsters.Max)
+	while #lurkers < count do
+		table.insert(lurkers, Lurker.new(area, folder, Random.new(104729 + #lurkers), #lurkers + 1))
+	end
+	while #lurkers > count do
+		table.remove(lurkers).anchor:Destroy()
+	end
+	workspace:SetAttribute("Monsters", count)
+end
 
 function Lurkers.init(layout)
-	local folder = Instance.new("Folder")
+	folder = Instance.new("Folder")
 	folder.Name = "Lurkers"
 	folder.Parent = workspace
 
@@ -21,7 +39,7 @@ function Lurkers.init(layout)
 	for _, room in layout.rooms do
 		roamHalfWidth = math.max(roamHalfWidth, room.roamHalfWidth)
 	end
-	local area = {
+	area = {
 		poolStart = first.poolStart,
 		poolEnd = last.poolEnd,
 		roamHalfWidth = roamHalfWidth,
@@ -29,7 +47,7 @@ function Lurkers.init(layout)
 		surfaceY = first.surfaceY,
 		roomAt = layout.roomAt,
 	}
-	table.insert(lurkers, Lurker.new(area, folder, Random.new(104729)))
+	Lurkers.setCount(1)
 end
 
 function Lurkers.step(dt)

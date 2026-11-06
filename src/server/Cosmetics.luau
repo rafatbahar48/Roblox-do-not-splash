@@ -53,7 +53,7 @@ function Cosmetics.apply(player, character, equipped)
 	OutfitLook.apply(character, skin)
 	character:SetAttribute("SkinMove", skin and skin.move)
 	local accessory = equipped.accessory and Catalog.byId[equipped.accessory]
-	local covered = skin and skin.premium and accessory and accessory.focus == "head"
+	local covered = skin and (skin.premium or skin.pack) and accessory and accessory.focus == "head"
 	AccessoryLook.apply(character, if covered then nil else equipped.accessory)
 end
 

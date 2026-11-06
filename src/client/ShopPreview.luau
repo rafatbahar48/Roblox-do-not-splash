@@ -56,7 +56,10 @@ local function stage(viewport, model, framing, lift)
 	local box, size = model:GetBoundingBox()
 	local camera = Instance.new("Camera")
 	camera.FieldOfView = FOV
-	local tall = math.max(size.Y, size.X * 0.8)
+	-- A narrow view has to fit a wide model's wings, not just its height.
+	local view = viewport.AbsoluteSize
+	local narrow = if view.Y > 0 then math.min(view.X / view.Y, 1) else 1
+	local tall = math.max(size.Y, size.X * 0.8 / narrow)
 	local distance = (tall / 2) / math.tan(math.rad(FOV / 2)) * framing
 	local aim = Vector3.new(0, tall * lift, 0)
 	camera.CFrame = CFrame.lookAt(aim + Vector3.new(0, 0, -distance), aim)

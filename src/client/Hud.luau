@@ -12,6 +12,7 @@
 --                 is paid), and Stats, Settings and Invite (not out in the
 --                 forest: in the lobby, the cave and the way out); on touch
 --                 screens in two rows near the top, clear of the jump button
+--   bottom middle in the lobby, Play: straight into a run (server/Parties.luau)
 --   bottom right  pebble, Updraft, Hush and Grapple buttons (only out in
 --                 the forest; Grapple also while a hook is in reach, to buy
 --                 one there and then); in the Christmas lobby, the snowball
@@ -30,7 +31,6 @@ local GuiService = game:GetService("GuiService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
-local SocialService = game:GetService("SocialService")
 local TextService = game:GetService("TextService")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
@@ -38,10 +38,12 @@ local UserInputService = game:GetService("UserInputService")
 local Candy = require(ReplicatedStorage.Shared.Candy)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
+local Perks = require(ReplicatedStorage.Shared.Perks)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Stages = require(ReplicatedStorage.Shared.Stages)
 local Zones = require(ReplicatedStorage.Shared.Zones)
 local Boosts = require(script.Parent.Boosts)
+local FriendPack = require(script.Parent.FriendPack)
 local Gamepad = require(script.Parent.Gamepad)
 local Grapple = require(script.Parent.Grapple)
 local SettingsUi = require(script.Parent.SettingsUi)
@@ -58,6 +60,7 @@ local RED = Color3.fromRGB(255, 60, 60)
 local GREYED = Color3.fromRGB(130, 124, 118) -- tints an action button with none left
 local DIFFICULTY_COLORS = { Easy = Candy.MINT, Normal = Candy.LEMON, Hard = Candy.PINK }
 local SEGMENTS = 6 -- in the noise meter
+local PLAY_WAIT = 10 -- seconds Play waits to be sent off (server/Parties.luau)
 local MARGIN = 16
 local SIDE_BUTTON = 112 -- Shop and Bag, on the left
 local GRID_BUTTON = 92 -- the buttons on the right
@@ -114,13 +117,6 @@ local function pictureButton(parent, art, name, size, props)
 end
 
 -- Asks Roblox to show the invite-friends prompt.
-local function inviteFriends()
-	local ok, canInvite = pcall(SocialService.CanSendGameInviteAsync, SocialService, player)
-	if ok and canInvite then
-		pcall(SocialService.PromptGameInvite, SocialService, player)
-	end
-end
-
 -- Asks Roblox to show the prompt to join the game's community, then asks
 -- the server to check with Roblox and pay the reward (server/Community.luau).
 local function joinCommunity()
@@ -361,7 +357,7 @@ function Hud.start()
 	local menuButtons = {
 		gridButton("dock_stats", "Stats", StatsUi.toggle),
 		gridButton("dock_settings", "Settings", SettingsUi.toggle),
-		gridButton("dock_invite", "Invite", inviteFriends),
+		gridButton("dock_invite", "Invite", FriendPack.openOrInvite),
 	}
 	local premiumButton = gridButton("dock_premium", "Premium", function()
 		ShopUi.open("shop", "premium")
@@ -386,6 +382,37 @@ function Hud.start()
 	for i, face in menuButtons do
 		face.Position = if touch then UDim2.fromOffset((i - 1) * step, step) else UDim2.fromOffset(step, (i - 1) * step)
 	end
+
+	-- Bottom middle: Play, between the thumbstick and the jump button on touch
+	-- screens --------------------------------------------------------------------
+
+	local playButton = Candy.button(fit, {
+		name = "Play",
+		anchor = Vector2.new(0.5, 1),
+		position = UDim2.new(0.5, 0, 1, -24),
+		size = UDim2.fromOffset(280, 92),
+		text = "Play",
+		color = Candy.LEMON,
+	})
+	shrinkOnTouch(playButton.Parent, TOUCH_BUTTONS)
+	Gamepad.keyHint(playButton, nil, Enum.KeyCode.DPadUp, 30, UDim2.fromOffset(-6, -6))
+	local settingOff = false
+	playButton.Activated:Connect(function()
+		if settingOff then
+			return
+		end
+		settingOff = true
+		playButton.Label.Text = "Setting off"
+		Remotes.QuickPlay:FireServer()
+		task.delay(PLAY_WAIT, function()
+			settingOff = false
+			playButton.Label.Text = "Play"
+		end)
+	end)
+	local inParty = false
+	Remotes.PartyStatus.OnClientEvent:Connect(function(status)
+		inParty = type(status) == "table"
+	end)
 
 	-- Bottom right: pebble and boost buttons -------------------------------------
 	-- On touch screens left of the jump button (placeActions, below).
@@ -574,7 +601,7 @@ function Hud.start()
 			local on = name == current
 			face.ImageTransparency = if on then 0 else 1
 			-- The others are just lettering on the bar's dark wood.
-			face.Label.TextColor3 = if on then Candy.letteringOn(DIFFICULTY_COLORS[name]) else Candy.DIM
+			face.Label.TextColor3 = if on then Candy.letteringOn(DIFFICULTY_COLORS[name]) elseif Perks.canPlay(player, name) then Candy.DIM else Candy.CLOUD
 			face.Label.Edge.Enabled = face.Label.TextColor3 ~= INK
 		end
 	end
@@ -646,6 +673,11 @@ function Hud.start()
 	player:GetAttributeChangedSignal("Pebbles"):Connect(updatePebbles)
 	player:GetAttributeChangedSignal("Snowballs"):Connect(updateSnowballs)
 	player:GetAttributeChangedSignal("Difficulty"):Connect(updateDifficulty)
+	for _, difficulty in Config.Difficulties do
+		if difficulty.needs then
+			player:GetAttributeChangedSignal("Escapes_" .. difficulty.needs.on):Connect(updateDifficulty)
+		end
+	end
 	player:GetAttributeChangedSignal("Hunted"):Connect(updateHunted)
 	player:GetAttributeChangedSignal("ShellsFound"):Connect(hideFoundShells)
 	player:GetAttributeChangedSignal("Coins"):Connect(updateCoins)
@@ -670,7 +702,7 @@ function Hud.start()
 	-- up: the HUD's buttons, where B lets go. Not while the selection has
 	-- the D-pad.
 	local function firstGridButton()
-		for _, face in { premiumButton, doubleButton, joinButton, menuButtons[1] } do
+		for _, face in { playButton, premiumButton, doubleButton, joinButton, menuButtons[1] } do
 			if face.Visible then
 				return face
 			end
@@ -708,6 +740,7 @@ function Hud.start()
 		leftDock.Visible = not inStages
 		rightDock.Visible = not inStages
 		snowActions.Visible = Config.Christmas and zone == "lobby"
+		playButton.Visible = zone == "lobby" and not inParty
 		if actions.Visible or snowActions.Visible then
 			placeActions()
 		end

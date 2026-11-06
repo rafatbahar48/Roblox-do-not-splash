@@ -1,4 +1,4 @@
--- The premium skins' moves, posed on this screen each frame for every
+-- The skins' moves, posed on this screen each frame for every
 -- character wearing one (its SkinMove attribute, set by server/
 -- Cosmetics.luau), on top of Roblox's own walking and idle animations:
 --
@@ -13,6 +13,8 @@
 --            flings them up, throws its head back and the embers burst
 --   bubbles  Cursed Diver: the helmet tilting as it looks about, bubbles
 --            rising from it, a burst now and then
+--   flutter  Marsh Moth: its wings slowly opening and closing, a little
+--            quicker while it walks
 --
 -- The lobby's mannequins (tagged SkinMannequin, server/LobbyBuilder.luau)
 -- do their skins' moves too, standing still.
@@ -214,6 +216,20 @@ end
 
 -- Bubbles: little faintly glowing green balls rising from the helmet,
 -- wobbling, on this screen only.
+function moves.flutter(_, character, t, walk)
+	local outfit = character:FindFirstChild("StillWaterOutfit")
+	if not outfit then
+		return
+	end
+	local fold = math.rad(16 + 12 * math.sin(t * (1.1 + 0.9 * walk)))
+	for _, wing in outfit:GetChildren() do
+		local joint = wing:FindFirstChild("OutfitWing")
+		if joint then
+			joint.Transform = CFrame.Angles(0, -joint:GetAttribute("Side") * fold, 0)
+		end
+	end
+end
+
 local function bubble(state, from)
 	local part = Instance.new("Part")
 	part.Name = "Bubble"
@@ -292,7 +308,8 @@ local function step(dt)
 	end
 end
 
--- Tracks a character while it wears a skin with a move.
+-- Tracks a character while it wears a skin with a move. Its SkinMove can get
+-- here ahead of its joints, so it looks again as each joint arrives.
 local function follow(character, seed)
 	local function check()
 		-- Back to rest first, so nothing the last move bent stays bent.
@@ -303,6 +320,11 @@ local function follow(character, seed)
 		end
 	end
 	character:GetAttributeChangedSignal("SkinMove"):Connect(check)
+	character.DescendantAdded:Connect(function(item)
+		if JOINTS[item.Name] and isJoint(item) then
+			check()
+		end
+	end)
 	check()
 end
 

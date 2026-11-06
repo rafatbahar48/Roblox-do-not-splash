@@ -14,6 +14,7 @@
 --   RunStartedAt       server time (workspace:GetServerTimeNow) the current
 --                      run began, while one is being timed
 --   Escapes            times escaped, all runs together
+--   Escapes_<difficulty>  times escaped on that difficulty (Perks.canPlay)
 --   StatRuns           runs started (through stage 1's doors)
 --   StatCaught         times it caught them
 --   StatStages         stages cleared, all runs together
@@ -21,14 +22,16 @@
 --   PlayTime           seconds played, as of PlayTimeAt (server time)
 --   Best_<difficulty>  fastest escape on that difficulty, in seconds
 --   Setting_<id>       their settings (Config.Settings)
---   SelfRevives        Self-Revives they have (bought for Robux), used first
---                      when it catches them
+--   SelfRevives        Self-Revives they have (bought for Robux, or the free
+--                      one of Config.Revive), used first when it catches them
 --   DownedUntil        server time they bleed out at, while caught and choosing
 --                      to revive, bleed out or go back to the lobby (Config.Revive)
 --   Practice           true on a practice run: no creature, and no coins,
 --                      shells, stats or records
 --   CaveArrival        server time their party last arrived in the cave
 --                      (client/Cave.luau plays what happens next)
+--   DailyDue           which day in a row today's reward for coming back
+--                      would be, while it hasn't been claimed (Config.Daily)
 --   CommunityRewarded  true once they have had the reward for joining the
 --                      game's community (Community.luau)
 --
@@ -51,6 +54,7 @@ local Format = require(ReplicatedStorage.Shared.Format)
 local Perks = require(ReplicatedStorage.Shared.Perks)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Stages = require(ReplicatedStorage.Shared.Stages)
+local Analytics = require(script.Parent.Analytics)
 local Cosmetics = require(script.Parent.Cosmetics)
 local Leaderboards = require(script.Parent.Leaderboards)
 local Noise = require(script.Parent.Noise)
@@ -185,6 +189,11 @@ local function load(player)
 		end
 	end
 
+	local escapesOn = {}
+	for name in Config.Difficulties do
+		escapesOn[name] = wholeNumber(type(data.escapesOn) == "table" and data.escapesOn[name])
+	end
+
 	local settings = {}
 	local savedSettings = if type(data.settings) == "table" then data.settings else {}
 	for _, setting in Config.Settings do
@@ -202,6 +211,7 @@ local function load(player)
 		checkpoint = checkpoint,
 		shells = shells,
 		wins = wholeNumber(data.wins),
+		escapesOn = escapesOn, -- [difficulty name] = times escaped on it
 		difficulty = if Config.Difficulties[data.difficulty] then data.difficulty else Config.DefaultDifficulty,
 		escaped = false,
 		coins = wholeNumber(data.coins or data.pearls), -- saves from before coins said pearls
@@ -209,8 +219,12 @@ local function load(player)
 		equipped = equipped,
 		boosts = boosts,
 		bestTimes = bestTimes, -- [difficulty name] = seconds
-		selfRevives = wholeNumber(data.selfRevives),
+		-- Before their first run, at least the free one.
+		selfRevives = math.max(wholeNumber(data.selfRevives), if wholeNumber(data.runs) == 0 then Config.Revive.Free else 0),
 		communityRewarded = data.communityRewarded == true,
+		dailyDay = tonumber(data.dailyDay), -- the UTC day they last claimed a reward on, or first came
+		dailyStreak = wholeNumber(data.dailyStreak), -- days in a row, up to then
+		friendRun = false, -- on a run that can win the Rare Pack (Config.FriendPack)
 		runs = wholeNumber(data.runs),
 		caught = wholeNumber(data.caught),
 		stages = wholeNumber(data.stages),
@@ -249,6 +263,7 @@ local function save(player, profile)
 		checkpoint = if profile.practice then 0 else profile.checkpoint,
 		shells = shells,
 		wins = profile.wins,
+		escapesOn = profile.escapesOn,
 		difficulty = profile.difficulty,
 		escaped = profile.escaped and not profile.practice,
 		coins = profile.coins,
@@ -259,6 +274,8 @@ local function save(player, profile)
 		bestTimesVersion = Config.BestTimesVersion,
 		selfRevives = profile.selfRevives,
 		communityRewarded = profile.communityRewarded,
+		dailyDay = profile.dailyDay,
+		dailyStreak = profile.dailyStreak,
 		runs = profile.runs,
 		caught = profile.caught,
 		stages = profile.stages,
@@ -306,6 +323,9 @@ local function sync(player, profile)
 	player:SetAttribute("CommunityRewarded", if profile.communityRewarded then true else nil)
 	player:SetAttribute("Practice", if profile.practice then true else nil)
 	player:SetAttribute("Escapes", profile.wins)
+	for name, count in profile.escapesOn do
+		player:SetAttribute("Escapes_" .. name, count)
+	end
 	player:SetAttribute("StatRuns", profile.runs)
 	player:SetAttribute("StatCaught", profile.caught)
 	player:SetAttribute("StatStages", profile.stages)
@@ -396,6 +416,19 @@ local function leaveRun(player, profile)
 	sync(player, profile)
 end
 
+local function utcDay()
+	return os.time() // 86400
+end
+
+-- Which day in a row a reward for coming back today would be, or nil if
+-- there's none today.
+local function dailyDue(profile)
+	if profile.dailyDay == utcDay() then
+		return nil
+	end
+	return (if profile.dailyDay == utcDay() - 1 then profile.dailyStreak else 0) + 1
+end
+
 local function onCharacterAdded(player, character)
 	player:SetAttribute("Pebbles", Perks.pebblesPerLife(player))
 	local profile = profiles[player]
@@ -453,14 +486,26 @@ local function onPlayerAdded(player)
 			profile.difficulty = joinData.difficulty
 		end
 		profile.partyPractice = joinData.practice == true
+		profile.friendRun = joinData.friendRun == true
 	end
 	profiles[player] = profile
 	sync(player, profile)
+	-- In a party's own server the host's choice stands, opened or not.
+	if not Progress.inPartyServer and not Perks.canPlay(player, profile.difficulty) then
+		profile.difficulty = Config.DefaultDifficulty
+		sync(player, profile)
+	end
 	Leaderboards.seed(player, profile.wins, profile.bestTimes)
 	if Progress.inPartyServer then
 		Progress.enterCave(player)
 	else
 		spawnPlayer(player)
+		Analytics.reached(player, "Joined")
+		-- A first visit has nothing to come back to yet: rewards start tomorrow.
+		if not profile.dailyDay and profile.playTime == 0 then
+			profile.dailyDay = utcDay()
+		end
+		player:SetAttribute("DailyDue", dailyDue(profile))
 	end
 end
 
@@ -480,6 +525,7 @@ local function startRun(player, profile)
 	profile.run = { startedAt = os.clock(), easiest = Config.Difficulties[profile.difficulty].order }
 	if not profile.practice then
 		profile.runs += 1
+		Analytics.reached(player, "Left the cave")
 	end
 	player:SetAttribute("RunStartedAt", workspace:GetServerTimeNow())
 	sync(player, profile)
@@ -506,6 +552,7 @@ local function finishRun(player, profile)
 		return ("\nTime %s, practice"):format(Format.time(seconds))
 	end
 	local difficulty = difficultyByOrder(run.easiest)
+	profile.escapesOn[difficulty] += 1
 	local best = profile.bestTimes[difficulty]
 	if best and seconds >= best then
 		return ("\nTime %s on %s   (best %s)"):format(Format.time(seconds), difficulty, Format.time(best))
@@ -533,7 +580,8 @@ local function onCheckpoint(room, hit)
 		return
 	end
 	profile.stages += 1
-	local coins = Config.Coins.PerStage * Perks.coinMultiplier(player)
+	Analytics.reached(player, ("Stage %d cleared"):format(room.index))
+	local coins = Perks.coins(player, Config.Coins.PerStage)
 	profile.earned += coins
 	player:SetAttribute("Pebbles", Perks.pebblesPerLife(player))
 	addCoins(player, profile, coins)
@@ -547,7 +595,7 @@ local function onShell(room, hit)
 		return
 	end
 	profile.shells[room.index] = true
-	local coins = Config.Coins.PerShell * Perks.coinMultiplier(player)
+	local coins = Perks.coins(player, Config.Coins.PerShell)
 	profile.earned += coins
 	addCoins(player, profile, coins)
 	Remotes.Notify:FireClient(player, "shell", ("Shell found (%d/%d)   +%d coins"):format(shellCount(profile), #Stages, coins))
@@ -564,8 +612,9 @@ local function onExit(hit)
 		return
 	end
 	profile.wins += 1
+	Analytics.reached(player, "Escaped")
 	local timeLine = finishRun(player, profile)
-	local coins = Config.Coins.PerEscape * Perks.coinMultiplier(player)
+	local coins = Perks.coins(player, Config.Coins.PerEscape)
 	profile.earned += coins
 	addCoins(player, profile, coins)
 	Leaderboards.recordEscape(player, profile.wins)
@@ -574,6 +623,10 @@ local function onExit(hit)
 		"win",
 		("You got out. Escapes: %d   Shells: %d/%d   +%d coins%s"):format(profile.wins, shellCount(profile), #Stages, coins, timeLine)
 	)
+	if profile.friendRun and not profile.owned[Config.FriendPack.Skin] then
+		Progress.grant(player, Config.FriendPack.Gives)
+		Remotes.PackWon:FireClient(player)
+	end
 	task.spawn(save, player, profile)
 end
 
@@ -595,6 +648,11 @@ end
 function Progress.setDifficulty(player, name)
 	local profile = profiles[player]
 	if not profile or type(name) ~= "string" or not Config.Difficulties[name] or profile.difficulty == name then
+		return
+	end
+	if not Perks.canPlay(player, name) then
+		local needs = Config.Difficulties[name].needs
+		Remotes.Notify:FireClient(player, "party", ("Escape on %s %d times to open %s"):format(needs.on, needs.escapes, name))
 		return
 	end
 	profile.difficulty = name
@@ -633,6 +691,19 @@ function Progress.enterCave(player, practice, slot, count)
 	player:SetAttribute("CaveArrival", workspace:GetServerTimeNow())
 	if practice then
 		Remotes.Notify:FireClient(player, "party", "Practice run: nothing is out there tonight. No coins or records.")
+	else
+		Analytics.reached(player, "In the cave")
+		if profile.friendRun and not profile.owned[Config.FriendPack.Skin] then
+			Remotes.Notify:FireClient(player, "party", ("Rare Pack run: clear all %d stages to win it"):format(#Stages))
+		end
+	end
+end
+
+-- Whether a player's run can win the Rare Pack (Parties.luau).
+function Progress.setFriendRun(player, on)
+	local profile = profiles[player]
+	if profile then
+		profile.friendRun = on == true
 	end
 end
 
@@ -738,6 +809,19 @@ function Progress.init(newLayout)
 	layout.runStart.Touched:Connect(onRunStart)
 
 	Remotes.SetDifficulty.OnServerEvent:Connect(Progress.setDifficulty)
+	Remotes.ClaimDaily.OnServerEvent:Connect(function(player)
+		local profile = profiles[player]
+		local day = profile and not Progress.inPartyServer and dailyDue(profile)
+		if not day then
+			return
+		end
+		profile.dailyDay = utcDay()
+		profile.dailyStreak = day
+		player:SetAttribute("DailyDue", nil)
+		local rewards = Config.Daily.Rewards
+		Progress.grant(player, rewards[(day - 1) % #rewards + 1])
+		Remotes.Notify:FireClient(player, "bought", ("Day %d reward claimed. See you tomorrow!"):format(day))
+	end)
 
 	Remotes.SaveSetting.OnServerEvent:Connect(function(player, id, value)
 		local profile = profiles[player]

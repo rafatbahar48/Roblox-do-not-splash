@@ -14,7 +14,7 @@ local NAMES = {
 	"BoostStarted", -- server -> client: boost id, duration, and for the grapple its hook
 	"Caught", -- server -> client: where it struck, what it heard ("splash", ...), how loud you were, its anchor
 	"PartySetup", -- server -> client: party door number to set up a party on and its mode (Config.Doors), or nil to close the pop-up
-	"CreateParty", -- client -> server: party door number, size, difficulty name (ignored where the door decides), friends only
+	"CreateParty", -- client -> server: party door number, size, difficulty name (ignored for practice), monsters, friends only
 	"LeaveParty", -- client -> server: leave your party, or cancel setting one up
 	"PartyStatus", -- server -> client: { count, size, difficulty, practice, leavesAt, owner } for your party, or nil
 	"CameraLook", -- client -> server: which way your camera points, across the ground (unit Vector3)
@@ -23,6 +23,10 @@ local NAMES = {
 	"ThrowSnowball", -- client -> server: Vector3 aim point, in the Christmas lobby
 	"SnowballHit", -- server -> client: a snowball hit you
 	"ClaimCommunity", -- client -> server: may have just joined the community; check and pay its reward
+	"QuickPlay", -- client -> server: set off on a run of your own now (the HUD's Play button)
+	"ShopOpened", -- client -> server: opened the shop, for its funnel (server/Analytics.luau)
+	"ClaimDaily", -- client -> server: take today's reward for coming back (Config.Daily)
+	"PackWon", -- server -> client: you have just won the Rare Pack (Config.FriendPack)
 }
 
 local folder
